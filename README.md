@@ -1,21 +1,20 @@
-# Vircadia Worlds
+# Vircadia World
 
 This project must be small (fewer lines of code, though no code golf). The scale MUST be balanced: more complexity = less lines of code to allow for that, OR if you want more lines of code, it must be less complex by an order of magnitude, but even then the lines of code must be minimal.
 
 Stack:
-1. Bun.sh (runtime) 
+1. Bun.sh / Node.js (runtime) 
 2. Fastify (router)
 
-## Rail
+## Simulation
 
-The Rail is the core code found in this repository. It consists of a high-performance realtime rail of workers that requests pass through. It's designed to run from Bun.sh, with each script running through a web worker.
+Simulation of worlds is split into two layers, first is the surface (Metaphysical) and then the foundation (Physical). Traditional games and software follow metaphysical forces where they create the direct idea of something (e.g. a gun or a car, or "a script which will move this planet from A to B when the update starts") and then try to add physical complexity through the top down approach.
 
-Projects would be structured like this:
+### Metaphysical
 
-1. Clone `Pantheon`, comes preloaded with core workers
-   - Plugin: Simulation via Babylon.js (headless) (import and export scenes via glTF)
-   - Plugin: Storage via Git
-   - Plugin: Networking via WebTransport
-   - Plugin: Monitoring by Prometheus Export, hosted Grafana
-2. Add own workers, configure as needed.
+The **metaphysical simulation layer** allows for development of scripts and functionality of the world in the traditional methods since computing was invented.
+
+### Physical
+
+The **physical simulation layer** is constantly applying increased complexity to it as we are able to simulate forces better and better to create "worlds" that follow different physical laws, predefined.
 
