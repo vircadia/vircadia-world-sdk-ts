@@ -1,3 +1,89 @@
+// Initialize variables for WebRTC
+let localStream: MediaStream;
+let peerConnection: RTCPeerConnection;
+
+const configuration = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' }
+    ]
+  };
+// Function to initialize WebRTC
+async function initializeWebRTC() {
+  // Get local audio stream from microphone
+  localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+  // Create a new peer connection
+  peerConnection = new RTCPeerConnection(configuration);
+
+  // Add local stream to the peer connection
+  localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+  // Set up event listeners for the peer connection
+  peerConnection.onicecandidate = handleICECandidate;
+  peerConnection.ontrack = handleRemoteTrack;
+
+  // Create an offer and set it as the local description
+  const offer = await peerConnection.createOffer();
+  await peerConnection.setLocalDescription(offer);
+
+  // Send the offer to the remote peer via the signaling server
+  signalOffer(offer);
+}
+
+// Function to handle incoming ICE candidates
+function handleICECandidate(event: RTCPeerConnectionIceEvent) {
+  if (event.candidate) {
+    // Send the ICE candidate to the remote peer via the signaling server
+    signalICECandidate(event.candidate);
+  }
+}
+
+// Function to handle incoming remote tracks
+function handleRemoteTrack(event: RTCTrackEvent) {
+  const remoteAudioStream = event.streams[0];
+  // Use the remote audio stream in the spatialization function
+  spatializeAudio(remoteAudioStream);
+}
+
+// Function to handle incoming offers from the signaling server
+async function handleOffer(offer: RTCSessionDescriptionInit) {
+  await peerConnection.setRemoteDescription(offer);
+
+  // Create an answer and set it as the local description
+  const answer = await peerConnection.createAnswer();
+  await peerConnection.setLocalDescription(answer);
+
+  // Send the answer back to the remote peer via the signaling server
+  signalAnswer(answer);
+}
+
+// Function to handle incoming answers from the signaling server
+async function handleAnswer(answer: RTCSessionDescriptionInit) {
+  await peerConnection.setRemoteDescription(answer);
+}
+
+// Function to handle incoming ICE candidates from the signaling server
+async function handleRemoteICECandidate(candidate: RTCIceCandidateInit) {
+  await peerConnection.addIceCandidate(candidate);
+}
+
+// Functions to send signaling messages (to be implemented based on your signaling server)
+function signalOffer(offer: RTCSessionDescriptionInit) {
+  // Send the offer to the remote peer via the signaling server
+}
+
+function signalAnswer(answer: RTCSessionDescriptionInit) {
+  // Send the answer to the remote peer via the signaling server
+}
+
+function signalICECandidate(candidate: RTCIceCandidateInit) {
+  // Send the ICE candidate to the remote peer via the signaling server
+}
+
 async function loadAudioContext(audioUrl: string): Promise<AudioBuffer> {
     const audioContext = new AudioContext();
     const response = await fetch(audioUrl);
@@ -50,5 +136,5 @@ panner2.positionZ.setValueAtTime(0, audioContext.currentTime);
     document.getElementById('app').appendChild(audioElement); // Append the audio element to the DOM
 }
 
-spatializeAudio('test.mp3', 'test.mp3');
-
+// spatializeAudio('test.mp3', 'test.mp3');
+initializeWebRTC();
