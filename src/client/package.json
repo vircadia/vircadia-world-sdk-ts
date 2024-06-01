@@ -1,0 +1,17 @@
+{
+  "name": "vircadia-world-client",
+  "private": false,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@trpc/client": "npm:@trpc/server@next"
+  },
+  "devDependencies": {
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}

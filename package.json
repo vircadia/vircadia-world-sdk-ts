@@ -2,34 +2,28 @@
   "name": "vircadia-world",
   "private": false,
   "type": "module",
+  "workspaces": [
+    "src/*"
+  ],
   "scripts": {
-    "dev:server": "tsx watch src/server/server",
-    "dev:client": "vite",
+    "dev:server": "npm run dev --prefix src/server",
+    "dev:client": "npm run dev --prefix src/client",
     "dev": "run-p dev:* --print-label",
     "lint": "eslint --cache --ext \".js,.ts,.tsx\" src",
     "format": "prettier --write 'src/**/*.{js,ts,tsx,json,css,md}'",
     "type-check": "tsc",
-    "build:server": "esbuild src/server/server.ts --bundle --packages=external --platform=node --format=esm --outdir=dist/server --sourcemap",
-    "build:client": "vite build",
-    "build": "run-s build:server build:client",
-    "start": "pnpm dev",
-    "test-dev": "start-server-and-test 'tsx src/server/server' 3000 'vite'",
-    "test-start": "start-server-and-test 'node dist/server' 3000 'vite'"
+    "build:server": "npm run build --prefix src/server",
+    "build:client": "npm run build --prefix src/client",
+    "build": "run-s build:server build:client"
   },
   "dependencies": {
-    "@trpc/client": "npm:@trpc/client@next",
-    "@trpc/server": "npm:@trpc/server@next",
-    "express": "^4.19.0",
     "zod": "^3.23.8"
   },
   "alias": {
     "scheduler/tracing": "../../node_modules/scheduler/tracing-profiling"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.13.0",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "esbuild": "^0.21.0",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-config-standard-with-typescript": "^43.0.1",
@@ -40,11 +34,9 @@
     "globals": "^15.3.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^3.2.5",
-    "start-server-and-test": "^1.12.0",
     "tsx": "^4.0.0",
     "typescript": "^5.4.5",
-    "vite": "^5.2.12",
-    "wait-port": "^1.0.1"
+    "vite": "^5.2.12"
   },
   "publishConfig": {
     "access": "restricted"
