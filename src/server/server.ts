@@ -4,21 +4,21 @@ import { Server } from 'socket.io';
 
 import { MetaRequest, WorldTransport } from '../routes';
 
+const TEMP_PORT = 3000;
+const TEMP_ALLOWED_ORIGINS = '*';
+const TEMP_ALLOWED_METHODS_REQ = 'GET, POST, PUT, DELETE, OPTIONS';
+const TEMP_ALLOWED_HEADERS_REQ = 'Content-Type, Authorization';
+const TEMP_ALLOWED_METHODS_WT = 'GET, POST';
+
 async function main() {
     const expressApp = express();
     const server = createServer(expressApp);
 
     // Requests via Express
     expressApp.use(function (req, res, next) {
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader(
-            'Access-Control-Allow-Methods',
-            'GET, POST, PUT, DELETE, OPTIONS',
-        );
-        res.setHeader(
-            'Access-Control-Allow-Headers',
-            'Content-Type, Authorization',
-        );
+        res.setHeader('Access-Control-Allow-Origin', TEMP_ALLOWED_ORIGINS);
+        res.setHeader('Access-Control-Allow-Methods', TEMP_ALLOWED_METHODS_REQ);
+        res.setHeader('Access-Control-Allow-Headers', TEMP_ALLOWED_HEADERS_REQ);
         if (req.method === 'OPTIONS') {
             return res.sendStatus(200);
         } else {
@@ -31,13 +31,13 @@ async function main() {
     // Webtransport via Socket.io
     const socketIO = new Server(server, {
         cors: {
-            origin: '*',
-            methods: ['GET', 'POST'],
+            origin: TEMP_ALLOWED_ORIGINS,
+            methods: TEMP_ALLOWED_METHODS_WT,
         },
     });
     WorldTransport.Router(socketIO);
 
-    server.listen(3000, () => {
+    server.listen(TEMP_PORT, () => {
         console.log('Server is running on port 3000');
     });
 }

@@ -6,7 +6,25 @@
         <title>SDK Test Page</title>
     </head>
     <body>
-        <button onclick="streamAudio()">Stream Audio</button>
-        <script type="module" src="/client.ts"></script>
+        <button id="streamButton">Stream Audio</button>
+        <script type="module" lang="ts">
+            import { Client } from '/client.ts';
+
+            if (!Client.isConnected()) {
+                Client.establishConnection();
+            }
+
+            const button = document.getElementById('streamButton');
+            button.addEventListener('click', async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: true,
+                    });
+                    Client.streamAudio(stream);
+                } catch (error) {
+                    console.error('Error accessing media devices:', error);
+                }
+            });
+        </script>
     </body>
 </html>

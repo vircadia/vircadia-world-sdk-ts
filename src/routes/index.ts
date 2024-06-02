@@ -1,3 +1,9 @@
+import { EPacketType, IAudioPacket } from './meta';
+
+export interface IRouter {
+    [EPacketType.Audio]: (socket: Socket, data: IAudioPacket) => void;
+}
+
 //
 //
 // Meta Requests (internals, like status, config, etc.)
@@ -28,30 +34,6 @@ export { router as MetaRequest };
 import { Server, Socket } from 'socket.io';
 
 export namespace WorldTransport {
-    export enum PacketType {
-        Audio = 'AudioPacket',
-    }
-
-    export interface IAudioPacket {
-        audioData: string | ArrayBuffer | null;
-        audioPosition: {
-            x: number | null;
-            y: number | null;
-            z: number | null;
-        };
-        audioOrientation: {
-            x: number | null;
-            y: number | null;
-            z: number | null;
-        };
-        TEMP_senderId: string | null;
-    }
-
-    // Define the structure of the Router with detailed event handlers
-    export interface IRouter {
-        [PacketType.Audio]: (socket: Socket, data: IAudioPacket) => void;
-    }
-
     export function Router(io: Server): void {
         io.on('connection', (socket) => {
             console.log('A user connected:', socket.id);
@@ -66,10 +48,10 @@ export namespace WorldTransport {
             //     socket.broadcast.emit('audioStream', audioData);
             // });
 
-            socket.on(PacketType.Audio, (audioData: IAudioPacket) => {
+            socket.on(EPacketType.Audio, (audioData: IAudioPacket) => {
                 // Broadcast audio data to all clients including the sender
                 console.log('audioStream received:', audioData);
-                io.emit(PacketType.Audio, audioData); // Changed from socket.broadcast.emit to io.emit
+                io.emit(EPacketType.Audio, audioData); // Changed from socket.broadcast.emit to io.emit
             });
         });
     }
