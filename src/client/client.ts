@@ -11,11 +11,11 @@ let TEMP_position: { x: number | null; y: number | null; z: number | null } = {
     z: null,
 };
 let TEMP_orientation: { x: number | null; y: number | null; z: number | null } =
-    {
-        x: null,
-        y: null,
-        z: null,
-    };
+{
+    x: null,
+    y: null,
+    z: null,
+};
 
 export namespace Client {
     export const isConnected = () => socket?.connected;

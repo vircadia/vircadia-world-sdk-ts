@@ -1,16 +1,13 @@
 {
-  "compilerOptions": {
-    "lib": ["esnext", "dom"],
-    "target": "esnext",
-    "esModuleInterop": true,
-    "strict": true,
-    "moduleResolution": "node",
-    "noEmit": true,
-    "skipLibCheck": true
-  },
-  "include": [
-    "src/**/*",
-    ".eslintrc.js"
-  ],
-  "exclude": ["node_modules"]
+    "compilerOptions": {
+        "lib": ["esnext", "dom"],
+        "target": "esnext",
+        "esModuleInterop": true,
+        "strict": true,
+        "moduleResolution": "node",
+        "noEmit": true,
+        "skipLibCheck": true
+    },
+    "include": ["src/**/*", ".eslintrc.cjs"],
+    "exclude": ["node_modules"]
 }
