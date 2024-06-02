@@ -2,8 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 
-import { Request } from '../routes/request/general-router';
-import { WebTransport } from '../routes/webtransport/general-router';
+import { MetaRequest, WorldTransport } from '../routes';
 
 async function main() {
     const expressApp = express();
@@ -27,7 +26,7 @@ async function main() {
         }
     });
 
-    expressApp.use('/', Request);
+    expressApp.use('/', MetaRequest);
 
     // Webtransport via Socket.io
     const socketIO = new Server(server, {
@@ -36,7 +35,7 @@ async function main() {
             methods: ['GET', 'POST'],
         },
     });
-    WebTransport.Router(socketIO);
+    WorldTransport.Router(socketIO);
 
     server.listen(3000, () => {
         console.log('Server is running on port 3000');
