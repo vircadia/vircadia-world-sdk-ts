@@ -1,40 +1,27 @@
-import { createTRPCClient, httpBatchLink } from '@trpc/client';
-import type { AppRouter } from '../server/router';
+import { io } from 'socket.io-client';
+import { WebTransport } from '../routes/webtransport/general-router';
 
-async function main() {
-    const client = createTRPCClient<AppRouter>({
-        links: [
-            httpBatchLink({
-                url: 'http://localhost:3000/trpc',
-            }),
-        ],
-    });
+const socket = io('http://localhost:3000');
 
-    const peerConnection = new RTCPeerConnection();
-
-    peerConnection.onicecandidate = async (event) => {
-        if (event.candidate) {
-            await client.connection.iceCandidate.mutate({
-                candidate: event.candidate.candidate,
-            });
-        }
-    };
-
-    // Create an offer and send it to the server
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
-
-    const { sdp: answerSdp } = await client.connection.offer.mutate({
-        sdp: offer.sdp ?? '',
-    });
-
-    await peerConnection.setRemoteDescription(
-        new RTCSessionDescription({ type: 'answer', sdp: answerSdp }),
-    );
-
-    // Handle incoming ICE candidates from the server
-    // This part depends on how you receive ICE candidates from the server
-    // For example, you might use WebSocket or another mechanism to receive them
+// Function to send a signal
+function sendSignal(data: WebTransport.ISignalData) {
+    socket.emit('signal', data);
 }
 
-void main();
+// Function to join a room
+function joinRoom(data: WebTransport.IRoomData) {
+    socket.emit('join-room', data);
+}
+
+// Function to leave a room
+function leaveRoom(data: WebTransport.IRoomData) {
+    socket.emit('leave-room', data);
+}
+
+// Listening to events
+socket.on('connect', () => {
+    console.log('Connected to server');
+});
+
+// Export the functions for use elsewhere in your client application
+export { sendSignal, joinRoom, leaveRoom };

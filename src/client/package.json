@@ -7,9 +7,8 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@trpc/client": "npm:@trpc/server@next"
-  },
-  "devDependencies": {
+    "axios": "^1.7.2",
+    "socket.io-client": "^4.7.5"
   },
   "publishConfig": {
     "access": "restricted"

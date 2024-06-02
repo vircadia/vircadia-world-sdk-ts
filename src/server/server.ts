@@ -1,12 +1,16 @@
-import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import express from 'express';
-import { appRouter } from './router';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+
+import { Request } from '../routes/request/general-router';
+import { WebTransport } from '../routes/webtransport/general-router';
 
 async function main() {
-    // express implementation
-    const app = express();
+    const expressApp = express();
+    const server = createServer(expressApp);
 
-    app.use(function (req, res, next) {
+    // Requests via Express
+    expressApp.use(function (req, res, next) {
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader(
             'Access-Control-Allow-Methods',
@@ -23,16 +27,20 @@ async function main() {
         }
     });
 
-    // For testing purposes, wait-on requests '/'
-    app.get('/', (_req, res) => res.send('Server is running!'));
+    expressApp.use('/', Request);
 
-    app.use(
-        '/trpc',
-        createExpressMiddleware({
-            router: appRouter,
-        }),
-    );
-    app.listen(3000);
+    // Webtransport via Socket.io
+    const socketIO = new Server(server, {
+        cors: {
+            origin: '*',
+            methods: ['GET', 'POST'],
+        },
+    });
+    WebTransport.Router(socketIO);
+
+    server.listen(3000, () => {
+        console.log('Server is running on port 3000');
+    });
 }
 
 void main();
