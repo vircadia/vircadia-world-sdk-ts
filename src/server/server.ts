@@ -2,7 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 
-import { MetaRequest, WorldTransport } from '../routes';
+import { MetaRequest, WorldTransport } from '../routes/router';
 
 const TEMP_PORT = 3000;
 const TEMP_ALLOWED_ORIGINS = '*';
@@ -10,7 +10,7 @@ const TEMP_ALLOWED_METHODS_REQ = 'GET, POST, PUT, DELETE, OPTIONS';
 const TEMP_ALLOWED_HEADERS_REQ = 'Content-Type, Authorization';
 const TEMP_ALLOWED_METHODS_WT = 'GET, POST';
 
-async function main() {
+function main() {
     const expressApp = express();
     const server = createServer(expressApp);
 
@@ -21,9 +21,8 @@ async function main() {
         res.setHeader('Access-Control-Allow-Headers', TEMP_ALLOWED_HEADERS_REQ);
         if (req.method === 'OPTIONS') {
             return res.sendStatus(200);
-        } else {
-            next();
         }
+        return next();
     });
 
     expressApp.use('/', MetaRequest);

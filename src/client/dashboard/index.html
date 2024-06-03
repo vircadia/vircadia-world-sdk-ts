@@ -20,7 +20,7 @@
                     const stream = await navigator.mediaDevices.getUserMedia({
                         audio: true,
                     });
-                    Client.streamAudio(stream);
+                    Client.TEMP_streamAudio(stream);
                 } catch (error) {
                     console.error('Error accessing media devices:', error);
                 }
