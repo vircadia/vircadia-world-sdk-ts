@@ -92,6 +92,43 @@ export namespace Client {
     export namespace Agent {
         const agentConnections: { [key: string]: RTCPeerConnection } = {};
 
+        export const addConnection = (agentId: string) => {
+            if (agentConnections[agentId]) {
+                console.log(`Connection already exists for agent ${agentId}`);
+                return;
+            }
+
+            const newConnection = new RTCPeerConnection({
+                iceServers: TEMP_ICE_SERVERS,
+            });
+
+            newConnection.onconnectionstatechange = () => {
+                console.log(
+                    `Connection state changed for agent ${agentId}: ${newConnection.connectionState}`,
+                );
+                if (newConnection.connectionState === 'connected') {
+                    console.log(`Agent ${agentId} is fully connected.`);
+                } else if (newConnection.connectionState === 'disconnected') {
+                    console.log(`Agent ${agentId} is disconnected.`);
+                    removeConnection(agentId); // Auto-remove on disconnect
+                }
+            };
+
+            // Additional event listeners setup here...
+
+            agentConnections[agentId] = newConnection;
+        };
+
+        export const removeConnection = (agentId: string) => {
+            if (agentConnections[agentId]) {
+                agentConnections[agentId].close();
+                delete agentConnections[agentId];
+                console.log(
+                    `Connection closed and removed for agent ${agentId}`,
+                );
+            }
+        };
+
         export const init = () => {
             socket?.on(
                 EPacketType.AGENT_Offer,
@@ -201,6 +238,8 @@ export namespace Client {
                 return; // Exit if a connection already exists
             }
 
+            console.info('Attempting to create connection for agent:', agentId);
+
             const newPeerConnection = new RTCPeerConnection({
                 iceServers: TEMP_ICE_SERVERS, // Ensure to use ICE servers configuration
             });
@@ -215,6 +254,20 @@ export namespace Client {
                             candidate: event.candidate,
                         }),
                     );
+                }
+            };
+
+            newPeerConnection.onconnectionstatechange = () => {
+                console.log(
+                    `Connection state changed for agent ${agentId}: ${newPeerConnection.connectionState}`,
+                );
+                if (newPeerConnection.connectionState === 'connected') {
+                    console.log(`Agent ${agentId} is fully connected.`);
+                } else if (
+                    newPeerConnection.connectionState === 'disconnected'
+                ) {
+                    console.log(`Agent ${agentId} is disconnected.`);
+                    removeConnection(agentId); // Auto-remove on disconnect
                 }
             };
 
