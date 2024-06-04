@@ -39,6 +39,16 @@ export namespace Client {
         z: null,
     };
 
+    export const TEMP_updateMetadataLocally = (metadata: {
+        agentId: string;
+        position: { x: number; y: number; z: number };
+        orientation: { x: number; y: number; z: number };
+    }) => {
+        TEMP_agentId = metadata.agentId;
+        TEMP_position = metadata.position;
+        TEMP_orientation = metadata.orientation;
+    };
+
     export const isConnected = () => socket?.connected ?? false;
 
     export namespace Setup {
@@ -91,12 +101,17 @@ export namespace Client {
 
     export namespace Agent {
         const agentConnections: { [key: string]: RTCPeerConnection } = {};
+        const LOG_PREFIX = '[AGENT]';
 
         export const addConnection = (agentId: string) => {
             if (agentConnections[agentId]) {
-                console.log(`Connection already exists for agent ${agentId}`);
+                console.log(
+                    `${LOG_PREFIX} Connection already exists for agent ${agentId}`,
+                );
                 return;
             }
+
+            console.log(`${LOG_PREFIX} Adding connection for agent ${agentId}`);
 
             const newConnection = new RTCPeerConnection({
                 iceServers: TEMP_ICE_SERVERS,
@@ -104,12 +119,16 @@ export namespace Client {
 
             newConnection.onconnectionstatechange = () => {
                 console.log(
-                    `Connection state changed for agent ${agentId}: ${newConnection.connectionState}`,
+                    `${LOG_PREFIX} Connection state changed for agent ${agentId}: ${newConnection.connectionState}`,
                 );
                 if (newConnection.connectionState === 'connected') {
-                    console.log(`Agent ${agentId} is fully connected.`);
+                    console.log(
+                        `${LOG_PREFIX} Agent ${agentId} is fully connected.`,
+                    );
                 } else if (newConnection.connectionState === 'disconnected') {
-                    console.log(`Agent ${agentId} is disconnected.`);
+                    console.log(
+                        `${LOG_PREFIX} Agent ${agentId} is disconnected.`,
+                    );
                     removeConnection(agentId); // Auto-remove on disconnect
                 }
             };
@@ -121,27 +140,33 @@ export namespace Client {
 
         export const removeConnection = (agentId: string) => {
             if (agentConnections[agentId]) {
+                console.log(
+                    `${LOG_PREFIX} Removing connection for agent ${agentId}`,
+                );
                 agentConnections[agentId].close();
                 delete agentConnections[agentId];
                 console.log(
-                    `Connection closed and removed for agent ${agentId}`,
+                    `${LOG_PREFIX} Connection closed and removed for agent ${agentId}`,
                 );
             }
         };
 
         export const init = () => {
+            console.log(`${LOG_PREFIX} Initializing agent connections`);
+
             socket?.on(
                 EPacketType.AGENT_Offer,
                 async (message: C_AGENT_Offer_Packet) => {
+                    console.log(`${LOG_PREFIX} Received AGENT_Offer`);
                     const { senderId } = message;
                     if (!senderId) {
                         console.error(
-                            'Invalid senderId received in AGENT_Offer',
+                            `${LOG_PREFIX} Invalid senderId received in AGENT_Offer`,
                         );
                         return;
                     }
                     if (!agentConnections[senderId]) {
-                        createConnection(senderId);
+                        await createConnection(senderId);
                     }
                     await agentConnections[senderId].setRemoteDescription(
                         new RTCSessionDescription({
@@ -170,16 +195,17 @@ export namespace Client {
             socket?.on(
                 EPacketType.AGENT_Answer,
                 async (message: C_AGENT_Answer_Packet) => {
+                    console.log(`${LOG_PREFIX} Received AGENT_Answer`);
                     const { senderId } = message;
                     if (!senderId) {
                         console.error(
-                            'Invalid senderId received in AGENT_Answer',
+                            `${LOG_PREFIX} Invalid senderId received in AGENT_Answer`,
                         );
                         return;
                     }
 
                     if (!agentConnections[senderId]) {
-                        createConnection(senderId);
+                        await createConnection(senderId);
                     }
                     await agentConnections[senderId].setRemoteDescription(
                         new RTCSessionDescription({
@@ -193,15 +219,16 @@ export namespace Client {
             socket?.on(
                 EPacketType.AGENT_Candidate,
                 async (message: C_AGENT_Candidate_Packet) => {
+                    console.log(`${LOG_PREFIX} Received AGENT_Candidate`);
                     const { senderId, candidate } = message;
                     if (!senderId) {
                         console.error(
-                            'Invalid senderId received in AGENT_Candidate',
+                            `${LOG_PREFIX} Invalid senderId received in AGENT_Candidate`,
                         );
                         return;
                     }
                     if (!agentConnections[senderId]) {
-                        createConnection(senderId);
+                        await createConnection(senderId);
                     }
                     await agentConnections[senderId].addIceCandidate(
                         new RTCIceCandidate(candidate),
@@ -212,8 +239,12 @@ export namespace Client {
             socket?.on(
                 EPacketType.WORLD_AgentList,
                 (message: C_WORLD_AgentList_Packet) => {
+                    console.log(`${LOG_PREFIX} Received WORLD_AgentList`);
                     const { agentList } = message;
-                    console.log('Received agent list:', agentList);
+                    console.log(
+                        `${LOG_PREFIX} Received agent list:`,
+                        agentList,
+                    );
 
                     // Remove connections for agents no longer present
                     Object.keys(agentConnections).forEach((agentId) => {
@@ -223,29 +254,39 @@ export namespace Client {
                     });
 
                     // Establish new connections for new agents
-                    agentList.forEach((agentId) => {
+                    agentList.forEach(async (agentId) => {
                         if (!agentConnections[agentId]) {
-                            Agent.createConnection(agentId);
+                            await createConnection(agentId);
                         }
                     });
                 },
             );
         };
 
-        export const createConnection = (agentId: string) => {
+        export const createConnection = async (agentId: string) => {
             if (agentConnections[agentId]) {
-                console.log(`Connection already exists for user ${agentId}`);
+                console.log(
+                    `${LOG_PREFIX} Connection already exists for user ${agentId}`,
+                );
                 return; // Exit if a connection already exists
             }
 
-            console.info('Attempting to create connection for agent:', agentId);
+            console.info(
+                `${LOG_PREFIX} Attempting to create connection for agent:`,
+                agentId,
+            );
 
             const newPeerConnection = new RTCPeerConnection({
                 iceServers: TEMP_ICE_SERVERS, // Ensure to use ICE servers configuration
             });
             agentConnections[agentId] = newPeerConnection;
 
+            await createOffer(agentId);
+
             newPeerConnection.onicecandidate = (event) => {
+                console.log(
+                    `${LOG_PREFIX} onicecandidate event triggered for agent ${agentId}`,
+                );
                 if (event.candidate) {
                     socket?.emit(
                         EPacketType.AGENT_Candidate,
@@ -257,21 +298,40 @@ export namespace Client {
                 }
             };
 
+            newPeerConnection.oniceconnectionstatechange = () => {
+                console.log(
+                    `${LOG_PREFIX} ICE connection state changed for agent ${agentId}: ${newPeerConnection.connectionState}`,
+                );
+            };
+
             newPeerConnection.onconnectionstatechange = () => {
                 console.log(
-                    `Connection state changed for agent ${agentId}: ${newPeerConnection.connectionState}`,
+                    `${LOG_PREFIX} Connection state changed for agent ${agentId}: ${newPeerConnection.connectionState}`,
                 );
                 if (newPeerConnection.connectionState === 'connected') {
-                    console.log(`Agent ${agentId} is fully connected.`);
+                    console.log(
+                        `${LOG_PREFIX} Agent ${agentId} is fully connected.`,
+                    );
                 } else if (
                     newPeerConnection.connectionState === 'disconnected'
                 ) {
-                    console.log(`Agent ${agentId} is disconnected.`);
+                    console.log(
+                        `${LOG_PREFIX} Agent ${agentId} is disconnected.`,
+                    );
                     removeConnection(agentId); // Auto-remove on disconnect
                 }
             };
 
+            newPeerConnection.onsignalingstatechange = () => {
+                console.log(
+                    `${LOG_PREFIX} Signaling state changed for agent ${agentId}: ${newPeerConnection.connectionState}`,
+                );
+            };
+
             newPeerConnection.ontrack = (event) => {
+                console.log(
+                    `${LOG_PREFIX} ontrack event triggered for agent ${agentId}`,
+                );
                 const remoteStream = event.streams[0];
                 // Handle the remote stream (e.g., play audio)
                 // ...
@@ -280,17 +340,23 @@ export namespace Client {
 
         export const closeAndRemoveConnection = (agentId: string) => {
             if (agentConnections[agentId]) {
+                console.log(
+                    `${LOG_PREFIX} Closing and removing connection for agent ${agentId}`,
+                );
                 // Close the connection if needed, e.g., close any data channels or streams
                 agentConnections[agentId].close();
                 // Remove from the agentConnections object
                 delete agentConnections[agentId];
                 console.log(
-                    `Connection closed and removed for agent ${agentId}`,
+                    `${LOG_PREFIX} Connection closed and removed for agent ${agentId}`,
                 );
             }
         };
 
         export const addLocalStream = async (agentId: string) => {
+            console.log(
+                `${LOG_PREFIX} Adding local stream for agent ${agentId}`,
+            );
             const localStream = await navigator.mediaDevices.getUserMedia({
                 audio: true,
             });
@@ -300,9 +366,10 @@ export namespace Client {
         };
 
         export const createOffer = async (agentId: string) => {
+            console.log(`${LOG_PREFIX} Creating offer for agent ${agentId}`);
             if (!agentConnections[agentId]) {
                 console.error(
-                    'Agent connection not initialized for user:',
+                    `${LOG_PREFIX} Agent connection not initialized for user:`,
                     agentId,
                 );
                 return;
@@ -312,7 +379,10 @@ export namespace Client {
             await agentConnections[agentId].setLocalDescription(offer);
 
             if (offer.sdp === undefined) {
-                console.error('Offer SDP is undefined for user:', agentId);
+                console.error(
+                    `${LOG_PREFIX} Offer SDP is undefined for user:`,
+                    agentId,
+                );
                 return;
             }
 
@@ -324,17 +394,59 @@ export namespace Client {
                 }),
             );
         };
-    }
 
-    export const TEMP_updateMetadataLocally = (metadata: {
-        agentId: string;
-        position: { x: number; y: number; z: number };
-        orientation: { x: number; y: number; z: number };
-    }) => {
-        TEMP_agentId = metadata.agentId;
-        TEMP_position = metadata.position;
-        TEMP_orientation = metadata.orientation;
-    };
+        export const handleIncomingOffer = async (
+            message: C_AGENT_Offer_Packet,
+        ) => {
+            const { senderId, sdp } = message;
+            if (!senderId || !sdp) {
+                console.error(`${LOG_PREFIX} Invalid offer received`);
+                return;
+            }
+
+            // Check if there's already an ongoing negotiation with this sender
+            if (
+                agentConnections[senderId] &&
+                agentConnections[senderId].signalingState !== 'stable'
+            ) {
+                console.log(
+                    `${LOG_PREFIX} Negotiation already in progress with ${senderId}`,
+                );
+                // Implement role check to resolve glare condition
+                if (shouldIgnoreOffer(senderId)) {
+                    console.log(
+                        `${LOG_PREFIX} Ignoring incoming offer due to glare resolution`,
+                    );
+                    return;
+                }
+            }
+
+            if (!agentConnections[senderId]) {
+                await createConnection(senderId);
+            }
+
+            await agentConnections[senderId].setRemoteDescription(
+                new RTCSessionDescription({ type: 'offer', sdp }),
+            );
+            const answer = await agentConnections[senderId].createAnswer();
+            await agentConnections[senderId].setLocalDescription(answer);
+
+            if (answer.sdp) {
+                socket?.emit(
+                    EPacketType.AGENT_Answer,
+                    new C_AGENT_Answer_Packet({
+                        senderId,
+                        sdp: answer.sdp,
+                    }),
+                );
+            }
+        };
+
+        const shouldIgnoreOffer = (senderId: string) => {
+            // Assuming localAgentId is defined somewhere in your context
+            return (TEMP_agentId ?? '').s > senderId; // Ignore if local agent ID is higher
+        };
+    }
 
     export namespace Audio {
         let audioContext: AudioContext | null = null;

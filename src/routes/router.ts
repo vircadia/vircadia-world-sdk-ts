@@ -44,8 +44,6 @@ export { router as MetaRequest };
 
 import { Server, Socket } from 'socket.io';
 
-const TEMP_CAN_CONNECT_TO_SELF_VIA_WORLDTRANSPORT = true;
-
 let WorldTransportServer: Server | null = null;
 
 export namespace WorldTransport {
@@ -106,11 +104,16 @@ export namespace WorldTransport {
     }
 
     export namespace Agent {
+        const LOG_PREFIX = '[AGENT]'; // Corrected typo from LOG_PREIX to LOG_PREFIX
+
         export function init(socket: Socket): void {
             socket.on(
                 EPacketType.AGENT_Heartbeat,
                 (data: C_AGENT_Heartbeat_Packet) => {
-                    console.log('Received WORLD_Maintain from:', data.senderId);
+                    console.log(
+                        `${LOG_PREFIX} Received WORLD_Maintain from:`,
+                        data.senderId,
+                    );
                     if (data.senderId) {
                         agentSocketMap.set(data.senderId, socket.id);
                         WorldTransportServer?.emit(
@@ -120,6 +123,9 @@ export namespace WorldTransport {
                                 agentList: Array.from(agentSocketMap.keys()),
                             }),
                         );
+                        console.log(
+                            `${LOG_PREFIX} Updated agent list after heartbeat.`,
+                        );
                     }
                 },
             );
@@ -127,10 +133,9 @@ export namespace WorldTransport {
             socket.on(
                 EPacketType.AGENT_Offer,
                 (offerData: C_AGENT_Offer_Packet) => {
-                    if (offerData.senderId) {
-                        // Ensure senderId is not null
+                    if (offerData.senderId && offerData.receiverId) {
                         console.log(
-                            'Received AGENT_Offer from:',
+                            `${LOG_PREFIX} Received AGENT_Offer from:`,
                             offerData.senderId,
                             'to:',
                             offerData.receiverId
@@ -138,26 +143,16 @@ export namespace WorldTransport {
                                 : offerData.senderId,
                         );
 
-                        if (!TEMP_CAN_CONNECT_TO_SELF_VIA_WORLDTRANSPORT) {
-                            if (offerData.senderId === offerData.receiverId) {
-                                console.log(
-                                    `Should not connect to oneself ${offerData.senderId}`,
-                                );
-                                return;
-                            }
-                        }
-
-                        if (offerData.receiverId) {
-                            socket
-                                .to(offerData.receiverId)
-                                .emit(EPacketType.AGENT_Offer, offerData);
-                        } else {
-                            socket
-                                .to(offerData.senderId)
-                                .emit(EPacketType.AGENT_Offer, offerData);
-                        }
+                        socket
+                            .to(offerData.receiverId)
+                            .emit(EPacketType.AGENT_Offer, offerData);
+                        console.log(
+                            `${LOG_PREFIX} Offer routed to receiverId: ${offerData.receiverId}`,
+                        );
                     } else {
-                        console.log('Invalid senderId received in AGENT_Offer');
+                        console.log(
+                            `${LOG_PREFIX} Invalid senderId/receiverId received in AGENT_Offer`,
+                        );
                     }
                 },
             );
@@ -165,30 +160,25 @@ export namespace WorldTransport {
             socket.on(
                 EPacketType.AGENT_Answer,
                 (answerData: C_AGENT_Answer_Packet) => {
-                    if (answerData.senderId) {
-                        // Ensure senderId is not null
+                    if (answerData.senderId && answerData.receiverId) {
                         console.log(
-                            'Received AGENT_Answer from:',
+                            `${LOG_PREFIX} Received AGENT_Answer from:`,
                             answerData.senderId,
                             'to:',
                             answerData.receiverId
                                 ? answerData.receiverId
                                 : answerData.senderId,
                         );
-                        if (answerData.receiverId) {
-                            socket
-                                .to(answerData.receiverId)
-                                .emit(EPacketType.AGENT_Answer, answerData);
-                        } else if (
-                            TEMP_CAN_CONNECT_TO_SELF_VIA_WORLDTRANSPORT
-                        ) {
-                            socket
-                                .to(answerData.senderId)
-                                .emit(EPacketType.AGENT_Answer, answerData);
-                        }
+
+                        socket
+                            .to(answerData.receiverId)
+                            .emit(EPacketType.AGENT_Answer, answerData);
+                        console.log(
+                            `${LOG_PREFIX} Answer routed to receiverId: ${answerData.receiverId}`,
+                        );
                     } else {
                         console.log(
-                            'Invalid senderId received in AGENT_Answer',
+                            `${LOG_PREFIX} Invalid senderId/receiverId received in AGENT_Answer`,
                         );
                     }
                 },
@@ -197,37 +187,24 @@ export namespace WorldTransport {
             socket.on(
                 EPacketType.AGENT_Candidate,
                 (candidateData: C_AGENT_Candidate_Packet) => {
-                    if (candidateData.senderId) {
-                        // Ensure senderId is not null
+                    if (candidateData.senderId && candidateData.receiverId) {
                         console.log(
-                            'Received AGENT_Candidate from:',
+                            `${LOG_PREFIX} Received AGENT_Candidate from:`,
                             candidateData.senderId,
                             'to:',
                             candidateData.receiverId
                                 ? candidateData.receiverId
                                 : candidateData.senderId,
                         );
-                        // Emit the ICE candidate to the specific user
-                        if (candidateData.receiverId) {
-                            socket
-                                .to(candidateData.receiverId)
-                                .emit(
-                                    EPacketType.AGENT_Candidate,
-                                    candidateData,
-                                );
-                        } else if (
-                            TEMP_CAN_CONNECT_TO_SELF_VIA_WORLDTRANSPORT
-                        ) {
-                            socket
-                                .to(candidateData.senderId)
-                                .emit(
-                                    EPacketType.AGENT_Candidate,
-                                    candidateData,
-                                );
-                        }
+                        socket
+                            .to(candidateData.receiverId)
+                            .emit(EPacketType.AGENT_Candidate, candidateData);
+                        console.log(
+                            `${LOG_PREFIX} Candidate routed to receiverId: ${candidateData.receiverId}`,
+                        );
                     } else {
                         console.log(
-                            'Invalid senderId received in AGENT_Candidate',
+                            `${LOG_PREFIX} Invalid senderId/receiverId received in AGENT_Candidate`,
                         );
                     }
                 },
