@@ -1,19 +1,20 @@
 export enum EPacketType {
-    WORLD_Maintain = 'world-maintain-packet',
-    PEER_Offer = 'peer-offer-packet',
-    PEER_Answer = 'peer-answer-packet',
-    PEER_Candidate = 'peer-candidate-packet',
+    AGENT_Heartbeat = 'world-agent-heartbeat-packet',
+    WORLD_AgentList = 'world-agent-list-packet',
+    AGENT_Offer = 'agent-offer-packet',
+    AGENT_Answer = 'agent-answer-packet',
+    AGENT_Candidate = 'agent-candidate-packet',
     AUDIO = 'audio-packet',
 }
 
-interface IBasePacket {
+interface I_BASE_Packet {
     type: EPacketType;
     senderId: string | null;
     receiverId?: string | null;
 }
 
-export class C_PEER_Offer_Packet implements IBasePacket {
-    type: EPacketType.PEER_Offer = EPacketType.PEER_Offer;
+export class C_AGENT_Offer_Packet implements I_BASE_Packet {
+    type: EPacketType.AGENT_Offer = EPacketType.AGENT_Offer;
     senderId: string | null;
     receiverId?: string | null;
     sdp: string;
@@ -24,8 +25,8 @@ export class C_PEER_Offer_Packet implements IBasePacket {
     }
 }
 
-export class C_PEER_Answer_Packet implements IBasePacket {
-    type: EPacketType.PEER_Answer = EPacketType.PEER_Answer;
+export class C_AGENT_Answer_Packet implements I_BASE_Packet {
+    type: EPacketType.AGENT_Answer = EPacketType.AGENT_Answer;
     senderId: string | null;
     receiverId?: string | null;
     sdp: string;
@@ -36,8 +37,8 @@ export class C_PEER_Answer_Packet implements IBasePacket {
     }
 }
 
-export class C_PEER_Candidate_Packet implements IBasePacket {
-    type: EPacketType.PEER_Candidate = EPacketType.PEER_Candidate;
+export class C_AGENT_Candidate_Packet implements I_BASE_Packet {
+    type: EPacketType.AGENT_Candidate = EPacketType.AGENT_Candidate;
     senderId: string | null;
     receiverId?: string | null;
     candidate: RTCIceCandidateInit;
@@ -51,8 +52,8 @@ export class C_PEER_Candidate_Packet implements IBasePacket {
     }
 }
 
-export class C_WORLD_Maintain_Packet implements IBasePacket {
-    type: EPacketType.WORLD_Maintain = EPacketType.WORLD_Maintain;
+export class C_AGENT_Heartbeat_Packet implements I_BASE_Packet {
+    type: EPacketType.AGENT_Heartbeat = EPacketType.AGENT_Heartbeat;
     senderId: string | null;
 
     constructor(data: { senderId: string | null }) {
@@ -60,7 +61,18 @@ export class C_WORLD_Maintain_Packet implements IBasePacket {
     }
 }
 
-export class C_AUDIO_Packet implements IBasePacket {
+export class C_WORLD_AgentList_Packet implements I_BASE_Packet {
+    type: EPacketType.WORLD_AgentList = EPacketType.WORLD_AgentList;
+    senderId: string | null;
+    agentList: string[];
+
+    constructor(data: { senderId: string | null; agentList: string[] }) {
+        this.senderId = data.senderId;
+        this.agentList = data.agentList;
+    }
+}
+
+export class C_AUDIO_Packet implements I_BASE_Packet {
     type: EPacketType.AUDIO = EPacketType.AUDIO;
     audioData: ArrayBuffer | null;
     audioPosition: {

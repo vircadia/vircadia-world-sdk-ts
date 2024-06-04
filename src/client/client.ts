@@ -2,10 +2,11 @@ import { io, Socket } from 'socket.io-client';
 import {
     EPacketType,
     C_AUDIO_Packet,
-    C_WORLD_Maintain_Packet,
-    C_PEER_Candidate_Packet,
-    C_PEER_Offer_Packet,
-    C_PEER_Answer_Packet,
+    C_AGENT_Heartbeat_Packet,
+    C_AGENT_Candidate_Packet,
+    C_AGENT_Offer_Packet,
+    C_AGENT_Answer_Packet,
+    C_WORLD_AgentList_Packet,
 } from '../routes/meta';
 
 // FIXME: This should be defined in config.
@@ -57,7 +58,7 @@ export namespace Client {
             socket = io(`${data.host}:${data.port}`, {});
 
             Audio.init();
-            Peer.init();
+            Agent.init();
 
             // Listening to events
             socket.on('connect', () => {
@@ -82,45 +83,47 @@ export namespace Client {
 
         const sendMaintainPacket = () => {
             socket?.emit(
-                EPacketType.WORLD_Maintain,
-                new C_WORLD_Maintain_Packet({
+                EPacketType.AGENT_Heartbeat,
+                new C_AGENT_Heartbeat_Packet({
                     senderId: TEMP_userId,
                 }),
             );
         };
     }
 
-    export namespace Peer {
-        const peerConnections: { [key: string]: RTCPeerConnection } = {};
+    export namespace Agent {
+        const agentConnections: { [key: string]: RTCPeerConnection } = {};
 
         export const init = () => {
             socket?.on(
-                EPacketType.PEER_Offer,
-                async (message: C_PEER_Offer_Packet) => {
+                EPacketType.AGENT_Offer,
+                async (message: C_AGENT_Offer_Packet) => {
                     const { senderId } = message;
                     if (!senderId) {
                         console.error(
-                            'Invalid senderId received in PEER_Offer',
+                            'Invalid senderId received in AGENT_Offer',
                         );
                         return;
                     }
-                    if (!peerConnections[senderId]) {
+                    if (!agentConnections[senderId]) {
                         createConnection(senderId);
                     }
-                    await peerConnections[senderId].setRemoteDescription(
+                    await agentConnections[senderId].setRemoteDescription(
                         new RTCSessionDescription({
                             type: 'offer',
                             sdp: message.sdp,
                         }),
                     );
                     const answer =
-                        await peerConnections[senderId].createAnswer();
-                    await peerConnections[senderId].setLocalDescription(answer);
+                        await agentConnections[senderId].createAnswer();
+                    await agentConnections[senderId].setLocalDescription(
+                        answer,
+                    );
 
                     if (answer.sdp) {
                         socket?.emit(
-                            EPacketType.PEER_Answer,
-                            new C_PEER_Answer_Packet({
+                            EPacketType.AGENT_Answer,
+                            new C_AGENT_Answer_Packet({
                                 senderId,
                                 sdp: answer.sdp,
                             }),
@@ -130,19 +133,19 @@ export namespace Client {
             );
 
             socket?.on(
-                EPacketType.PEER_Answer,
-                async (message: C_PEER_Answer_Packet) => {
+                EPacketType.AGENT_Answer,
+                async (message: C_AGENT_Answer_Packet) => {
                     const { senderId } = message;
                     if (!senderId) {
                         console.error(
-                            'Invalid senderId received in PEER_Answer',
+                            'Invalid senderId received in AGENT_Answer',
                         );
                         return;
                     }
-                    if (!peerConnections[senderId]) {
+                    if (!agentConnections[senderId]) {
                         createConnection(senderId);
                     }
-                    await peerConnections[senderId].setRemoteDescription(
+                    await agentConnections[senderId].setRemoteDescription(
                         new RTCSessionDescription({
                             type: 'answer',
                             sdp: message.sdp,
@@ -152,47 +155,86 @@ export namespace Client {
             );
 
             socket?.on(
-                EPacketType.PEER_Candidate,
-                async (message: C_PEER_Candidate_Packet) => {
+                EPacketType.AGENT_Candidate,
+                async (message: C_AGENT_Candidate_Packet) => {
                     const { senderId, candidate } = message;
                     if (!senderId) {
                         console.error(
-                            'Invalid senderId received in PEER_Candidate',
+                            'Invalid senderId received in AGENT_Candidate',
                         );
                         return;
                     }
-                    if (!peerConnections[senderId]) {
+                    if (!agentConnections[senderId]) {
                         createConnection(senderId);
                     }
-                    await peerConnections[senderId].addIceCandidate(
+                    await agentConnections[senderId].addIceCandidate(
                         new RTCIceCandidate(candidate),
                     );
+                },
+            );
+
+            socket?.on(
+                EPacketType.WORLD_AgentList,
+                (message: C_WORLD_AgentList_Packet) => {
+                    const { agentList } = message;
+                    console.log('Received agent list:', agentList);
+
+                    // Remove connections for agents no longer present
+                    Object.keys(agentConnections).forEach((agentId) => {
+                        if (!agentList.includes(agentId)) {
+                            closeAndRemoveConnection(agentId);
+                        }
+                    });
+
+                    // Establish new connections for new agents
+                    agentList.forEach((agentId) => {
+                        if (!agentConnections[agentId]) {
+                            Agent.createConnection(agentId);
+                        }
+                    });
                 },
             );
         };
 
         export const createConnection = (userId: string) => {
-            if (!peerConnections[userId]) {
-                const newPeerConnection = new RTCPeerConnection();
-                peerConnections[userId] = newPeerConnection;
+            if (agentConnections[userId]) {
+                console.log(`Connection already exists for user ${userId}`);
+                return; // Exit if a connection already exists
+            }
 
-                newPeerConnection.onicecandidate = (event) => {
-                    if (event.candidate) {
-                        socket?.emit(
-                            EPacketType.PEER_Candidate,
-                            new C_PEER_Candidate_Packet({
-                                senderId: userId,
-                                candidate: event.candidate,
-                            }),
-                        );
-                    }
-                };
+            const newPeerConnection = new RTCPeerConnection({
+                iceServers: TEMP_ICE_SERVERS, // Ensure to use ICE servers configuration
+            });
+            agentConnections[userId] = newPeerConnection;
 
-                newPeerConnection.ontrack = (event) => {
-                    const remoteStream = event.streams[0];
-                    // Handle the remote stream (e.g., play audio)
-                    // ...
-                };
+            newPeerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket?.emit(
+                        EPacketType.AGENT_Candidate,
+                        new C_AGENT_Candidate_Packet({
+                            senderId: userId,
+                            candidate: event.candidate,
+                        }),
+                    );
+                }
+            };
+
+            newPeerConnection.ontrack = (event) => {
+                const remoteStream = event.streams[0];
+                // Handle the remote stream (e.g., play audio)
+                // ...
+            };
+        };
+
+        export const closeAndRemoveConnection = (agentId: string) => {
+            if (agentConnections[agentId]) {
+                // Close the connection if needed, e.g., close any data channels or streams
+                agentConnections[agentId].close();
+                // Remove from the agentConnections object
+                delete agentConnections[agentId];
+                console.log(
+                    `Connection closed and removed for agent ${agentId}`,
+                );
             }
         };
 
@@ -201,21 +243,21 @@ export namespace Client {
                 audio: true,
             });
             localStream.getTracks().forEach((track) => {
-                peerConnections[userId].addTrack(track, localStream);
+                agentConnections[userId].addTrack(track, localStream);
             });
         };
 
         export const createOffer = async (userId: string) => {
-            if (!peerConnections[userId]) {
+            if (!agentConnections[userId]) {
                 console.error(
-                    'Peer connection not initialized for user:',
+                    'Agent connection not initialized for user:',
                     userId,
                 );
                 return;
             }
 
-            const offer = await peerConnections[userId].createOffer();
-            await peerConnections[userId].setLocalDescription(offer);
+            const offer = await agentConnections[userId].createOffer();
+            await agentConnections[userId].setLocalDescription(offer);
 
             if (offer.sdp === undefined) {
                 console.error('Offer SDP is undefined for user:', userId);
@@ -223,8 +265,8 @@ export namespace Client {
             }
 
             socket?.emit(
-                EPacketType.PEER_Offer,
-                new C_PEER_Offer_Packet({
+                EPacketType.AGENT_Offer,
+                new C_AGENT_Offer_Packet({
                     senderId: userId,
                     sdp: offer.sdp,
                 }),

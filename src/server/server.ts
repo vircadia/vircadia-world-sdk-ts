@@ -10,7 +10,7 @@ const TEMP_ALLOWED_METHODS_REQ = 'GET, POST, PUT, DELETE, OPTIONS';
 const TEMP_ALLOWED_HEADERS_REQ = 'Content-Type, Authorization';
 const TEMP_ALLOWED_METHODS_WT = 'GET, POST';
 
-function main() {
+function init() {
     const expressApp = express();
     const server = createServer(expressApp);
 
@@ -41,4 +41,4 @@ function main() {
     });
 }
 
-void main();
+void init();
