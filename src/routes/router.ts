@@ -44,15 +44,21 @@ export { router as MetaRequest };
 
 import { Server, Socket } from 'socket.io';
 
+const TEMP_CAN_CONNECT_TO_SELF_VIA_WORLDTRANSPORT = true;
+
+let WorldTransportServer: Server | null = null;
+
 export namespace WorldTransport {
-    const agentSocketMap = new Map<string, string>(); // Maps userId to socketId
+    const agentSocketMap = new Map<string, string>(); // Maps agentId to socketId
 
     let signalActiveUsersInterval: NodeJS.Timeout | null = null;
 
     export function Router(io: Server): void {
+        WorldTransportServer = io;
+
         signalActiveUsersInterval = setInterval(() => {
             const connectedPeers = Array.from(agentSocketMap.keys());
-            io.emit(
+            WorldTransportServer?.emit(
                 EPacketType.WORLD_AgentList,
                 new C_WORLD_AgentList_Packet({
                     senderId: TEMP_ROUTER_USER_ID,
@@ -65,46 +71,49 @@ export namespace WorldTransport {
             );
         }, 1000);
 
-        io.on('connection', (socket) => {
+        WorldTransportServer?.on('connection', (socket) => {
             console.log('A user connected:', socket.id);
 
             socket.on('disconnect', () => {
-                console.log('User disconnected:', socket.id);
+                socket.removeAllListeners();
 
-                // Reverse lookup to find userId by socket.id
-                let userId = null;
+                // Reverse lookup to find agentId by socket.id
+                let agentId = null;
                 for (const [key, value] of agentSocketMap.entries()) {
                     if (value === socket.id) {
-                        userId = key;
+                        agentId = key;
                         break;
                     }
                 }
 
-                if (userId) {
-                    agentSocketMap.delete(userId);
+                if (agentId) {
+                    agentSocketMap.delete(agentId);
                 }
-                io.emit(
+                WorldTransportServer?.emit(
                     EPacketType.WORLD_AgentList,
                     new C_WORLD_AgentList_Packet({
                         senderId: TEMP_ROUTER_USER_ID,
                         agentList: Array.from(agentSocketMap.keys()),
                     }),
                 );
+
+                console.log('User disconnected:', socket.id);
             });
 
-            // socket.on('audioStream', (audioData) => {
-            //     // Broadcast audio data to all clients except the sender
-            //     console.log('audioStream received:', audioData);
-            //     socket.broadcast.emit('audioStream', audioData);
-            // });
+            Agent.init(socket);
+            Audio.init(socket);
+        });
+    }
 
+    export namespace Agent {
+        export function init(socket: Socket): void {
             socket.on(
                 EPacketType.AGENT_Heartbeat,
                 (data: C_AGENT_Heartbeat_Packet) => {
                     console.log('Received WORLD_Maintain from:', data.senderId);
                     if (data.senderId) {
                         agentSocketMap.set(data.senderId, socket.id);
-                        io.emit(
+                        WorldTransportServer?.emit(
                             EPacketType.WORLD_AgentList,
                             new C_WORLD_AgentList_Packet({
                                 senderId: TEMP_ROUTER_USER_ID,
@@ -114,15 +123,6 @@ export namespace WorldTransport {
                     }
                 },
             );
-
-            socket.on(EPacketType.AUDIO, (audioData: C_AUDIO_Packet) => {
-                // Broadcast audio data to all clients including the sender
-                console.log(
-                    'Sending audio packet to all clients. Total connections:',
-                    io.engine.clientsCount,
-                );
-                io.emit(EPacketType.AUDIO, audioData); // Changed from socket.broadcast.emit to io.emit
-            });
 
             socket.on(
                 EPacketType.AGENT_Offer,
@@ -137,6 +137,15 @@ export namespace WorldTransport {
                                 ? offerData.receiverId
                                 : offerData.senderId,
                         );
+
+                        if (!TEMP_CAN_CONNECT_TO_SELF_VIA_WORLDTRANSPORT) {
+                            if (offerData.senderId === offerData.receiverId) {
+                                console.log(
+                                    `Should not connect to oneself ${offerData.senderId}`,
+                                );
+                                return;
+                            }
+                        }
 
                         if (offerData.receiverId) {
                             socket
@@ -170,7 +179,9 @@ export namespace WorldTransport {
                             socket
                                 .to(answerData.receiverId)
                                 .emit(EPacketType.AGENT_Answer, answerData);
-                        } else {
+                        } else if (
+                            TEMP_CAN_CONNECT_TO_SELF_VIA_WORLDTRANSPORT
+                        ) {
                             socket
                                 .to(answerData.senderId)
                                 .emit(EPacketType.AGENT_Answer, answerData);
@@ -204,7 +215,9 @@ export namespace WorldTransport {
                                     EPacketType.AGENT_Candidate,
                                     candidateData,
                                 );
-                        } else {
+                        } else if (
+                            TEMP_CAN_CONNECT_TO_SELF_VIA_WORLDTRANSPORT
+                        ) {
                             socket
                                 .to(candidateData.senderId)
                                 .emit(
@@ -219,6 +232,25 @@ export namespace WorldTransport {
                     }
                 },
             );
-        });
+        }
+    }
+
+    export namespace Audio {
+        export function init(socket: Socket): void {
+            // socket.on('audioStream', (audioData) => {
+            //     // Broadcast audio data to all clients except the sender
+            //     console.log('audioStream received:', audioData);
+            //     socket.broadcast.emit('audioStream', audioData);
+            // });
+
+            socket.on(EPacketType.AUDIO, (audioData: C_AUDIO_Packet) => {
+                // Broadcast audio data to all clients including the sender
+                console.log(
+                    'Sending audio packet to all clients. Total connections:',
+                    WorldTransportServer?.engine.clientsCount,
+                );
+                WorldTransportServer?.emit(EPacketType.AUDIO, audioData); // Changed from socket.broadcast.emit to WorldTransportServer?.emit
+            });
+        }
     }
 }

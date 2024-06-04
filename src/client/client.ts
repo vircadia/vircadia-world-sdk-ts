@@ -18,7 +18,7 @@ const TEMP_ICE_SERVERS = [
 
 export namespace Client {
     let socket: Socket | null = null;
-    let TEMP_userId: string | null = null;
+    let TEMP_agentId: string | null = null;
     // FIXME: This is temp, avatars shouldn't exist, all avatars should simply be entities.
     let TEMP_position: {
         x: number | null;
@@ -77,15 +77,13 @@ export namespace Client {
                 );
                 console.log('Disconnected from server');
             });
-
-            // Set up listeners.
         };
 
         const sendMaintainPacket = () => {
             socket?.emit(
                 EPacketType.AGENT_Heartbeat,
                 new C_AGENT_Heartbeat_Packet({
-                    senderId: TEMP_userId,
+                    senderId: TEMP_agentId,
                 }),
             );
         };
@@ -142,6 +140,7 @@ export namespace Client {
                         );
                         return;
                     }
+
                     if (!agentConnections[senderId]) {
                         createConnection(senderId);
                     }
@@ -196,23 +195,23 @@ export namespace Client {
             );
         };
 
-        export const createConnection = (userId: string) => {
-            if (agentConnections[userId]) {
-                console.log(`Connection already exists for user ${userId}`);
+        export const createConnection = (agentId: string) => {
+            if (agentConnections[agentId]) {
+                console.log(`Connection already exists for user ${agentId}`);
                 return; // Exit if a connection already exists
             }
 
             const newPeerConnection = new RTCPeerConnection({
                 iceServers: TEMP_ICE_SERVERS, // Ensure to use ICE servers configuration
             });
-            agentConnections[userId] = newPeerConnection;
+            agentConnections[agentId] = newPeerConnection;
 
             newPeerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
                     socket?.emit(
                         EPacketType.AGENT_Candidate,
                         new C_AGENT_Candidate_Packet({
-                            senderId: userId,
+                            senderId: agentId,
                             candidate: event.candidate,
                         }),
                     );
@@ -238,36 +237,36 @@ export namespace Client {
             }
         };
 
-        export const addLocalStream = async (userId: string) => {
+        export const addLocalStream = async (agentId: string) => {
             const localStream = await navigator.mediaDevices.getUserMedia({
                 audio: true,
             });
             localStream.getTracks().forEach((track) => {
-                agentConnections[userId].addTrack(track, localStream);
+                agentConnections[agentId].addTrack(track, localStream);
             });
         };
 
-        export const createOffer = async (userId: string) => {
-            if (!agentConnections[userId]) {
+        export const createOffer = async (agentId: string) => {
+            if (!agentConnections[agentId]) {
                 console.error(
                     'Agent connection not initialized for user:',
-                    userId,
+                    agentId,
                 );
                 return;
             }
 
-            const offer = await agentConnections[userId].createOffer();
-            await agentConnections[userId].setLocalDescription(offer);
+            const offer = await agentConnections[agentId].createOffer();
+            await agentConnections[agentId].setLocalDescription(offer);
 
             if (offer.sdp === undefined) {
-                console.error('Offer SDP is undefined for user:', userId);
+                console.error('Offer SDP is undefined for user:', agentId);
                 return;
             }
 
             socket?.emit(
                 EPacketType.AGENT_Offer,
                 new C_AGENT_Offer_Packet({
-                    senderId: userId,
+                    senderId: agentId,
                     sdp: offer.sdp,
                 }),
             );
@@ -275,11 +274,11 @@ export namespace Client {
     }
 
     export const TEMP_updateMetadataLocally = (metadata: {
-        userId: string;
+        agentId: string;
         position: { x: number; y: number; z: number };
         orientation: { x: number; y: number; z: number };
     }) => {
-        TEMP_userId = metadata.userId;
+        TEMP_agentId = metadata.agentId;
         TEMP_position = metadata.position;
         TEMP_orientation = metadata.orientation;
     };
@@ -382,42 +381,38 @@ export namespace Client {
         };
 
         export function TEMP_streamAudio(stream: MediaStream) {
-            const mediaRecorder = new MediaRecorder(stream, {
-                mimeType: 'audio/webm; codecs=opus',
-            });
-            // const reader = new FileReader();
-
-            mediaRecorder.ondataavailable = async (event) => {
-                const audioBlob = event.data;
-                if (audioBlob.size === 0) {
-                    // Skip processing and sending empty audio data
-                    return;
-                }
-
-                // reader.onloadend = () => {
-                //     const base64String = reader.result as string;
-                //     const base64Data = base64String.split(',')[1]; // Remove the data URL header
-                //     sendAudioPacket({
-                //         audioData: base64Data,
-                //         audioPosition: TEMP_position,
-                //         audioOrientation: TEMP_orientation,
-                //         TEMP_senderId: TEMP_userId,
-                //     });
-                // };
-                // reader.readAsDataURL(audioBlob);
-
-                const arrayBuffer = await audioBlob.arrayBuffer();
-
-                TEMP_sendAudioPacket(
-                    new C_AUDIO_Packet({
-                        audioData: arrayBuffer,
-                        audioPosition: TEMP_position,
-                        audioOrientation: TEMP_orientation,
-                        senderId: TEMP_userId,
-                    }),
-                );
-            };
-            mediaRecorder.start(750); // Emit data every 750 milliseconds (0.75 seconds)
+            // const mediaRecorder = new MediaRecorder(stream, {
+            //     mimeType: 'audio/webm; codecs=opus',
+            // });
+            // // const reader = new FileReader();
+            // mediaRecorder.ondataavailable = async (event) => {
+            //     const audioBlob = event.data;
+            //     if (audioBlob.size === 0) {
+            //         // Skip processing and sending empty audio data
+            //         return;
+            //     }
+            //     // reader.onloadend = () => {
+            //     //     const base64String = reader.result as string;
+            //     //     const base64Data = base64String.split(',')[1]; // Remove the data URL header
+            //     //     sendAudioPacket({
+            //     //         audioData: base64Data,
+            //     //         audioPosition: TEMP_position,
+            //     //         audioOrientation: TEMP_orientation,
+            //     //         TEMP_senderId: TEMP_agentId,
+            //     //     });
+            //     // };
+            //     // reader.readAsDataURL(audioBlob);
+            //     const arrayBuffer = await audioBlob.arrayBuffer();
+            //     TEMP_sendAudioPacket(
+            //         new C_AUDIO_Packet({
+            //             audioData: arrayBuffer,
+            //             audioPosition: TEMP_position,
+            //             audioOrientation: TEMP_orientation,
+            //             senderId: TEMP_agentId,
+            //         }),
+            //     );
+            // };
+            // mediaRecorder.start(750); // Emit data every 750 milliseconds (0.75 seconds)
         }
 
         const TEMP_sendAudioPacket = (audioData: C_AUDIO_Packet) => {
