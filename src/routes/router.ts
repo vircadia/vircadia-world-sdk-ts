@@ -1,9 +1,6 @@
 import {
     EPacketType,
     C_AUDIO_Packet,
-    C_AGENT_Offer_Packet,
-    C_AGENT_Answer_Packet,
-    C_AGENT_Candidate_Packet,
     C_AGENT_Heartbeat_Packet,
     C_WORLD_AgentList_Packet,
 } from './meta';
@@ -98,15 +95,14 @@ export namespace WorldTransport {
                 console.log('User disconnected:', socket.id);
             });
 
-            Agent.init(socket);
-            Audio.init(socket);
+            Agent.InitializeAgentModule(socket);
         });
     }
 
     export namespace Agent {
         const LOG_PREFIX = '[AGENT]'; // Corrected typo from LOG_PREIX to LOG_PREFIX
 
-        export function init(socket: Socket): void {
+        export function InitializeAgentModule(socket: Socket): void {
             socket.on(
                 EPacketType.AGENT_Heartbeat,
                 (data: C_AGENT_Heartbeat_Packet) => {
@@ -129,105 +125,6 @@ export namespace WorldTransport {
                     }
                 },
             );
-
-            socket.on(
-                EPacketType.AGENT_Offer,
-                (offerData: C_AGENT_Offer_Packet) => {
-                    if (offerData.senderId && offerData.receiverId) {
-                        console.log(
-                            `${LOG_PREFIX} Received AGENT_Offer from:`,
-                            offerData.senderId,
-                            'to:',
-                            offerData.receiverId
-                                ? offerData.receiverId
-                                : offerData.senderId,
-                        );
-
-                        socket
-                            .to(offerData.receiverId)
-                            .emit(EPacketType.AGENT_Offer, offerData);
-                        console.log(
-                            `${LOG_PREFIX} Offer routed to receiverId: ${offerData.receiverId}`,
-                        );
-                    } else {
-                        console.log(
-                            `${LOG_PREFIX} Invalid senderId/receiverId received in AGENT_Offer`,
-                        );
-                    }
-                },
-            );
-
-            socket.on(
-                EPacketType.AGENT_Answer,
-                (answerData: C_AGENT_Answer_Packet) => {
-                    if (answerData.senderId && answerData.receiverId) {
-                        console.log(
-                            `${LOG_PREFIX} Received AGENT_Answer from:`,
-                            answerData.senderId,
-                            'to:',
-                            answerData.receiverId
-                                ? answerData.receiverId
-                                : answerData.senderId,
-                        );
-
-                        socket
-                            .to(answerData.receiverId)
-                            .emit(EPacketType.AGENT_Answer, answerData);
-                        console.log(
-                            `${LOG_PREFIX} Answer routed to receiverId: ${answerData.receiverId}`,
-                        );
-                    } else {
-                        console.log(
-                            `${LOG_PREFIX} Invalid senderId/receiverId received in AGENT_Answer`,
-                        );
-                    }
-                },
-            );
-
-            socket.on(
-                EPacketType.AGENT_Candidate,
-                (candidateData: C_AGENT_Candidate_Packet) => {
-                    if (candidateData.senderId && candidateData.receiverId) {
-                        console.log(
-                            `${LOG_PREFIX} Received AGENT_Candidate from:`,
-                            candidateData.senderId,
-                            'to:',
-                            candidateData.receiverId
-                                ? candidateData.receiverId
-                                : candidateData.senderId,
-                        );
-                        socket
-                            .to(candidateData.receiverId)
-                            .emit(EPacketType.AGENT_Candidate, candidateData);
-                        console.log(
-                            `${LOG_PREFIX} Candidate routed to receiverId: ${candidateData.receiverId}`,
-                        );
-                    } else {
-                        console.log(
-                            `${LOG_PREFIX} Invalid senderId/receiverId received in AGENT_Candidate`,
-                        );
-                    }
-                },
-            );
-        }
-    }
-
-    export namespace Audio {
-        export function init(socket: Socket): void {
-            // socket.on('audioStream', (audioData) => {
-            //     // Broadcast audio data to all clients except the sender
-            //     console.log('audioStream received:', audioData);
-            //     socket.broadcast.emit('audioStream', audioData);
-            // });
-
-            socket.on(EPacketType.AUDIO, (audioData: C_AUDIO_Packet) => {
-                // Broadcast audio data to all clients including the sender
-                console.log(
-                    'Sending audio packet to all clients. Total connections:',
-                    WorldTransportServer?.engine.clientsCount,
-                );
-                WorldTransportServer?.emit(EPacketType.AUDIO, audioData); // Changed from socket.broadcast.emit to WorldTransportServer?.emit
-            });
         }
     }
 }

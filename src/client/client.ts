@@ -1,11 +1,11 @@
+// Agent <-> Server
 import { io, Socket } from 'socket.io-client';
+// Agent <-> Agent
+import { Peer, DataConnection, ConnectionType, MediaConnection } from 'peerjs';
+
 import {
     EPacketType,
-    C_AUDIO_Packet,
     C_AGENT_Heartbeat_Packet,
-    C_AGENT_Candidate_Packet,
-    C_AGENT_Offer_Packet,
-    C_AGENT_Answer_Packet,
     C_WORLD_AgentList_Packet,
 } from '../routes/meta';
 
@@ -40,11 +40,9 @@ export namespace Client {
     };
 
     export const TEMP_updateMetadataLocally = (metadata: {
-        agentId: string;
         position: { x: number; y: number; z: number };
         orientation: { x: number; y: number; z: number };
     }) => {
-        TEMP_agentId = metadata.agentId;
         TEMP_position = metadata.position;
         TEMP_orientation = metadata.orientation;
     };
@@ -58,7 +56,10 @@ export namespace Client {
             // TODO: defaults should be in config
             host: string;
             port: number;
+            agentId: string;
         }) => {
+            TEMP_agentId = data.agentId;
+
             if (socket) {
                 socket.removeAllListeners();
                 socket.close();
@@ -67,8 +68,7 @@ export namespace Client {
 
             socket = io(`${data.host}:${data.port}`, {});
 
-            Audio.init();
-            Agent.init();
+            Agent.InitializeAgentModule(data.agentId);
 
             // Listening to events
             socket.on('connect', () => {
@@ -100,489 +100,283 @@ export namespace Client {
     }
 
     export namespace Agent {
-        const agentConnections: { [key: string]: RTCPeerConnection } = {};
-        const LOG_PREFIX = '[AGENT]';
+        let peer: Peer | null = null;
+        const agentConnections: {
+            [key: string]: {
+                dataConnection: DataConnection | null;
+                mediaConnection: MediaConnection | null;
+            };
+        } = {};
 
-        export const addConnection = (agentId: string) => {
-            if (agentConnections[agentId]) {
-                console.log(
-                    `${LOG_PREFIX} Connection already exists for agent ${agentId}`,
-                );
-                return;
-            }
-
-            console.log(`${LOG_PREFIX} Adding connection for agent ${agentId}`);
-
-            const newConnection = new RTCPeerConnection({
-                iceServers: TEMP_ICE_SERVERS,
+        export const InitializeAgentModule = (agentId: string) => {
+            peer = new Peer(agentId, {
+                host: 'localhost', // or the server's address
+                port: 3000,
+                path: '/myapp',
             });
 
-            newConnection.onconnectionstatechange = () => {
-                console.log(
-                    `${LOG_PREFIX} Connection state changed for agent ${agentId}: ${newConnection.connectionState}`,
-                );
-                if (newConnection.connectionState === 'connected') {
+            peer.on('connection', (conn) => {
+                const remoteAgentId = conn.peer;
+                console.log(`Received connection from agent ${remoteAgentId}`);
+                agentConnections[remoteAgentId] = {
+                    dataConnection: conn,
+                    mediaConnection: null,
+                };
+
+                Audio.TEMP_streamAudio();
+
+                conn.on('data', (data) => {
                     console.log(
-                        `${LOG_PREFIX} Agent ${agentId} is fully connected.`,
+                        `Received data from agent ${remoteAgentId}:`,
+                        data,
                     );
-                } else if (newConnection.connectionState === 'disconnected') {
+                    // Handle received data
+                });
+
+                conn.on('close', () => {
                     console.log(
-                        `${LOG_PREFIX} Agent ${agentId} is disconnected.`,
+                        `Connection closed with agent ${remoteAgentId}`,
                     );
-                    removeConnection(agentId); // Auto-remove on disconnect
-                }
-            };
-
-            // Additional event listeners setup here...
-
-            agentConnections[agentId] = newConnection;
-        };
-
-        export const removeConnection = (agentId: string) => {
-            if (agentConnections[agentId]) {
-                console.log(
-                    `${LOG_PREFIX} Removing connection for agent ${agentId}`,
-                );
-                agentConnections[agentId].close();
-                delete agentConnections[agentId];
-                console.log(
-                    `${LOG_PREFIX} Connection closed and removed for agent ${agentId}`,
-                );
-            }
-        };
-
-        export const init = () => {
-            console.log(`${LOG_PREFIX} Initializing agent connections`);
-
-            socket?.on(
-                EPacketType.AGENT_Offer,
-                async (message: C_AGENT_Offer_Packet) => {
-                    console.log(`${LOG_PREFIX} Received AGENT_Offer`);
-                    const { senderId } = message;
-                    if (!senderId) {
-                        console.error(
-                            `${LOG_PREFIX} Invalid senderId received in AGENT_Offer`,
-                        );
-                        return;
-                    }
-                    if (!agentConnections[senderId]) {
-                        await createConnection(senderId);
-                    }
-                    await agentConnections[senderId].setRemoteDescription(
-                        new RTCSessionDescription({
-                            type: 'offer',
-                            sdp: message.sdp,
-                        }),
-                    );
-                    const answer =
-                        await agentConnections[senderId].createAnswer();
-                    await agentConnections[senderId].setLocalDescription(
-                        answer,
-                    );
-
-                    if (answer.sdp) {
-                        socket?.emit(
-                            EPacketType.AGENT_Answer,
-                            new C_AGENT_Answer_Packet({
-                                senderId,
-                                sdp: answer.sdp,
-                            }),
-                        );
-                    }
-                },
-            );
-
-            socket?.on(
-                EPacketType.AGENT_Answer,
-                async (message: C_AGENT_Answer_Packet) => {
-                    console.log(`${LOG_PREFIX} Received AGENT_Answer`);
-                    const { senderId } = message;
-                    if (!senderId) {
-                        console.error(
-                            `${LOG_PREFIX} Invalid senderId received in AGENT_Answer`,
-                        );
-                        return;
-                    }
-
-                    if (!agentConnections[senderId]) {
-                        await createConnection(senderId);
-                    }
-                    await agentConnections[senderId].setRemoteDescription(
-                        new RTCSessionDescription({
-                            type: 'answer',
-                            sdp: message.sdp,
-                        }),
-                    );
-                },
-            );
-
-            socket?.on(
-                EPacketType.AGENT_Candidate,
-                async (message: C_AGENT_Candidate_Packet) => {
-                    console.log(`${LOG_PREFIX} Received AGENT_Candidate`);
-                    const { senderId, candidate } = message;
-                    if (!senderId) {
-                        console.error(
-                            `${LOG_PREFIX} Invalid senderId received in AGENT_Candidate`,
-                        );
-                        return;
-                    }
-                    if (!agentConnections[senderId]) {
-                        await createConnection(senderId);
-                    }
-                    await agentConnections[senderId].addIceCandidate(
-                        new RTCIceCandidate(candidate),
-                    );
-                },
-            );
+                    delete agentConnections[remoteAgentId];
+                });
+            });
 
             socket?.on(
                 EPacketType.WORLD_AgentList,
                 (message: C_WORLD_AgentList_Packet) => {
-                    console.log(`${LOG_PREFIX} Received WORLD_AgentList`);
+                    console.log('Received WORLD_AgentList');
                     const { agentList } = message;
-                    console.log(
-                        `${LOG_PREFIX} Received agent list:`,
-                        agentList,
-                    );
+                    console.log('Received agent list:', agentList);
 
                     // Remove connections for agents no longer present
-                    Object.keys(agentConnections).forEach((agentId) => {
-                        if (!agentList.includes(agentId)) {
-                            closeAndRemoveConnection(agentId);
+                    Object.keys(agentConnections).forEach((foundAgentId) => {
+                        if (!agentList.includes(foundAgentId)) {
+                            disconnect(foundAgentId);
                         }
                     });
 
                     // Establish new connections for new agents
-                    agentList.forEach(async (agentId) => {
-                        if (!agentConnections[agentId]) {
-                            await createConnection(agentId);
+                    agentList.forEach((foundAgentId) => {
+                        if (
+                            foundAgentId !== peer?.id &&
+                            !agentConnections[foundAgentId]
+                        ) {
+                            connect(foundAgentId);
                         }
                     });
                 },
             );
         };
 
-        export const createConnection = async (agentId: string) => {
-            if (agentConnections[agentId]) {
-                console.log(
-                    `${LOG_PREFIX} Connection already exists for user ${agentId}`,
-                );
-                return; // Exit if a connection already exists
-            }
+        export const connect = (agentId: string) => {
+            if (peer) {
+                const dataConn = peer.connect(agentId);
+                agentConnections[agentId] = {
+                    dataConnection: dataConn,
+                    mediaConnection: null,
+                };
 
-            console.info(
-                `${LOG_PREFIX} Attempting to create connection for agent:`,
-                agentId,
-            );
+                dataConn.on('open', () => {
+                    console.log(`Connected to agent ${agentId}`);
+                });
 
-            const newPeerConnection = new RTCPeerConnection({
-                iceServers: TEMP_ICE_SERVERS, // Ensure to use ICE servers configuration
-            });
-            agentConnections[agentId] = newPeerConnection;
+                dataConn.on('data', (data) => {
+                    console.log(`Received data from agent ${agentId}:`, data);
+                    // Handle received data
+                });
 
-            await createOffer(agentId);
-
-            newPeerConnection.onicecandidate = (event) => {
-                console.log(
-                    `${LOG_PREFIX} onicecandidate event triggered for agent ${agentId}`,
-                );
-                if (event.candidate) {
-                    socket?.emit(
-                        EPacketType.AGENT_Candidate,
-                        new C_AGENT_Candidate_Packet({
-                            senderId: agentId,
-                            candidate: event.candidate,
-                        }),
-                    );
-                }
-            };
-
-            newPeerConnection.oniceconnectionstatechange = () => {
-                console.log(
-                    `${LOG_PREFIX} ICE connection state changed for agent ${agentId}: ${newPeerConnection.connectionState}`,
-                );
-            };
-
-            newPeerConnection.onconnectionstatechange = () => {
-                console.log(
-                    `${LOG_PREFIX} Connection state changed for agent ${agentId}: ${newPeerConnection.connectionState}`,
-                );
-                if (newPeerConnection.connectionState === 'connected') {
-                    console.log(
-                        `${LOG_PREFIX} Agent ${agentId} is fully connected.`,
-                    );
-                } else if (
-                    newPeerConnection.connectionState === 'disconnected'
-                ) {
-                    console.log(
-                        `${LOG_PREFIX} Agent ${agentId} is disconnected.`,
-                    );
-                    removeConnection(agentId); // Auto-remove on disconnect
-                }
-            };
-
-            newPeerConnection.onsignalingstatechange = () => {
-                console.log(
-                    `${LOG_PREFIX} Signaling state changed for agent ${agentId}: ${newPeerConnection.connectionState}`,
-                );
-            };
-
-            newPeerConnection.ontrack = (event) => {
-                console.log(
-                    `${LOG_PREFIX} ontrack event triggered for agent ${agentId}`,
-                );
-                const remoteStream = event.streams[0];
-                // Handle the remote stream (e.g., play audio)
-                // ...
-            };
-        };
-
-        export const closeAndRemoveConnection = (agentId: string) => {
-            if (agentConnections[agentId]) {
-                console.log(
-                    `${LOG_PREFIX} Closing and removing connection for agent ${agentId}`,
-                );
-                // Close the connection if needed, e.g., close any data channels or streams
-                agentConnections[agentId].close();
-                // Remove from the agentConnections object
-                delete agentConnections[agentId];
-                console.log(
-                    `${LOG_PREFIX} Connection closed and removed for agent ${agentId}`,
-                );
+                dataConn.on('close', () => {
+                    console.log(`Connection closed with agent ${agentId}`);
+                    delete agentConnections[agentId];
+                });
             }
         };
 
-        export const addLocalStream = async (agentId: string) => {
-            console.log(
-                `${LOG_PREFIX} Adding local stream for agent ${agentId}`,
-            );
-            const localStream = await navigator.mediaDevices.getUserMedia({
-                audio: true,
-            });
-            localStream.getTracks().forEach((track) => {
-                agentConnections[agentId].addTrack(track, localStream);
-            });
-        };
-
-        export const createOffer = async (agentId: string) => {
-            console.log(`${LOG_PREFIX} Creating offer for agent ${agentId}`);
-            if (!agentConnections[agentId]) {
-                console.error(
-                    `${LOG_PREFIX} Agent connection not initialized for user:`,
-                    agentId,
-                );
-                return;
-            }
-
-            const offer = await agentConnections[agentId].createOffer();
-            await agentConnections[agentId].setLocalDescription(offer);
-
-            if (offer.sdp === undefined) {
-                console.error(
-                    `${LOG_PREFIX} Offer SDP is undefined for user:`,
-                    agentId,
-                );
-                return;
-            }
-
-            socket?.emit(
-                EPacketType.AGENT_Offer,
-                new C_AGENT_Offer_Packet({
-                    senderId: agentId,
-                    sdp: offer.sdp,
-                }),
-            );
-        };
-
-        export const handleIncomingOffer = async (
-            message: C_AGENT_Offer_Packet,
-        ) => {
-            const { senderId, sdp } = message;
-            if (!senderId || !sdp) {
-                console.error(`${LOG_PREFIX} Invalid offer received`);
-                return;
-            }
-
-            // Check if there's already an ongoing negotiation with this sender
+        export const sendData = (agentId: string, data: any) => {
             if (
-                agentConnections[senderId] &&
-                agentConnections[senderId].signalingState !== 'stable'
+                agentConnections[agentId] &&
+                agentConnections[agentId].dataConnection
             ) {
-                console.log(
-                    `${LOG_PREFIX} Negotiation already in progress with ${senderId}`,
-                );
-                // Implement role check to resolve glare condition
-                if (shouldIgnoreOffer(senderId)) {
-                    console.log(
-                        `${LOG_PREFIX} Ignoring incoming offer due to glare resolution`,
+                void agentConnections[agentId].dataConnection.send(data);
+            }
+        };
+
+        export const disconnect = (agentId: string) => {
+            if (agentConnections[agentId]) {
+                agentConnections[agentId].dataConnection?.close();
+                agentConnections[agentId].mediaConnection?.close();
+                delete agentConnections[agentId];
+            }
+        };
+
+        export namespace Audio {
+            const AUDIO_LOG_PREFIX = '[AUDIO]';
+
+            let audioContext: AudioContext | null = null;
+            // eslint-disable-next-line prefer-const
+            export let TEMP_mediaStream: MediaStream | null = null;
+
+            export const InitializeAudioModule = () => {
+                if (!audioContext) {
+                    audioContext = new AudioContext();
+                }
+
+                // socket?.on(EPacketType.AUDIO, async (audioData: C_AUDIO_Packet) => {
+                //     console.log('#### Received audio stream ####');
+                //     if (!audioData.audioData) {
+                //         console.info('#### No audio data, not playing audio. ####');
+                //         return;
+                //     }
+                //     if (!TEMP_audioContext) {
+                //         TEMP_audioContext = new AudioContext();
+                //     }
+                //     // const audioDataAsBase64 = audioData.audioData;
+                //     // const binaryString = atob(audioDataAsBase64);
+                //     // const len = binaryString.length;
+                //     // const bytes = new Uint8Array(len);
+                //     // for (let i = 0; i < len; i++) {
+                //     //     bytes[i] = binaryString.charCodeAt(i);
+                //     // }
+                //     // const uint8Array = new Uint8Array(bytes);
+                //     const audioArrayBuffer = audioData.audioData;
+                //     const audioDataAsUint8Array = new Uint8Array(audioArrayBuffer);
+                //     console.info('#### POST-RECV Audio data', audioData.audioData);
+                //     // Decode the Opus audio data
+                //     const decodedAudio = TEMP_opusDecoder.decodeFrame(
+                //         audioDataAsUint8Array,
+                //     );
+                //     await TEMP_opusDecoder.reset();
+                //     // Get the decoded PCM samples for the mono channel
+                //     const monoChannelData = decodedAudio.channelData[0];
+                //     // Create an AudioBuffer for mono audio
+                //     const audioBuffer = TEMP_audioContext.createBuffer(
+                //         1, // 1 channel for mono
+                //         monoChannelData.length,
+                //         decodedAudio.sampleRate,
+                //     );
+                //     audioBuffer.copyToChannel(monoChannelData, 0, 0);
+                //     console.info('#### Spatializing audio ####');
+                //     const source = TEMP_audioContext.createBufferSource();
+                //     source.buffer = audioBuffer;
+                //     const panner = TEMP_audioContext.createPanner();
+                //     panner.panningModel = 'HRTF';
+                //     panner.distanceModel = 'inverse';
+                //     panner.refDistance = 1;
+                //     panner.maxDistance = 10000;
+                //     panner.rolloffFactor = 1;
+                //     panner.coneInnerAngle = 360;
+                //     panner.coneOuterAngle = 0;
+                //     panner.coneOuterGain = 0;
+                //     if (
+                //         TEMP_position.x !== null &&
+                //         TEMP_position.y !== null &&
+                //         TEMP_position.z !== null
+                //     ) {
+                //         panner.positionX.setValueAtTime(
+                //             TEMP_position.x,
+                //             TEMP_audioContext.currentTime,
+                //         );
+                //         panner.positionY.setValueAtTime(
+                //             TEMP_position.y,
+                //             TEMP_audioContext.currentTime,
+                //         );
+                //         panner.positionZ.setValueAtTime(
+                //             TEMP_position.z,
+                //             TEMP_audioContext.currentTime,
+                //         );
+                //     }
+                //     if (
+                //         TEMP_orientation.x !== null &&
+                //         TEMP_orientation.y !== null &&
+                //         TEMP_orientation.z !== null
+                //     ) {
+                //         panner.orientationX.setValueAtTime(
+                //             TEMP_orientation.x,
+                //             TEMP_audioContext.currentTime,
+                //         );
+                //         panner.orientationY.setValueAtTime(
+                //             TEMP_orientation.y,
+                //             TEMP_audioContext.currentTime,
+                //         );
+                //         panner.orientationZ.setValueAtTime(
+                //             TEMP_orientation.z,
+                //             TEMP_audioContext.currentTime,
+                //         );
+                //     }
+                //     source.connect(panner);
+                //     panner.connect(TEMP_audioContext.destination);
+                //     console.info('#### Playing audio ####');
+                //     source.start();
+                // });
+            };
+
+            export const TEMP_streamAudio = () => {
+                if (!TEMP_mediaStream) {
+                    console.error(
+                        `${AUDIO_LOG_PREFIX} No media stream available.`,
                     );
                     return;
                 }
-            }
+                const newAudioTrack = TEMP_mediaStream.getAudioTracks()[0];
 
-            if (!agentConnections[senderId]) {
-                await createConnection(senderId);
-            }
+                if (!newAudioTrack) {
+                    console.error(
+                        `${AUDIO_LOG_PREFIX} No audio track in provided stream.`,
+                    );
+                    return;
+                }
 
-            await agentConnections[senderId].setRemoteDescription(
-                new RTCSessionDescription({ type: 'offer', sdp }),
-            );
-            const answer = await agentConnections[senderId].createAnswer();
-            await agentConnections[senderId].setLocalDescription(answer);
-
-            if (answer.sdp) {
-                socket?.emit(
-                    EPacketType.AGENT_Answer,
-                    new C_AGENT_Answer_Packet({
-                        senderId,
-                        sdp: answer.sdp,
-                    }),
+                console.log(
+                    `${AUDIO_LOG_PREFIX} Updating audio streams for all connected agents.`,
                 );
-            }
-        };
 
-        const shouldIgnoreOffer = (senderId: string) => {
-            // Assuming localAgentId is defined somewhere in your context
-            return (TEMP_agentId ?? '').s > senderId; // Ignore if local agent ID is higher
-        };
-    }
+                Object.keys(agentConnections).forEach((agentId) => {
+                    const connectionInfo = agentConnections[agentId];
+                    if (!connectionInfo) {
+                        console.error(
+                            `${AUDIO_LOG_PREFIX} Agent connection not initialized for agent:`,
+                            agentId,
+                        );
+                        return;
+                    }
 
-    export namespace Audio {
-        let audioContext: AudioContext | null = null;
-
-        export const init = () => {
-            if (!audioContext) {
-                audioContext = new AudioContext();
-            }
-
-            // socket?.on(EPacketType.AUDIO, async (audioData: C_AUDIO_Packet) => {
-            //     console.log('#### Received audio stream ####');
-            //     if (!audioData.audioData) {
-            //         console.info('#### No audio data, not playing audio. ####');
-            //         return;
-            //     }
-            //     if (!TEMP_audioContext) {
-            //         TEMP_audioContext = new AudioContext();
-            //     }
-            //     // const audioDataAsBase64 = audioData.audioData;
-            //     // const binaryString = atob(audioDataAsBase64);
-            //     // const len = binaryString.length;
-            //     // const bytes = new Uint8Array(len);
-            //     // for (let i = 0; i < len; i++) {
-            //     //     bytes[i] = binaryString.charCodeAt(i);
-            //     // }
-            //     // const uint8Array = new Uint8Array(bytes);
-            //     const audioArrayBuffer = audioData.audioData;
-            //     const audioDataAsUint8Array = new Uint8Array(audioArrayBuffer);
-            //     console.info('#### POST-RECV Audio data', audioData.audioData);
-            //     // Decode the Opus audio data
-            //     const decodedAudio = TEMP_opusDecoder.decodeFrame(
-            //         audioDataAsUint8Array,
-            //     );
-            //     await TEMP_opusDecoder.reset();
-            //     // Get the decoded PCM samples for the mono channel
-            //     const monoChannelData = decodedAudio.channelData[0];
-            //     // Create an AudioBuffer for mono audio
-            //     const audioBuffer = TEMP_audioContext.createBuffer(
-            //         1, // 1 channel for mono
-            //         monoChannelData.length,
-            //         decodedAudio.sampleRate,
-            //     );
-            //     audioBuffer.copyToChannel(monoChannelData, 0, 0);
-            //     console.info('#### Spatializing audio ####');
-            //     const source = TEMP_audioContext.createBufferSource();
-            //     source.buffer = audioBuffer;
-            //     const panner = TEMP_audioContext.createPanner();
-            //     panner.panningModel = 'HRTF';
-            //     panner.distanceModel = 'inverse';
-            //     panner.refDistance = 1;
-            //     panner.maxDistance = 10000;
-            //     panner.rolloffFactor = 1;
-            //     panner.coneInnerAngle = 360;
-            //     panner.coneOuterAngle = 0;
-            //     panner.coneOuterGain = 0;
-            //     if (
-            //         TEMP_position.x !== null &&
-            //         TEMP_position.y !== null &&
-            //         TEMP_position.z !== null
-            //     ) {
-            //         panner.positionX.setValueAtTime(
-            //             TEMP_position.x,
-            //             TEMP_audioContext.currentTime,
-            //         );
-            //         panner.positionY.setValueAtTime(
-            //             TEMP_position.y,
-            //             TEMP_audioContext.currentTime,
-            //         );
-            //         panner.positionZ.setValueAtTime(
-            //             TEMP_position.z,
-            //             TEMP_audioContext.currentTime,
-            //         );
-            //     }
-            //     if (
-            //         TEMP_orientation.x !== null &&
-            //         TEMP_orientation.y !== null &&
-            //         TEMP_orientation.z !== null
-            //     ) {
-            //         panner.orientationX.setValueAtTime(
-            //             TEMP_orientation.x,
-            //             TEMP_audioContext.currentTime,
-            //         );
-            //         panner.orientationY.setValueAtTime(
-            //             TEMP_orientation.y,
-            //             TEMP_audioContext.currentTime,
-            //         );
-            //         panner.orientationZ.setValueAtTime(
-            //             TEMP_orientation.z,
-            //             TEMP_audioContext.currentTime,
-            //         );
-            //     }
-            //     source.connect(panner);
-            //     panner.connect(TEMP_audioContext.destination);
-            //     console.info('#### Playing audio ####');
-            //     source.start();
-            // });
-        };
-
-        export function TEMP_streamAudio(stream: MediaStream) {
-            // const mediaRecorder = new MediaRecorder(stream, {
-            //     mimeType: 'audio/webm; codecs=opus',
-            // });
-            // // const reader = new FileReader();
-            // mediaRecorder.ondataavailable = async (event) => {
-            //     const audioBlob = event.data;
-            //     if (audioBlob.size === 0) {
-            //         // Skip processing and sending empty audio data
-            //         return;
-            //     }
-            //     // reader.onloadend = () => {
-            //     //     const base64String = reader.result as string;
-            //     //     const base64Data = base64String.split(',')[1]; // Remove the data URL header
-            //     //     sendAudioPacket({
-            //     //         audioData: base64Data,
-            //     //         audioPosition: TEMP_position,
-            //     //         audioOrientation: TEMP_orientation,
-            //     //         TEMP_senderId: TEMP_agentId,
-            //     //     });
-            //     // };
-            //     // reader.readAsDataURL(audioBlob);
-            //     const arrayBuffer = await audioBlob.arrayBuffer();
-            //     TEMP_sendAudioPacket(
-            //         new C_AUDIO_Packet({
-            //             audioData: arrayBuffer,
-            //             audioPosition: TEMP_position,
-            //             audioOrientation: TEMP_orientation,
-            //             senderId: TEMP_agentId,
-            //         }),
-            //     );
-            // };
-            // mediaRecorder.start(750); // Emit data every 750 milliseconds (0.75 seconds)
+                    // Check if a media connection already exists
+                    if (connectionInfo.mediaConnection) {
+                        const sender =
+                            connectionInfo.mediaConnection.peerConnection
+                                ?.getSenders()
+                                .find((s) => s.track?.kind === 'audio');
+                        if (sender) {
+                            sender
+                                .replaceTrack(newAudioTrack)
+                                .then(() => {
+                                    console.log(
+                                        `${AUDIO_LOG_PREFIX} Audio track replaced for agent ${agentId}.`,
+                                    );
+                                })
+                                .catch((error) => {
+                                    console.error(
+                                        `${AUDIO_LOG_PREFIX} Error replacing track for agent ${agentId}:`,
+                                        error,
+                                    );
+                                });
+                        } else {
+                            console.error(
+                                `${AUDIO_LOG_PREFIX} No existing audio sender to replace track for agent ${agentId}.`,
+                            );
+                        }
+                    } else if (peer) {
+                        // If no media connection exists, create a new one
+                        connectionInfo.mediaConnection = peer.call(
+                            agentId,
+                            TEMP_mediaStream,
+                        );
+                        console.log(
+                            `${AUDIO_LOG_PREFIX} New media connection established with agent ${agentId}.`,
+                        );
+                    }
+                });
+            };
         }
-
-        const TEMP_sendAudioPacket = (audioData: C_AUDIO_Packet) => {
-            console.info('#### PRE-SEND Audio data size', audioData.audioData);
-            socket?.emit(EPacketType.AUDIO, audioData);
-        };
     }
 }

@@ -1,6 +1,7 @@
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import { ExpressPeerServer } from 'peer';
 
 import { MetaRequest, WorldTransport } from '../routes/router';
 
@@ -12,7 +13,6 @@ const TEMP_ALLOWED_METHODS_WT = 'GET, POST';
 
 function init() {
     const expressApp = express();
-    const server = createServer(expressApp);
 
     // Requests via Express
     expressApp.use(function (req, res, next) {
@@ -27,6 +27,9 @@ function init() {
 
     expressApp.use('/', MetaRequest);
 
+    // Create HTTP server
+    const server = createServer(expressApp);
+
     // Webtransport via Socket.io
     const socketIO = new Server(server, {
         cors: {
@@ -36,8 +39,14 @@ function init() {
     });
     WorldTransport.Router(socketIO);
 
+    // Peer server setup
+    const peerServer = ExpressPeerServer(server, {
+        path: '/myapp',
+    });
+    expressApp.use('/peerjs', peerServer);
+
     server.listen(TEMP_PORT, () => {
-        console.log('Server is running on port 3000');
+        console.log(`Server is running on port ${TEMP_PORT}`);
     });
 }
 
