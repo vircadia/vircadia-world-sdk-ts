@@ -148,24 +148,30 @@ export namespace Client {
                             foundAgentId !== peer?.id &&
                             !agentConnections[foundAgentId]
                         ) {
-                            connect(foundAgentId);
+                            connectDataChannel(foundAgentId);
+                            connectMediaChannel(foundAgentId);
                         }
                     });
                 },
             );
         };
 
-        export const connect = (agentId: string) => {
-            if (peer) {
-                const dataConn = peer.connect(agentId);
-                agentConnections[agentId] = {
-                    dataConnection: dataConn,
-                    media: {
-                        connection: null,
-                        metadata: null,
-                    },
-                };
+        const createAgent = (agentId: string) => {
+            agentConnections[agentId] = {
+                dataConnection: null,
+                media: {
+                    connection: null,
+                    metadata: null,
+                },
+            };
+        };
 
+        const removeAgent = (agentId: string) => {
+            delete agentConnections[agentId];
+        };
+
+        const connectMediaChannel = (agentId: string) => {
+            if (peer) {
                 // Establish a media connection without a stream initially
                 console.info(
                     `${AGENT_LOG_PREFIX} Establishing media connection with agent ${agentId}.`,
@@ -174,13 +180,16 @@ export namespace Client {
                     agentId,
                     Audio.TEMP_mediaStream as MediaStream,
                 );
+                console.info('#### MediaConn', mediaConn);
 
                 if (mediaConn) {
                     agentConnections[agentId].media.connection = mediaConn;
 
+                    Audio.TEMP_broadcastAudioStreams();
+
                     mediaConn.on('stream', (stream: MediaStream) => {
                         console.log(
-                            `Received media stream from agent ${agentId}`,
+                            `${AGENT_LOG_PREFIX} Received media stream from agent ${agentId}`,
                         );
                         // Handle the incoming stream as needed
                         Audio.handleIncomingStream({
@@ -189,15 +198,44 @@ export namespace Client {
                         });
                     });
 
-                    Audio.TEMP_broadcastAudioStreams();
+                    mediaConn.on('close', () => {
+                        console.info(
+                            `${AGENT_LOG_PREFIX} Closed media connection with agent ${agentId}, connection: [`,
+                            mediaConn,
+                            `]`,
+                        );
+                    });
 
-                    console.log(
-                        `${AGENT_LOG_PREFIX} Established media connection with agent ${agentId}.`,
-                    );
+                    mediaConn.on('error', () => {
+                        console.info(
+                            `${AGENT_LOG_PREFIX} Error establishing media connection with agent ${agentId}, connection: [`,
+                            mediaConn,
+                            `]`,
+                        );
+                    });
+                }
+            }
+        };
+
+        const connectDataChannel = (agentId: string) => {
+            if (peer) {
+                const dataConn = peer.connect(agentId);
+                if (!dataConn) {
+                    console.error(`Failed to connect to agent ${agentId}`);
+                    return;
+                }
+
+                if (agentConnections[agentId]) {
+                    agentConnections[agentId].dataConnection = dataConn;
+                } else {
+                    createAgent(agentId);
+                    if (agentConnections[agentId]) {
+                        agentConnections[agentId].dataConnection = dataConn;
+                    }
                 }
 
                 dataConn.on('open', () => {
-                    console.log(`Connected to agent ${agentId}`);
+                    console.log(`Data connection opened with agent ${agentId}`);
                 });
 
                 dataConn.on('data', (data) => {
@@ -210,8 +248,8 @@ export namespace Client {
                 });
 
                 dataConn.on('close', () => {
-                    console.log(`Connection closed with agent ${agentId}`);
-                    // delete agentConnections[agentId];
+                    console.log(`Data connection closed with agent ${agentId}`);
+                    removeAgent(agentId);
                 });
             }
         };
@@ -220,7 +258,7 @@ export namespace Client {
             if (agentConnections[agentId]) {
                 agentConnections[agentId].dataConnection?.close();
                 agentConnections[agentId].media.connection?.close();
-                delete agentConnections[agentId];
+                removeAgent(agentId);
             }
         };
 
@@ -241,7 +279,11 @@ export namespace Client {
                     });
                     void connectionInfo.dataConnection.send(packet);
                     console.log(
-                        `[AGENT] Sent metadata to agent ${agentId}. Connection status: \nDATA: [${connectionInfo.dataConnection.open}]\nMEDIA: [${connectionInfo.media.connection?.open}]`,
+                        `[AGENT] Sent metadata to agent ${agentId}. Connection status: \nDATA: [`,
+                        connectionInfo.dataConnection,
+                        `]\nMEDIA: [`,
+                        connectionInfo.media.connection,
+                        `]`,
                     );
                 } else {
                     console.error(
@@ -413,43 +455,44 @@ export namespace Client {
 
                 Object.keys(agentConnections).forEach((agentId) => {
                     const connectionInfo = agentConnections[agentId];
-                    if (!connectionInfo) {
-                        console.error(
-                            `${AUDIO_LOG_PREFIX} Agent connection not initialized for agent:`,
-                            agentId,
-                        );
-                        return;
+                    if (!connectionInfo.media.connection) {
+                        connectMediaChannel(agentId);
+
+                        if (!connectionInfo.media.connection) {
+                            console.error(
+                                `${AUDIO_LOG_PREFIX} Agent connection not initialized for agent:`,
+                                agentId,
+                            );
+                            return;
+                        }
                     }
 
-                    // Check if a media connection exists
-                    if (connectionInfo.media.connection) {
-                        const sender =
-                            connectionInfo.media.connection.peerConnection
-                                ?.getSenders()
-                                .find((s) => s.track?.kind === 'audio');
-                        if (sender) {
-                            sender
-                                .replaceTrack(newAudioTrack)
-                                .then(() => {
-                                    console.log(
-                                        `${AUDIO_LOG_PREFIX} Audio track replaced for agent ${agentId}.`,
-                                    );
-                                })
-                                .catch((error) => {
-                                    console.error(
-                                        `${AUDIO_LOG_PREFIX} Error replacing track for agent ${agentId}:`,
-                                        error,
-                                    );
-                                });
-                        } else {
-                            connectionInfo.media.connection.peerConnection?.addTrack(
-                                newAudioTrack,
-                                TEMP_mediaStream as MediaStream,
-                            );
-                            console.log(
-                                `${AUDIO_LOG_PREFIX} Audio track added for agent ${agentId}.`,
-                            );
-                        }
+                    const sender =
+                        connectionInfo.media.connection.peerConnection
+                            ?.getSenders()
+                            .find((s) => s.track?.kind === 'audio');
+                    if (sender) {
+                        sender
+                            .replaceTrack(newAudioTrack)
+                            .then(() => {
+                                console.log(
+                                    `${AUDIO_LOG_PREFIX} Audio track replaced for agent ${agentId}.`,
+                                );
+                            })
+                            .catch((error) => {
+                                console.error(
+                                    `${AUDIO_LOG_PREFIX} Error replacing track for agent ${agentId}:`,
+                                    error,
+                                );
+                            });
+                    } else {
+                        connectionInfo.media.connection.peerConnection?.addTrack(
+                            newAudioTrack,
+                            TEMP_mediaStream as MediaStream,
+                        );
+                        console.log(
+                            `${AUDIO_LOG_PREFIX} Audio track added for agent ${agentId}.`,
+                        );
                     }
                 });
             };
