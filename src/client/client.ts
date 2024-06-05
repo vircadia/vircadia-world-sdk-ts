@@ -39,28 +39,7 @@ export namespace Client {
         TEMP_position = metadata.position;
         TEMP_orientation = metadata.orientation;
 
-        // Check if data connections exist and send metadata to all open connections
-        Object.keys(Agent.agentConnections).forEach((agentId) => {
-            const connectionInfo = Agent.agentConnections[agentId];
-            if (
-                connectionInfo.dataConnection &&
-                connectionInfo.dataConnection.open &&
-                TEMP_position &&
-                TEMP_orientation
-            ) {
-                const packet = new C_AUDIO_Metadata_Packet({
-                    senderId: TEMP_agentId,
-                    audioPosition: TEMP_position,
-                    audioOrientation: TEMP_orientation,
-                });
-                void connectionInfo.dataConnection.send(packet);
-                console.log(`[AGENT] Sent metadata to agent ${agentId}.`);
-            } else {
-                console.error(
-                    `[AGENT] No data connection to send metadata for agent ${agentId}.`,
-                );
-            }
-        });
+        Agent.sendHeartbeatToAgents();
     };
 
     export const isConnected = () => socket?.connected ?? false;
@@ -146,7 +125,7 @@ export namespace Client {
                     },
                 };
 
-                Audio.TEMP_streamAudio();
+                Audio.TEMP_broadcastAudioStreams();
             });
 
             socket?.on(
@@ -187,26 +166,14 @@ export namespace Client {
                     },
                 };
 
-                let mediaStreamToUse: MediaStream | null = null;
-
-                if (Audio.TEMP_mediaStream) {
-                    mediaStreamToUse = Audio.TEMP_mediaStream;
-                } else {
-                    // Create a dummy media stream with an empty audio track
-                    mediaStreamToUse = new MediaStream();
-                    const audioContext = new AudioContext();
-                    const oscillator = audioContext.createOscillator();
-                    const destination =
-                        audioContext.createMediaStreamDestination();
-                    oscillator.connect(destination);
-                    oscillator.start();
-                    mediaStreamToUse.addTrack(
-                        destination.stream.getAudioTracks()[0],
-                    );
-                }
-
-                // Establish a media connection with the dummy stream
-                const mediaConn = peer?.call(agentId, mediaStreamToUse);
+                // Establish a media connection without a stream initially
+                console.info(
+                    `${AGENT_LOG_PREFIX} Establishing media connection with agent ${agentId}.`,
+                );
+                const mediaConn = peer.call(
+                    agentId,
+                    Audio.TEMP_mediaStream as MediaStream,
+                );
 
                 if (mediaConn) {
                     agentConnections[agentId].media.connection = mediaConn;
@@ -221,6 +188,8 @@ export namespace Client {
                             agentId,
                         });
                     });
+
+                    Audio.TEMP_broadcastAudioStreams();
 
                     console.log(
                         `${AGENT_LOG_PREFIX} Established media connection with agent ${agentId}.`,
@@ -253,6 +222,33 @@ export namespace Client {
                 agentConnections[agentId].media.connection?.close();
                 delete agentConnections[agentId];
             }
+        };
+
+        export const sendHeartbeatToAgents = () => {
+            // Check if data connections exist and send metadata to all open connections
+            Object.keys(Agent.agentConnections).forEach((agentId) => {
+                const connectionInfo = Agent.agentConnections[agentId];
+                if (
+                    connectionInfo.dataConnection &&
+                    connectionInfo.dataConnection.open &&
+                    TEMP_position &&
+                    TEMP_orientation
+                ) {
+                    const packet = new C_AUDIO_Metadata_Packet({
+                        senderId: TEMP_agentId,
+                        audioPosition: TEMP_position,
+                        audioOrientation: TEMP_orientation,
+                    });
+                    void connectionInfo.dataConnection.send(packet);
+                    console.log(
+                        `[AGENT] Sent metadata to agent ${agentId}. Connection status: \nDATA: [${connectionInfo.dataConnection.open}]\nMEDIA: [${connectionInfo.media.connection?.open}]`,
+                    );
+                } else {
+                    console.error(
+                        `[AGENT] No data connection to send metadata for agent ${agentId}.`,
+                    );
+                }
+            });
         };
 
         export namespace Audio {
@@ -395,7 +391,7 @@ export namespace Client {
                 );
             };
 
-            export const TEMP_streamAudio = () => {
+            export const TEMP_broadcastAudioStreams = () => {
                 if (!TEMP_mediaStream) {
                     console.error(
                         `${AUDIO_LOG_PREFIX} No media stream available.`,
@@ -425,7 +421,7 @@ export namespace Client {
                         return;
                     }
 
-                    // Check if a media connection already exists
+                    // Check if a media connection exists
                     if (connectionInfo.media.connection) {
                         const sender =
                             connectionInfo.media.connection.peerConnection
@@ -446,14 +442,14 @@ export namespace Client {
                                     );
                                 });
                         } else {
-                            console.error(
-                                `${AUDIO_LOG_PREFIX} No existing audio sender to replace track for agent ${agentId}.`,
+                            connectionInfo.media.connection.peerConnection?.addTrack(
+                                newAudioTrack,
+                                TEMP_mediaStream as MediaStream,
+                            );
+                            console.log(
+                                `${AUDIO_LOG_PREFIX} Audio track added for agent ${agentId}.`,
                             );
                         }
-                    } else if (peer) {
-                        console.log(
-                            `${AUDIO_LOG_PREFIX} No existing media connection to replace track for agent ${agentId}.`,
-                        );
                     }
                 });
             };
