@@ -108,6 +108,8 @@ export namespace Client {
         } = {};
 
         export const InitializeAgentModule = (agentId: string) => {
+            Audio.InitializeAudioModule();
+
             peer = new Peer(agentId, {
                 host: '/', // or the server's address
                 path: '/peerjs',
@@ -117,15 +119,38 @@ export namespace Client {
             peer.on('connection', (conn) => {
                 const remoteAgentId = conn.peer;
                 console.log(`Received connection from agent ${remoteAgentId}`);
-                agentConnections[remoteAgentId] = {
-                    dataConnection: conn,
-                    media: {
-                        connection: null,
-                        metadata: null,
-                    },
-                };
+                if (agentConnections[remoteAgentId]) {
+                    console.error(
+                        `${AGENT_LOG_PREFIX} Received connection from agent ${remoteAgentId}, but agent already exists.`,
+                    );
+                } else {
+                    createAgent(remoteAgentId);
+                    agentConnections[remoteAgentId].dataConnection = conn;
+                }
+            });
 
-                Audio.TEMP_broadcastAudioStreams();
+            peer.on('call', (call) => {
+                console.log('Received a call from:', call.peer);
+                acceptMediaChannel(call);
+
+                call.on('stream', (remoteStream) => {
+                    console.log('Received remote stream');
+                    // Handle the remote stream
+                    Audio.handleIncomingStream({
+                        stream: remoteStream,
+                        agentId: call.peer,
+                    });
+
+                    Audio.TEMP_broadcastAudioStreams();
+                });
+
+                call.on('close', () => {
+                    console.log('Call closed');
+                });
+
+                call.on('error', (error) => {
+                    console.error('Call error:', error);
+                });
             });
 
             socket?.on(
@@ -170,50 +195,82 @@ export namespace Client {
             delete agentConnections[agentId];
         };
 
+        const acceptMediaChannel = (mediaConn: MediaConnection) => {
+            mediaConn.answer(Audio.TEMP_mediaStream || undefined);
+            if (agentConnections[mediaConn.peer]) {
+                agentConnections[mediaConn.peer].media.connection = mediaConn;
+            } else {
+                createAgent(mediaConn.peer);
+                if (agentConnections[mediaConn.peer]) {
+                    agentConnections[mediaConn.peer].media.connection =
+                        mediaConn;
+                }
+            }
+        };
+
         const connectMediaChannel = (agentId: string) => {
+            if (!Audio.TEMP_mediaStream) {
+                console.error(`${AGENT_LOG_PREFIX} No media stream available.`);
+                return;
+            }
+            console.info(
+                `${AGENT_LOG_PREFIX} Establishing media connection with agent ${agentId}, media stream: [`,
+                Audio.TEMP_mediaStream,
+                `]`,
+            );
+
             if (peer) {
                 // Establish a media connection without a stream initially
-                console.info(
-                    `${AGENT_LOG_PREFIX} Establishing media connection with agent ${agentId}.`,
-                );
-                const mediaConn = peer.call(
-                    agentId,
-                    Audio.TEMP_mediaStream as MediaStream,
-                );
-                console.info('#### MediaConn', mediaConn);
+                const mediaConn = peer.call(agentId, Audio.TEMP_mediaStream);
 
-                if (mediaConn) {
-                    agentConnections[agentId].media.connection = mediaConn;
-
-                    Audio.TEMP_broadcastAudioStreams();
-
-                    mediaConn.on('stream', (stream: MediaStream) => {
-                        console.log(
-                            `${AGENT_LOG_PREFIX} Received media stream from agent ${agentId}`,
-                        );
-                        // Handle the incoming stream as needed
-                        Audio.handleIncomingStream({
-                            stream,
-                            agentId,
-                        });
-                    });
-
-                    mediaConn.on('close', () => {
-                        console.info(
-                            `${AGENT_LOG_PREFIX} Closed media connection with agent ${agentId}, connection: [`,
-                            mediaConn,
-                            `]`,
-                        );
-                    });
-
-                    mediaConn.on('error', () => {
-                        console.info(
-                            `${AGENT_LOG_PREFIX} Error establishing media connection with agent ${agentId}, connection: [`,
-                            mediaConn,
-                            `]`,
-                        );
-                    });
+                if (!mediaConn) {
+                    console.info(
+                        `${AGENT_LOG_PREFIX} Failed to establish media connection with agent ${agentId}`,
+                    );
+                    return;
                 }
+
+                if (agentConnections[agentId]) {
+                    agentConnections[agentId].media.connection = mediaConn;
+                } else {
+                    createAgent(agentId);
+                    if (agentConnections[agentId]) {
+                        agentConnections[agentId].media.connection = mediaConn;
+                    }
+                }
+
+                console.info(
+                    `${AGENT_LOG_PREFIX} Establishing media connection with agent ${agentId}, media stream: [`,
+                    Audio.TEMP_mediaStream,
+                    `]\nMedia connection: [`,
+                    mediaConn,
+                    `]`,
+                );
+
+                agentConnections[agentId].media.connection = mediaConn;
+
+                mediaConn.on('iceStateChanged', (state) => {
+                    console.log(
+                        `${AGENT_LOG_PREFIX} ICE state changed for agent ${agentId}: ${state}`,
+                    );
+                });
+
+                mediaConn.on('close', () => {
+                    console.info(
+                        `${AGENT_LOG_PREFIX} Closed media connection with agent ${agentId}, connection: [`,
+                        mediaConn,
+                        `]`,
+                    );
+                });
+
+                mediaConn.on('error', (error) => {
+                    console.info(
+                        `${AGENT_LOG_PREFIX} Error establishing media connection with agent ${agentId}, connection: [`,
+                        mediaConn,
+                        `]`,
+                        error,
+                    );
+                });
             }
         };
 
@@ -221,7 +278,9 @@ export namespace Client {
             if (peer) {
                 const dataConn = peer.connect(agentId);
                 if (!dataConn) {
-                    console.error(`Failed to connect to agent ${agentId}`);
+                    console.error(
+                        `${AGENT_LOG_PREFIX} Failed to establish data connection with agent ${agentId}`,
+                    );
                     return;
                 }
 
@@ -410,23 +469,6 @@ export namespace Client {
 
                 audioSource.connect(panner);
                 panner.connect(audioContext.destination);
-
-                // Create a ScriptProcessorNode to listen for audio data
-                const processor = audioContext.createScriptProcessor(
-                    1024,
-                    1,
-                    1,
-                );
-                processor.onaudioprocess = (audioProcessingEvent) => {
-                    const inputBuffer = audioProcessingEvent.inputBuffer;
-                    const inputData = inputBuffer.getChannelData(0);
-
-                    // Process the audio data here
-                    console.log('Received audio data:', inputData);
-                };
-
-                audioSource.connect(processor);
-                processor.connect(audioContext.destination);
 
                 console.info(
                     `${AUDIO_LOG_PREFIX} Playing spatialized audio from incoming stream.`,
