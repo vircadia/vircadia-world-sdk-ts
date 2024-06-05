@@ -134,7 +134,7 @@ export namespace Client {
                 acceptMediaChannel(call);
 
                 call.on('stream', (remoteStream) => {
-                    console.log('Received remote stream');
+                    console.error('Received remote stream');
                     // Handle the remote stream
                     Audio.handleIncomingStream({
                         stream: remoteStream,
@@ -246,8 +246,6 @@ export namespace Client {
                     mediaConn,
                     `]`,
                 );
-
-                agentConnections[agentId].media.connection = mediaConn;
 
                 mediaConn.on('iceStateChanged', (state) => {
                     console.log(
@@ -377,6 +375,9 @@ export namespace Client {
                 }
 
                 const audioTracks = data.stream.getAudioTracks();
+                console.log(
+                    `${AUDIO_LOG_PREFIX} Number of audio tracks: ${audioTracks.length}`,
+                );
                 if (audioTracks.length === 0) {
                     console.error(
                         `${AUDIO_LOG_PREFIX} No audio tracks in the incoming stream.`,
@@ -385,90 +386,120 @@ export namespace Client {
                 }
 
                 console.log(
+                    `${AUDIO_LOG_PREFIX} Audio context state: ${audioContext.state}`,
+                );
+                console.log(
                     `${AUDIO_LOG_PREFIX} Establishing incoming media stream processor with agent ${data.agentId}.`,
                 );
 
                 const audioSource = audioContext.createMediaStreamSource(
                     data.stream,
                 );
-                const panner = audioContext.createPanner();
-                panner.panningModel = 'HRTF';
-                panner.distanceModel = 'inverse';
-                panner.refDistance = 1;
-                panner.maxDistance = 10000;
-                panner.rolloffFactor = 1;
-                panner.coneInnerAngle = 360;
-                panner.coneOuterAngle = 0;
-                panner.coneOuterGain = 0;
+                // output the audio directly
+                audioSource.connect(audioContext.destination);
+                void audioContext.resume();
 
-                const agentMetadata =
-                    agentConnections[data.agentId]?.media.metadata;
+                // const panner = audioContext.createPanner();
+                // panner.panningModel = 'HRTF';
+                // panner.distanceModel = 'inverse';
+                // panner.refDistance = 1;
+                // panner.maxDistance = 10000;
+                // panner.rolloffFactor = 1;
+                // panner.coneInnerAngle = 360;
+                // panner.coneOuterAngle = 0;
+                // panner.coneOuterGain = 0;
 
-                if (agentMetadata) {
-                    const { audioPosition, audioOrientation } = agentMetadata;
-                    if (audioPosition) {
-                        panner.positionX.setValueAtTime(
-                            audioPosition.x,
-                            audioContext.currentTime,
-                        );
-                        panner.positionY.setValueAtTime(
-                            audioPosition.y,
-                            audioContext.currentTime,
-                        );
-                        panner.positionZ.setValueAtTime(
-                            audioPosition.z,
-                            audioContext.currentTime,
-                        );
-                    }
+                // const agentMetadata =
+                //     agentConnections[data.agentId]?.media.metadata;
 
-                    if (audioOrientation) {
-                        panner.orientationX.setValueAtTime(
-                            audioOrientation.x,
-                            audioContext.currentTime,
-                        );
-                        panner.orientationY.setValueAtTime(
-                            audioOrientation.y,
-                            audioContext.currentTime,
-                        );
-                        panner.orientationZ.setValueAtTime(
-                            audioOrientation.z,
-                            audioContext.currentTime,
-                        );
-                    }
-                } else {
-                    if (TEMP_position) {
-                        panner.positionX.setValueAtTime(
-                            TEMP_position.x,
-                            audioContext.currentTime,
-                        );
-                        panner.positionY.setValueAtTime(
-                            TEMP_position.y,
-                            audioContext.currentTime,
-                        );
-                        panner.positionZ.setValueAtTime(
-                            TEMP_position.z,
-                            audioContext.currentTime,
-                        );
-                    }
+                // if (agentMetadata) {
+                //     const { audioPosition, audioOrientation } = agentMetadata;
+                //     if (audioPosition) {
+                //         panner.positionX.setValueAtTime(
+                //             audioPosition.x,
+                //             audioContext.currentTime,
+                //         );
+                //         panner.positionY.setValueAtTime(
+                //             audioPosition.y,
+                //             audioContext.currentTime,
+                //         );
+                //         panner.positionZ.setValueAtTime(
+                //             audioPosition.z,
+                //             audioContext.currentTime,
+                //         );
+                //     }
 
-                    if (TEMP_orientation) {
-                        panner.orientationX.setValueAtTime(
-                            TEMP_orientation.x,
-                            audioContext.currentTime,
-                        );
-                        panner.orientationY.setValueAtTime(
-                            TEMP_orientation.y,
-                            audioContext.currentTime,
-                        );
-                        panner.orientationZ.setValueAtTime(
-                            TEMP_orientation.z,
-                            audioContext.currentTime,
-                        );
-                    }
-                }
+                //     if (audioOrientation) {
+                //         panner.orientationX.setValueAtTime(
+                //             audioOrientation.x,
+                //             audioContext.currentTime,
+                //         );
+                //         panner.orientationY.setValueAtTime(
+                //             audioOrientation.y,
+                //             audioContext.currentTime,
+                //         );
+                //         panner.orientationZ.setValueAtTime(
+                //             audioOrientation.z,
+                //             audioContext.currentTime,
+                //         );
+                //     }
+                // } else {
+                //     if (TEMP_position) {
+                //         panner.positionX.setValueAtTime(
+                //             TEMP_position.x,
+                //             audioContext.currentTime,
+                //         );
+                //         panner.positionY.setValueAtTime(
+                //             TEMP_position.y,
+                //             audioContext.currentTime,
+                //         );
+                //         panner.positionZ.setValueAtTime(
+                //             TEMP_position.z,
+                //             audioContext.currentTime,
+                //         );
+                //     }
 
-                audioSource.connect(panner);
-                panner.connect(audioContext.destination);
+                //     if (TEMP_orientation) {
+                //         panner.orientationX.setValueAtTime(
+                //             TEMP_orientation.x,
+                //             audioContext.currentTime,
+                //         );
+                //         panner.orientationY.setValueAtTime(
+                //             TEMP_orientation.y,
+                //             audioContext.currentTime,
+                //         );
+                //         panner.orientationZ.setValueAtTime(
+                //             TEMP_orientation.z,
+                //             audioContext.currentTime,
+                //         );
+                //     }
+                // }
+
+                // audioSource.connect(panner);
+                // panner.connect(audioContext.destination);
+
+                // console.log(
+                //     `${AUDIO_LOG_PREFIX} Audio source connected to panner: ${audioSource.numberOfOutputs > 0}`,
+                // );
+                // console.log(
+                //     `${AUDIO_LOG_PREFIX} Panner connected to destination: ${panner.numberOfOutputs > 0}`,
+                // );
+
+                // const analyser = audioContext.createAnalyser();
+                // audioSource.connect(analyser);
+
+                // const bufferLength = analyser.frequencyBinCount;
+                // const dataArray = new Uint8Array(bufferLength);
+
+                // function logAudioData() {
+                //     analyser.getByteFrequencyData(dataArray);
+                //     console.log(
+                //         `${AUDIO_LOG_PREFIX} Audio data: ${Array.from(dataArray)}`,
+                //     );
+                //     requestAnimationFrame(logAudioData);
+                // }
+
+                // logAudioData();
 
                 console.info(
                     `${AUDIO_LOG_PREFIX} Playing spatialized audio from incoming stream.`,
@@ -492,7 +523,9 @@ export namespace Client {
                 }
 
                 console.log(
-                    `${AUDIO_LOG_PREFIX} Updating audio streams for all connected agents.`,
+                    `${AUDIO_LOG_PREFIX} Updating audio streams for all connected agents. Tracks: [`,
+                    TEMP_mediaStream.getAudioTracks(),
+                    `]`,
                 );
 
                 Object.keys(agentConnections).forEach((agentId) => {
@@ -505,7 +538,7 @@ export namespace Client {
                                 `${AUDIO_LOG_PREFIX} Agent connection not initialized for agent:`,
                                 agentId,
                             );
-                            return;
+                            return; // Continue to the next agent
                         }
                     }
 
