@@ -1,12 +1,15 @@
 import {
     EPacketType,
-    C_AUDIO_Packet,
+    C_AUDIO_Metadata_Packet,
     C_AGENT_Heartbeat_Packet,
     C_WORLD_AgentList_Packet,
 } from './meta';
 
 export interface IRouter {
-    [EPacketType.AUDIO]: (socket: Socket, data: C_AUDIO_Packet) => void;
+    [EPacketType.AUDIO_Metadata]: (
+        socket: Socket,
+        data: C_AUDIO_Metadata_Packet,
+    ) => void;
 }
 
 // TODO:

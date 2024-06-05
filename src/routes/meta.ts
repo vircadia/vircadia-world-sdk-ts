@@ -1,7 +1,7 @@
 export enum EPacketType {
     AGENT_Heartbeat = 'world-agent-heartbeat-packet',
     WORLD_AgentList = 'world-agent-list-packet',
-    AUDIO = 'audio-packet',
+    AUDIO_Metadata = 'audio-metadata-packet',
 }
 
 interface I_BASE_Packet {
@@ -30,34 +30,31 @@ export class C_WORLD_AgentList_Packet implements I_BASE_Packet {
     }
 }
 
-export class C_AUDIO_Packet implements I_BASE_Packet {
-    type: EPacketType.AUDIO = EPacketType.AUDIO;
-    audioData: ArrayBuffer | null;
+export class C_AUDIO_Metadata_Packet implements I_BASE_Packet {
+    type: EPacketType.AUDIO_Metadata = EPacketType.AUDIO_Metadata;
     audioPosition: {
-        x: number | null;
-        y: number | null;
-        z: number | null;
-    };
+        x: number;
+        y: number;
+        z: number;
+    } | null;
 
     audioOrientation: {
-        x: number | null;
-        y: number | null;
-        z: number | null;
-    };
+        x: number;
+        y: number;
+        z: number;
+    } | null;
 
     senderId: string | null;
 
     constructor(data: {
-        audioData: ArrayBuffer | null;
-        audioPosition: { x: number | null; y: number | null; z: number | null };
+        audioPosition: { x: number; y: number; z: number };
         audioOrientation: {
-            x: number | null;
-            y: number | null;
-            z: number | null;
+            x: number;
+            y: number;
+            z: number;
         };
         senderId: string | null;
     }) {
-        this.audioData = data.audioData;
         this.audioPosition = data.audioPosition;
         this.audioOrientation = data.audioOrientation;
         this.senderId = data.senderId;

@@ -1,12 +1,13 @@
 // Agent <-> Server
 import { io, Socket } from 'socket.io-client';
 // Agent <-> Agent
-import { Peer, DataConnection, ConnectionType, MediaConnection } from 'peerjs';
+import { Peer, DataConnection, MediaConnection } from 'peerjs';
 
 import {
     EPacketType,
     C_AGENT_Heartbeat_Packet,
     C_WORLD_AgentList_Packet,
+    C_AUDIO_Metadata_Packet,
 } from '../routes/meta';
 
 // FIXME: This should be defined in config.
@@ -21,23 +22,15 @@ export namespace Client {
     let TEMP_agentId: string | null = null;
     // FIXME: This is temp, avatars shouldn't exist, all avatars should simply be entities.
     let TEMP_position: {
-        x: number | null;
-        y: number | null;
-        z: number | null;
-    } = {
-        x: null,
-        y: null,
-        z: null,
-    };
+        x: number;
+        y: number;
+        z: number;
+    } | null = null;
     let TEMP_orientation: {
-        x: number | null;
-        y: number | null;
-        z: number | null;
-    } = {
-        x: null,
-        y: null,
-        z: null,
-    };
+        x: number;
+        y: number;
+        z: number;
+    } | null = null;
 
     export const TEMP_updateMetadataLocally = (metadata: {
         position: { x: number; y: number; z: number };
@@ -45,6 +38,29 @@ export namespace Client {
     }) => {
         TEMP_position = metadata.position;
         TEMP_orientation = metadata.orientation;
+
+        // Check if data connections exist and send metadata to all open connections
+        Object.keys(Agent.agentConnections).forEach((agentId) => {
+            const connectionInfo = Agent.agentConnections[agentId];
+            if (
+                connectionInfo.dataConnection &&
+                connectionInfo.dataConnection.open &&
+                TEMP_position &&
+                TEMP_orientation
+            ) {
+                const packet = new C_AUDIO_Metadata_Packet({
+                    senderId: TEMP_agentId,
+                    audioPosition: TEMP_position,
+                    audioOrientation: TEMP_orientation,
+                });
+                void connectionInfo.dataConnection.send(packet);
+                console.log(`[AGENT] Sent metadata to agent ${agentId}.`);
+            } else {
+                console.error(
+                    `[AGENT] No data connection to send metadata for agent ${agentId}.`,
+                );
+            }
+        });
     };
 
     export const isConnected = () => socket?.connected ?? false;
@@ -101,10 +117,13 @@ export namespace Client {
 
     export namespace Agent {
         let peer: Peer | null = null;
-        const agentConnections: {
+        export const agentConnections: {
             [key: string]: {
                 dataConnection: DataConnection | null;
-                mediaConnection: MediaConnection | null;
+                media: {
+                    connection: MediaConnection | null;
+                    metadata: C_AUDIO_Metadata_Packet | null;
+                };
             };
         } = {};
 
@@ -120,25 +139,13 @@ export namespace Client {
                 console.log(`Received connection from agent ${remoteAgentId}`);
                 agentConnections[remoteAgentId] = {
                     dataConnection: conn,
-                    mediaConnection: null,
+                    media: {
+                        connection: null,
+                        metadata: null,
+                    },
                 };
 
                 Audio.TEMP_streamAudio();
-
-                conn.on('data', (data) => {
-                    console.log(
-                        `Received data from agent ${remoteAgentId}:`,
-                        data,
-                    );
-                    // Handle received data
-                });
-
-                conn.on('close', () => {
-                    console.log(
-                        `Connection closed with agent ${remoteAgentId}`,
-                    );
-                    delete agentConnections[remoteAgentId];
-                });
             });
 
             socket?.on(
@@ -173,7 +180,10 @@ export namespace Client {
                 const dataConn = peer.connect(agentId);
                 agentConnections[agentId] = {
                     dataConnection: dataConn,
-                    mediaConnection: null,
+                    media: {
+                        connection: null,
+                        metadata: null,
+                    },
                 };
 
                 dataConn.on('open', () => {
@@ -182,7 +192,11 @@ export namespace Client {
 
                 dataConn.on('data', (data) => {
                     console.log(`Received data from agent ${agentId}:`, data);
-                    // Handle received data
+                    if (data instanceof C_AUDIO_Metadata_Packet) {
+                        if (agentConnections[agentId].media.connection) {
+                            agentConnections[agentId].media.metadata = data;
+                        }
+                    }
                 });
 
                 dataConn.on('close', () => {
@@ -192,19 +206,10 @@ export namespace Client {
             }
         };
 
-        export const sendData = (agentId: string, data: any) => {
-            if (
-                agentConnections[agentId] &&
-                agentConnections[agentId].dataConnection
-            ) {
-                void agentConnections[agentId].dataConnection.send(data);
-            }
-        };
-
         export const disconnect = (agentId: string) => {
             if (agentConnections[agentId]) {
                 agentConnections[agentId].dataConnection?.close();
-                agentConnections[agentId].mediaConnection?.close();
+                agentConnections[agentId].media.connection?.close();
                 delete agentConnections[agentId];
             }
         };
@@ -220,94 +225,110 @@ export namespace Client {
                 if (!audioContext) {
                     audioContext = new AudioContext();
                 }
+            };
 
-                // socket?.on(EPacketType.AUDIO, async (audioData: C_AUDIO_Packet) => {
-                //     console.log('#### Received audio stream ####');
-                //     if (!audioData.audioData) {
-                //         console.info('#### No audio data, not playing audio. ####');
-                //         return;
-                //     }
-                //     if (!TEMP_audioContext) {
-                //         TEMP_audioContext = new AudioContext();
-                //     }
-                //     // const audioDataAsBase64 = audioData.audioData;
-                //     // const binaryString = atob(audioDataAsBase64);
-                //     // const len = binaryString.length;
-                //     // const bytes = new Uint8Array(len);
-                //     // for (let i = 0; i < len; i++) {
-                //     //     bytes[i] = binaryString.charCodeAt(i);
-                //     // }
-                //     // const uint8Array = new Uint8Array(bytes);
-                //     const audioArrayBuffer = audioData.audioData;
-                //     const audioDataAsUint8Array = new Uint8Array(audioArrayBuffer);
-                //     console.info('#### POST-RECV Audio data', audioData.audioData);
-                //     // Decode the Opus audio data
-                //     const decodedAudio = TEMP_opusDecoder.decodeFrame(
-                //         audioDataAsUint8Array,
-                //     );
-                //     await TEMP_opusDecoder.reset();
-                //     // Get the decoded PCM samples for the mono channel
-                //     const monoChannelData = decodedAudio.channelData[0];
-                //     // Create an AudioBuffer for mono audio
-                //     const audioBuffer = TEMP_audioContext.createBuffer(
-                //         1, // 1 channel for mono
-                //         monoChannelData.length,
-                //         decodedAudio.sampleRate,
-                //     );
-                //     audioBuffer.copyToChannel(monoChannelData, 0, 0);
-                //     console.info('#### Spatializing audio ####');
-                //     const source = TEMP_audioContext.createBufferSource();
-                //     source.buffer = audioBuffer;
-                //     const panner = TEMP_audioContext.createPanner();
-                //     panner.panningModel = 'HRTF';
-                //     panner.distanceModel = 'inverse';
-                //     panner.refDistance = 1;
-                //     panner.maxDistance = 10000;
-                //     panner.rolloffFactor = 1;
-                //     panner.coneInnerAngle = 360;
-                //     panner.coneOuterAngle = 0;
-                //     panner.coneOuterGain = 0;
-                //     if (
-                //         TEMP_position.x !== null &&
-                //         TEMP_position.y !== null &&
-                //         TEMP_position.z !== null
-                //     ) {
-                //         panner.positionX.setValueAtTime(
-                //             TEMP_position.x,
-                //             TEMP_audioContext.currentTime,
-                //         );
-                //         panner.positionY.setValueAtTime(
-                //             TEMP_position.y,
-                //             TEMP_audioContext.currentTime,
-                //         );
-                //         panner.positionZ.setValueAtTime(
-                //             TEMP_position.z,
-                //             TEMP_audioContext.currentTime,
-                //         );
-                //     }
-                //     if (
-                //         TEMP_orientation.x !== null &&
-                //         TEMP_orientation.y !== null &&
-                //         TEMP_orientation.z !== null
-                //     ) {
-                //         panner.orientationX.setValueAtTime(
-                //             TEMP_orientation.x,
-                //             TEMP_audioContext.currentTime,
-                //         );
-                //         panner.orientationY.setValueAtTime(
-                //             TEMP_orientation.y,
-                //             TEMP_audioContext.currentTime,
-                //         );
-                //         panner.orientationZ.setValueAtTime(
-                //             TEMP_orientation.z,
-                //             TEMP_audioContext.currentTime,
-                //         );
-                //     }
-                //     source.connect(panner);
-                //     panner.connect(TEMP_audioContext.destination);
-                //     console.info('#### Playing audio ####');
-                //     source.start();
-                // });
+            const handleIncomingStream = (data: {
+                stream: MediaStream;
+                agentId: string;
+            }) => {
+                if (!audioContext) {
+                    console.error(
+                        `${AUDIO_LOG_PREFIX} No audio context available.`,
+                    );
+                    return;
+                }
+
+                const audioTracks = data.stream.getAudioTracks();
+                if (audioTracks.length === 0) {
+                    console.error(
+                        `${AUDIO_LOG_PREFIX} No audio tracks in the incoming stream.`,
+                    );
+                    return;
+                }
+
+                const audioSource = audioContext.createMediaStreamSource(
+                    data.stream,
+                );
+                const panner = audioContext.createPanner();
+                panner.panningModel = 'HRTF';
+                panner.distanceModel = 'inverse';
+                panner.refDistance = 1;
+                panner.maxDistance = 10000;
+                panner.rolloffFactor = 1;
+                panner.coneInnerAngle = 360;
+                panner.coneOuterAngle = 0;
+                panner.coneOuterGain = 0;
+
+                const agentMetadata =
+                    agentConnections[data.agentId]?.media.metadata;
+                if (agentMetadata) {
+                    const { audioPosition, audioOrientation } = agentMetadata;
+                    if (audioPosition) {
+                        panner.positionX.setValueAtTime(
+                            audioPosition.x,
+                            audioContext.currentTime,
+                        );
+                        panner.positionY.setValueAtTime(
+                            audioPosition.y,
+                            audioContext.currentTime,
+                        );
+                        panner.positionZ.setValueAtTime(
+                            audioPosition.z,
+                            audioContext.currentTime,
+                        );
+                    }
+
+                    if (audioOrientation) {
+                        panner.orientationX.setValueAtTime(
+                            audioOrientation.x,
+                            audioContext.currentTime,
+                        );
+                        panner.orientationY.setValueAtTime(
+                            audioOrientation.y,
+                            audioContext.currentTime,
+                        );
+                        panner.orientationZ.setValueAtTime(
+                            audioOrientation.z,
+                            audioContext.currentTime,
+                        );
+                    }
+                } else {
+                    if (TEMP_position) {
+                        panner.positionX.setValueAtTime(
+                            TEMP_position.x,
+                            audioContext.currentTime,
+                        );
+                        panner.positionY.setValueAtTime(
+                            TEMP_position.y,
+                            audioContext.currentTime,
+                        );
+                        panner.positionZ.setValueAtTime(
+                            TEMP_position.z,
+                            audioContext.currentTime,
+                        );
+                    }
+
+                    if (TEMP_orientation) {
+                        panner.orientationX.setValueAtTime(
+                            TEMP_orientation.x,
+                            audioContext.currentTime,
+                        );
+                        panner.orientationY.setValueAtTime(
+                            TEMP_orientation.y,
+                            audioContext.currentTime,
+                        );
+                        panner.orientationZ.setValueAtTime(
+                            TEMP_orientation.z,
+                            audioContext.currentTime,
+                        );
+                    }
+                }
+
+                audioSource.connect(panner);
+                panner.connect(audioContext.destination);
+                console.info(
+                    `${AUDIO_LOG_PREFIX} Playing spatialized audio from incoming stream.`,
+                );
             };
 
             export const TEMP_streamAudio = () => {
@@ -341,9 +362,9 @@ export namespace Client {
                     }
 
                     // Check if a media connection already exists
-                    if (connectionInfo.mediaConnection) {
+                    if (connectionInfo.media.connection) {
                         const sender =
-                            connectionInfo.mediaConnection.peerConnection
+                            connectionInfo.media.connection.peerConnection
                                 ?.getSenders()
                                 .find((s) => s.track?.kind === 'audio');
                         if (sender) {
@@ -367,9 +388,17 @@ export namespace Client {
                         }
                     } else if (peer) {
                         // If no media connection exists, create a new one
-                        connectionInfo.mediaConnection = peer.call(
+                        connectionInfo.media.connection = peer.call(
                             agentId,
-                            TEMP_mediaStream,
+                            TEMP_mediaStream as MediaStream,
+                        );
+                        connectionInfo.media.connection.on(
+                            'stream',
+                            (stream: MediaStream) =>
+                                handleIncomingStream({
+                                    stream,
+                                    agentId,
+                                }),
                         );
                         console.log(
                             `${AUDIO_LOG_PREFIX} New media connection established with agent ${agentId}.`,
