@@ -28,10 +28,10 @@ function init() {
     expressApp.use('/', MetaRequest);
 
     // Create HTTP server
-    const server = createServer(expressApp);
+    const expressServer = createServer(expressApp);
 
     // Webtransport via Socket.io
-    const socketIO = new Server(server, {
+    const socketIO = new Server(expressServer, {
         cors: {
             origin: TEMP_ALLOWED_ORIGINS,
             methods: TEMP_ALLOWED_METHODS_WT,
@@ -40,12 +40,15 @@ function init() {
     WorldTransport.Router(socketIO);
 
     // Peer server setup
-    const peerServer = ExpressPeerServer(server, {
-        path: '/myapp',
+    const peerServer = ExpressPeerServer(expressServer, {
+        port: TEMP_PORT,
+        allow_discovery: true,
+        // proxied: true,
     });
     expressApp.use('/peerjs', peerServer);
 
-    server.listen(TEMP_PORT, () => {
+    // Launch
+    expressServer.listen(TEMP_PORT, () => {
         console.log(`Server is running on port ${TEMP_PORT}`);
     });
 }

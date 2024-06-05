@@ -129,9 +129,9 @@ export namespace Client {
 
         export const InitializeAgentModule = (agentId: string) => {
             peer = new Peer(agentId, {
-                host: 'localhost', // or the server's address
+                host: '/', // or the server's address
+                path: '/peerjs',
                 port: 3000,
-                path: '/myapp',
             });
 
             peer.on('connection', (conn) => {
