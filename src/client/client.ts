@@ -173,6 +173,10 @@ export namespace Client {
             const acceptedCall = acceptMediaCall(call);
 
             if (acceptedCall) {
+                setTimeout(() => {
+                    Media.testAudioConnection(call.peer);
+                }, 1000);
+
                 call.on('stream', (remoteStream) => {
                     console.info(
                         `${AGENT_LOG_PREFIX} Received remote stream from [${call.peer}]`,
@@ -325,6 +329,11 @@ export namespace Client {
                         stream: remoteStream,
                         agentId,
                     });
+
+                    // Send a test audio message after a short delay
+                    setTimeout(() => {
+                        Media.testAudioConnection(agentId);
+                    }, 1000);
                 });
 
                 mediaConn.on('close', () => {
@@ -395,6 +404,49 @@ export namespace Client {
 
             export const InitializeMediaModule = () => {
                 audioContext = new AudioContext();
+            };
+
+            export const testAudioConnection = (agentId: string) => {
+                const connection = agentConnections[agentId]?.media.connection;
+                if (connection && audioContext) {
+                    const oscillator = audioContext.createOscillator();
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(
+                        440,
+                        audioContext.currentTime,
+                    );
+
+                    const destination =
+                        audioContext.createMediaStreamDestination();
+                    oscillator.connect(destination);
+                    oscillator.start();
+
+                    const testStream = destination.stream;
+                    connection.peerConnection
+                        .getSenders()
+                        .forEach(async (sender) => {
+                            if (sender.track && sender.track.kind === 'audio') {
+                                await sender.replaceTrack(
+                                    testStream.getAudioTracks()[0],
+                                );
+                            }
+                        });
+
+                    setTimeout(() => {
+                        oscillator.stop();
+                        oscillator.disconnect();
+                    }, 1000);
+
+                    console.log(
+                        `${MEDIA_LOG_PREFIX} Sent test audio to agent ${agentId}`,
+                    );
+                } else {
+                    console.warn(
+                        `${MEDIA_LOG_PREFIX} No media connection available for agent ${agentId}`,
+                        connection,
+                        audioContext,
+                    );
+                }
             };
 
             export const updateLocalStream = async (data: {
