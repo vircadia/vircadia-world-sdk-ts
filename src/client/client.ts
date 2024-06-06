@@ -128,8 +128,21 @@ export namespace Client {
                 port: 3000,
             });
 
-            peer.on('connection', handleDataConnection);
-            peer.on('call', handleMediaCall);
+            peer.on('connection', (conn: DataConnection) => {
+                console.log(`Incoming data connection from ${conn.peer}`);
+                if (!agentConnections[conn.peer]) {
+                    createAgent(conn.peer);
+                }
+                handleDataConnection(conn);
+            });
+
+            peer.on('call', (call: MediaConnection) => {
+                console.log(`Incoming media connection from ${call.peer}`);
+                if (!agentConnections[call.peer]) {
+                    createAgent(call.peer);
+                }
+                handleMediaConnection(call);
+            });
 
             socket?.on(EPacketType.WORLD_AgentList, handleAgentListUpdate);
         };
@@ -138,14 +151,7 @@ export namespace Client {
             const remoteAgentId = conn.peer;
             console.log(`Received data connection from agent ${remoteAgentId}`);
 
-            if (agentConnections[remoteAgentId]) {
-                console.error(
-                    `${AGENT_LOG_PREFIX} Received data connection from agent ${remoteAgentId}, but agent already exists.`,
-                );
-            } else {
-                createAgent(remoteAgentId);
-                agentConnections[remoteAgentId].dataConnection = conn;
-            }
+            agentConnections[remoteAgentId].dataConnection = conn;
 
             conn.on('data', (data) => {
                 // console.log(`Received data from agent ${remoteAgentId}:`, data);
@@ -160,36 +166,45 @@ export namespace Client {
                 console.log(
                     `Data connection closed with agent ${remoteAgentId}`,
                 );
-                removeAgent(remoteAgentId);
+                removeDataConnection(remoteAgentId);
             });
         };
 
-        const handleMediaCall = (call: MediaConnection) => {
+        const removeDataConnection = (agentId: string) => {
+            if (agentConnections[agentId].dataConnection) {
+                agentConnections[agentId].dataConnection.close();
+                agentConnections[agentId].dataConnection = null;
+            }
+        };
+
+        const handleMediaConnection = (call: MediaConnection) => {
+            const remoteAgentId = call.peer;
             console.log(
                 `${AGENT_LOG_PREFIX} Received a media call from:`,
-                call.peer,
+                remoteAgentId,
             );
 
             const acceptedCall = acceptMediaCall(call);
 
             if (acceptedCall) {
                 setTimeout(() => {
-                    Media.testAudioConnection(call.peer);
+                    Media.testAudioConnection(remoteAgentId);
                 }, 1000);
 
                 call.on('stream', (remoteStream) => {
                     console.info(
-                        `${AGENT_LOG_PREFIX} Received remote stream from [${call.peer}]`,
+                        `${AGENT_LOG_PREFIX} Received remote stream from [${remoteAgentId}]`,
                         remoteStream,
                     );
                     void Media.handleIncomingStream({
                         stream: remoteStream,
-                        agentId: call.peer,
+                        agentId: remoteAgentId,
                     });
                 });
 
                 call.on('close', () => {
                     console.log('Media call closed');
+                    removeMediaConnection(remoteAgentId);
                 });
 
                 call.on('error', (error) => {
@@ -197,8 +212,15 @@ export namespace Client {
                 });
             } else {
                 console.info(
-                    `${AGENT_LOG_PREFIX} Media call rejected from [${call.peer}]`,
+                    `${AGENT_LOG_PREFIX} Media call rejected from [${remoteAgentId}]`,
                 );
+            }
+        };
+
+        const removeMediaConnection = (agentId: string) => {
+            if (agentConnections[agentId].media.connection) {
+                agentConnections[agentId].media.connection.close();
+                agentConnections[agentId].media.connection = null;
             }
         };
 
@@ -216,10 +238,13 @@ export namespace Client {
 
             // Establish new connections for new agents
             agentList.forEach((agentId) => {
-                if (agentId !== peer?.id && !agentConnections[agentId]) {
-                    createAgent(agentId);
-                    connectDataChannel(agentId);
-                    connectMediaChannel(agentId);
+                if (agentId !== peer?.id) {
+                    if (!agentConnections[agentId]) {
+                        createAgent(agentId);
+                    }
+
+                    makeDataConnection(agentId);
+                    makeMediaConnection(agentId);
                 }
             });
         };
@@ -270,8 +295,18 @@ export namespace Client {
             return true;
         };
 
-        const connectDataChannel = (agentId: string) => {
-            if (peer && !agentConnections[agentId].dataConnection) {
+        const makeDataConnection = (agentId: string) => {
+            const agentConnection = agentConnections[agentId];
+
+            if (agentConnection.dataConnection?.open) {
+                // console.info(
+                //     `${AGENT_LOG_PREFIX} Data connection already exists and is open with agent ${agentId}`,
+                // );
+            } else if (peer && agentConnection) {
+                if (agentConnection.dataConnection) {
+                    removeDataConnection(agentId);
+                }
+
                 const dataConn = peer.connect(agentId);
                 if (!dataConn) {
                     console.error(
@@ -280,7 +315,7 @@ export namespace Client {
                     return;
                 }
 
-                agentConnections[agentId].dataConnection = dataConn;
+                agentConnection.dataConnection = dataConn;
 
                 dataConn.on('open', () => {
                     console.log(`Data connection opened with agent ${agentId}`);
@@ -288,12 +323,13 @@ export namespace Client {
 
                 dataConn.on('close', () => {
                     console.log(`Data connection closed with agent ${agentId}`);
-                    removeAgent(agentId);
+                    removeDataConnection(agentId);
                 });
             }
         };
 
-        const connectMediaChannel = (agentId: string) => {
+        const makeMediaConnection = (agentId: string) => {
+            const agentConnection = agentConnections[agentId];
             const localStream = Media.getLocalStream({ kind: 'audio' });
 
             if (!localStream) {
@@ -308,7 +344,15 @@ export namespace Client {
                 return;
             }
 
-            if (peer && !agentConnections[agentId].media.connection) {
+            if (agentConnection.media.connection?.open) {
+                // console.info(
+                //     `${AGENT_LOG_PREFIX} Media connection already exists and is open with agent ${agentId}`,
+                // );
+            } else if (peer && agentConnection) {
+                if (agentConnection.media.connection) {
+                    removeMediaConnection(agentId);
+                }
+
                 const mediaConn = peer.call(agentId, localStream);
                 if (!mediaConn) {
                     console.error(
@@ -317,7 +361,7 @@ export namespace Client {
                     return;
                 }
 
-                agentConnections[agentId].media.connection = mediaConn;
+                agentConnection.media.connection = mediaConn;
 
                 console.log(
                     `${AGENT_LOG_PREFIX} Establishing media connection with agent ${agentId}`,
@@ -340,7 +384,7 @@ export namespace Client {
                     console.log(
                         `Media connection closed with agent ${agentId}`,
                     );
-                    removeAgent(agentId);
+                    removeMediaConnection(agentId);
                 });
 
                 mediaConn.on('error', (error) => {
