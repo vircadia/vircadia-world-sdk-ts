@@ -174,8 +174,9 @@ export namespace Client {
 
             if (acceptedCall) {
                 call.on('stream', (remoteStream) => {
-                    console.log(
+                    console.info(
                         `${AGENT_LOG_PREFIX} Received remote stream from [${call.peer}]`,
+                        remoteStream,
                     );
                     void Media.handleIncomingStream({
                         stream: remoteStream,
@@ -198,9 +199,9 @@ export namespace Client {
         };
 
         const handleAgentListUpdate = (message: C_WORLD_AgentList_Packet) => {
-            console.log('Received agent list update');
+            // console.log('Received agent list update');
             const { agentList } = message;
-            console.log('Updated agent list:', agentList);
+            // console.log('Updated agent list:', agentList);
 
             // Remove connections for agents no longer present
             Object.keys(agentConnections).forEach((agentId) => {
@@ -241,12 +242,21 @@ export namespace Client {
             const localStream = Media.getLocalStream({ kind: 'audio' });
 
             if (!localStream) {
+                console.error(
+                    'No local audio stream available to answer the call.',
+                );
+                return false;
+            }
+
+            if (localStream.getAudioTracks().length === 0) {
+                console.error('Local audio stream has no audio tracks.');
                 return false;
             }
 
             mediaCall.answer(localStream);
 
             if (agentConnections[mediaCall.peer]) {
+                agentConnections[mediaCall.peer].media.connection?.close();
                 agentConnections[mediaCall.peer].media.connection = mediaCall;
             } else {
                 createAgent(mediaCall.peer);
@@ -282,11 +292,19 @@ export namespace Client {
         const connectMediaChannel = (agentId: string) => {
             const localStream = Media.getLocalStream({ kind: 'audio' });
 
-            if (
-                peer &&
-                !agentConnections[agentId].media.connection &&
-                localStream
-            ) {
+            if (!localStream) {
+                console.error(
+                    'No local audio stream available to initiate the call.',
+                );
+                return;
+            }
+
+            if (localStream.getAudioTracks().length === 0) {
+                console.error('Local audio stream has no audio tracks.');
+                return;
+            }
+
+            if (peer && !agentConnections[agentId].media.connection) {
                 const mediaConn = peer.call(agentId, localStream);
                 if (!mediaConn) {
                     console.error(
@@ -502,27 +520,9 @@ export namespace Client {
                     );
                 });
 
-                // Ensure the audio context is resumed on user interaction
-                // if (audioContext.state === 'suspended') {
-                //     const resumeAudioContext = () => {
-                //         console.info(' $$$ Triggered');
-                //         void audioContext?.resume().then(() => {
-                //             console.log(
-                //                 `${MEDIA_LOG_PREFIX} Audio context resumed.`,
-                //             );
-                //             document.removeEventListener(
-                //                 'click',
-                //                 resumeAudioContext,
-                //             );
-                //         });
-                //     };
-                //     document.addEventListener('click', resumeAudioContext);
-                // }
-
                 const audioSource = audioContext.createMediaStreamSource(
                     data.stream,
                 );
-
                 const panner = createSpatialPanner(data.agentId);
 
                 // Directly connect the audio source to the destination for echo
