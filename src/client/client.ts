@@ -188,7 +188,7 @@ export namespace Client {
 
             if (acceptedCall) {
                 setTimeout(() => {
-                    Media.testAudioConnection(remoteAgentId);
+                    void Media.testAudioConnection(remoteAgentId);
                 }, 1000);
 
                 call.on('stream', (remoteStream) => {
@@ -239,12 +239,19 @@ export namespace Client {
             // Establish new connections for new agents
             agentList.forEach((agentId) => {
                 if (agentId !== peer?.id) {
-                    if (!agentConnections[agentId]) {
+                    const agentConnection = agentConnections[agentId];
+
+                    if (!agentConnection) {
                         createAgent(agentId);
                     }
 
-                    makeDataConnection(agentId);
-                    makeMediaConnection(agentId);
+                    if (!agentConnection.dataConnection?.open) {
+                        makeDataConnection(agentId);
+                    }
+
+                    if (!agentConnection.media.connection?.open) {
+                        makeMediaConnection(agentId);
+                    }
                 }
             });
         };
@@ -298,15 +305,7 @@ export namespace Client {
         const makeDataConnection = (agentId: string) => {
             const agentConnection = agentConnections[agentId];
 
-            if (agentConnection.dataConnection?.open) {
-                // console.info(
-                //     `${AGENT_LOG_PREFIX} Data connection already exists and is open with agent ${agentId}`,
-                // );
-            } else if (peer && agentConnection) {
-                if (agentConnection.dataConnection) {
-                    removeDataConnection(agentId);
-                }
-
+            if (peer && agentConnection) {
                 const dataConn = peer.connect(agentId);
                 if (!dataConn) {
                     console.error(
@@ -344,15 +343,7 @@ export namespace Client {
                 return;
             }
 
-            if (agentConnection.media.connection?.open) {
-                // console.info(
-                //     `${AGENT_LOG_PREFIX} Media connection already exists and is open with agent ${agentId}`,
-                // );
-            } else if (peer && agentConnection) {
-                if (agentConnection.media.connection) {
-                    removeMediaConnection(agentId);
-                }
-
+            if (peer && agentConnection) {
                 const mediaConn = peer.call(agentId, localStream);
                 if (!mediaConn) {
                     console.error(
@@ -376,7 +367,7 @@ export namespace Client {
 
                     // Send a test audio message after a short delay
                     setTimeout(() => {
-                        Media.testAudioConnection(agentId);
+                        void Media.testAudioConnection(agentId);
                     }, 1000);
                 });
 
@@ -424,6 +415,11 @@ export namespace Client {
                         //     `${AGENT_LOG_PREFIX} #### Sent metadata to agent ${agentId}, audio track:`,
                         //     connection.media.connection,
                         // );
+                        console.info(
+                            'mediaConnection stats',
+                            connection.media.connection?.localStream,
+                            connection.media.connection?.remoteStream,
+                        );
                     } else {
                         console.warn(
                             `${AGENT_LOG_PREFIX} Unable to send metadata to agent ${agentId}. Connection status:`,
@@ -450,47 +446,81 @@ export namespace Client {
                 audioContext = new AudioContext();
             };
 
-            export const testAudioConnection = (agentId: string) => {
-                const connection = agentConnections[agentId]?.media.connection;
-                if (connection && audioContext) {
-                    const oscillator = audioContext.createOscillator();
-                    oscillator.type = 'sine';
-                    oscillator.frequency.setValueAtTime(
-                        440,
-                        audioContext.currentTime,
-                    );
+            export const testAudioConnection = (
+                agentId: string,
+            ): Promise<void> => {
+                return new Promise((resolve, reject) => {
+                    const connection =
+                        agentConnections[agentId]?.media.connection;
+                    const connectionStatus = connection?.open;
+                    const audioContextStatus = audioContext?.state;
 
-                    const destination =
-                        audioContext.createMediaStreamDestination();
-                    oscillator.connect(destination);
-                    oscillator.start();
+                    if (
+                        connectionStatus &&
+                        audioContext &&
+                        audioContextStatus === 'running'
+                    ) {
+                        const oscillator = audioContext.createOscillator();
+                        oscillator.type = 'sine';
+                        oscillator.frequency.setValueAtTime(
+                            440,
+                            audioContext.currentTime,
+                        );
 
-                    const testStream = destination.stream;
-                    connection.peerConnection
-                        .getSenders()
-                        .forEach(async (sender) => {
-                            if (sender.track && sender.track.kind === 'audio') {
-                                await sender.replaceTrack(
-                                    testStream.getAudioTracks()[0],
+                        const destination =
+                            audioContext.createMediaStreamDestination();
+                        oscillator.connect(destination);
+                        oscillator.start();
+
+                        const testStream = destination.stream;
+                        const senders = connection.peerConnection.getSenders();
+                        if (senders.length === 0) {
+                            console.error(
+                                `${MEDIA_LOG_PREFIX} $$$$ No senders available in peer connection.`,
+                            );
+                            reject('No senders available in peer connection.');
+                            return;
+                        }
+
+                        Promise.all(
+                            senders.map((sender) => {
+                                if (
+                                    sender.track &&
+                                    sender.track.kind === 'audio'
+                                ) {
+                                    return sender.replaceTrack(
+                                        testStream.getAudioTracks()[0],
+                                    );
+                                }
+                                return Promise.resolve();
+                            }),
+                        )
+                            .then(() => {
+                                setTimeout(() => {
+                                    oscillator.stop();
+                                    oscillator.disconnect();
+                                    console.log(
+                                        `${MEDIA_LOG_PREFIX} Sent test audio to agent ${agentId}`,
+                                    );
+                                    resolve();
+                                }, 1000);
+                            })
+                            .catch((error) => {
+                                console.error(
+                                    `${MEDIA_LOG_PREFIX} $$$$ Error replacing track:`,
+                                    error,
                                 );
-                            }
-                        });
-
-                    setTimeout(() => {
-                        oscillator.stop();
-                        oscillator.disconnect();
-                    }, 1000);
-
-                    console.log(
-                        `${MEDIA_LOG_PREFIX} Sent test audio to agent ${agentId}`,
-                    );
-                } else {
-                    console.warn(
-                        `${MEDIA_LOG_PREFIX} No media connection available for agent ${agentId}`,
-                        connection,
-                        audioContext,
-                    );
-                }
+                                reject(error);
+                            });
+                    } else {
+                        console.warn(
+                            `${MEDIA_LOG_PREFIX} $$$$ Failed to send test audio packet ${agentId}`,
+                            connection,
+                            audioContext,
+                        );
+                        reject('Connection or audio context not ready.');
+                    }
+                });
             };
 
             export const updateLocalStream = async (data: {
