@@ -411,15 +411,6 @@ export namespace Client {
                             audioOrientation: TEMP_orientation,
                         });
                         void connection.dataConnection.send(packet);
-                        // console.log(
-                        //     `${AGENT_LOG_PREFIX} Sent metadata to agent ${agentId}, audio track:`,
-                        //     connection.media.connection,
-                        // );
-                        console.info(
-                            'mediaConnection stats',
-                            connection.media.connection?.localStream,
-                            connection.media.connection?.remoteStream,
-                        );
                     } else {
                         console.warn(
                             `${AGENT_LOG_PREFIX} Unable to send metadata to agent ${agentId}. Connection status:`,
