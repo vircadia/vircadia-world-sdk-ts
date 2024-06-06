@@ -148,12 +148,12 @@ export namespace Client {
             }
 
             conn.on('data', (data) => {
-                console.log(`Received data from agent ${remoteAgentId}:`, data);
-                if (data instanceof C_AUDIO_Metadata_Packet) {
-                    if (agentConnections[remoteAgentId].media.connection) {
-                        agentConnections[remoteAgentId].media.metadata = data;
-                    }
-                }
+                // console.log(`Received data from agent ${remoteAgentId}:`, data);
+                // if (data instanceof C_AUDIO_Metadata_Packet) {
+                //     if (agentConnections[remoteAgentId].media.connection) {
+                //         agentConnections[remoteAgentId].media.metadata = data;
+                //     }
+                // }
             });
 
             conn.on('close', () => {
@@ -177,7 +177,7 @@ export namespace Client {
                     console.log(
                         `${AGENT_LOG_PREFIX} Received remote stream from [${call.peer}]`,
                     );
-                    Media.handleIncomingStream({
+                    void Media.handleIncomingStream({
                         stream: remoteStream,
                         agentId: call.peer,
                     });
@@ -303,7 +303,7 @@ export namespace Client {
 
                 mediaConn.on('stream', (remoteStream) => {
                     console.log(`Received remote stream from agent ${agentId}`);
-                    Media.handleIncomingStream({
+                    void Media.handleIncomingStream({
                         stream: remoteStream,
                         agentId,
                     });
@@ -330,10 +330,10 @@ export namespace Client {
         };
 
         export const sendHeartbeatToAgents = () => {
-            console.info(
-                '#### TEMP: Are my audio tracks muted?',
-                Media.getLocalStream({ kind: 'audio' }),
-            );
+            // console.info(
+            //     '#### TEMP: Are my audio tracks muted?',
+            //     Media.getLocalStream({ kind: 'audio' }),
+            // );
 
             Object.entries(agentConnections).forEach(
                 ([agentId, connection]) => {
@@ -349,10 +349,10 @@ export namespace Client {
                             audioOrientation: TEMP_orientation,
                         });
                         void connection.dataConnection.send(packet);
-                        console.log(
-                            `${AGENT_LOG_PREFIX} #### Sent metadata to agent ${agentId}, audio track:`,
-                            connection.media.connection,
-                        );
+                        // console.log(
+                        //     `${AGENT_LOG_PREFIX} #### Sent metadata to agent ${agentId}, audio track:`,
+                        //     connection.media.connection,
+                        // );
                     } else {
                         console.warn(
                             `${AGENT_LOG_PREFIX} Unable to send metadata to agent ${agentId}. Connection status:`,
@@ -379,11 +379,48 @@ export namespace Client {
                 audioContext = new AudioContext();
             };
 
-            export const updateLocalStream = (data: {
+            export const updateLocalStream = async (data: {
                 newStream: MediaStream;
                 kind: 'video' | 'audio';
             }) => {
                 localAudioStream = data.newStream;
+
+                // Connect the local stream to the audio context destination for echo
+                if (audioContext && data.kind === 'audio') {
+                    if (audioContext.state === 'suspended') {
+                        await audioContext.resume();
+                        console.log(
+                            `${MEDIA_LOG_PREFIX} #### Resumed OUTGOING audio context.`,
+                        );
+                    }
+
+                    // const audioSource = audioContext.createMediaStreamSource(
+                    //     data.newStream,
+                    // );
+                    // audioSource.connect(audioContext.destination);
+                    // console.log(
+                    //     `${MEDIA_LOG_PREFIX} #### Connected local audio stream to audio context destination.`,
+                    // );
+
+                    const audioTracks = data.newStream.getAudioTracks();
+                    if (audioTracks.length === 0) {
+                        console.warn(
+                            `${MEDIA_LOG_PREFIX} #### No audio tracks found in the stream.`,
+                        );
+                    } else {
+                        audioTracks.forEach((track) => {
+                            track.enabled = true;
+                            console.log(
+                                `${MEDIA_LOG_PREFIX} #### Audio track:`,
+                                track,
+                            );
+                        });
+                    }
+                } else {
+                    console.info(
+                        `${MEDIA_LOG_PREFIX} #### No audio context available [${audioContext}] or kind is not audio [${data.kind}]`,
+                    );
+                }
 
                 Object.values(Client.Agent.agentConnections).forEach(
                     (connection) => {
@@ -427,7 +464,7 @@ export namespace Client {
                 return null;
             };
 
-            export const handleIncomingStream = (data: {
+            export const handleIncomingStream = async (data: {
                 stream: MediaStream;
                 agentId: string;
             }) => {
@@ -438,9 +475,16 @@ export namespace Client {
                     return;
                 }
 
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                    console.log(
+                        `${MEDIA_LOG_PREFIX} #### Resumed INCOMING audio context.`,
+                    );
+                }
+
                 const audioTracks = data.stream.getAudioTracks();
-                console.log(
-                    `${MEDIA_LOG_PREFIX} Received ${audioTracks.length} audio tracks from agent ${data.agentId}`,
+                console.info(
+                    `${MEDIA_LOG_PREFIX} Received ${audioTracks.length} audio tracks from agent ${data.agentId} for stream [${data.stream}]`,
                 );
 
                 if (audioTracks.length === 0) {
@@ -450,17 +494,43 @@ export namespace Client {
                     return;
                 }
 
+                audioTracks.forEach((track) => {
+                    track.enabled = true;
+                    console.info(
+                        `${MEDIA_LOG_PREFIX} #### Incoming audio track:`,
+                        track,
+                    );
+                });
+
+                // Ensure the audio context is resumed on user interaction
+                // if (audioContext.state === 'suspended') {
+                //     const resumeAudioContext = () => {
+                //         console.info(' $$$ Triggered');
+                //         void audioContext?.resume().then(() => {
+                //             console.log(
+                //                 `${MEDIA_LOG_PREFIX} Audio context resumed.`,
+                //             );
+                //             document.removeEventListener(
+                //                 'click',
+                //                 resumeAudioContext,
+                //             );
+                //         });
+                //     };
+                //     document.addEventListener('click', resumeAudioContext);
+                // }
+
                 const audioSource = audioContext.createMediaStreamSource(
                     data.stream,
                 );
+
                 const panner = createSpatialPanner(data.agentId);
+
+                // Directly connect the audio source to the destination for echo
+                audioSource.connect(audioContext.destination);
 
                 // Connect the audio source to both the panner and the destination
                 audioSource.connect(panner);
                 panner.connect(audioContext.destination);
-
-                // Directly connect the audio source to the destination for echo
-                audioSource.connect(audioContext.destination);
 
                 console.log(
                     `${MEDIA_LOG_PREFIX} Connected incoming audio stream from agent ${data.agentId}`,
