@@ -17,6 +17,8 @@ const TEMP_ICE_SERVERS = [
     },
 ];
 
+const TEMP_AUDIO_METADATA_INTERVAL = 250;
+
 export namespace Client {
     let socket: Socket | null = null;
     let TEMP_agentId: string | null = null;
@@ -75,7 +77,7 @@ export namespace Client {
 
                 heartbeatInterval = setInterval(() => {
                     sendHeartbeatPacket();
-                }, 1000); // TODO: Use a constant or configuration variable for the interval duration
+                }, TEMP_AUDIO_METADATA_INTERVAL); // TODO: Use a constant or configuration variable for the interval duration
             });
 
             socket.on('disconnect', () => {
@@ -115,6 +117,7 @@ export namespace Client {
                 media: {
                     connection: MediaConnection | null;
                     metadata: C_AUDIO_Metadata_Packet | null;
+                    audioContext: AudioContext | null;
                 };
             };
         } = {};
@@ -154,12 +157,16 @@ export namespace Client {
             agentConnections[remoteAgentId].dataConnection = conn;
 
             conn.on('data', (data) => {
-                // console.log(`Received data from agent ${remoteAgentId}:`, data);
-                // if (data instanceof C_AUDIO_Metadata_Packet) {
-                //     if (agentConnections[remoteAgentId].media.connection) {
-                //         agentConnections[remoteAgentId].media.metadata = data;
-                //     }
-                // }
+                console.info(
+                    `Received data from agent ${remoteAgentId}:`,
+                    data,
+                    'is audio packet:',
+                    'audioPosition' in data && 'audioOrientation' in data, // Assuming these properties are unique to C_AUDIO_Metadata_Packet
+                );
+                if ('audioPosition' in data && 'audioOrientation' in data) {
+                    agentConnections[remoteAgentId].media.metadata =
+                        data as C_AUDIO_Metadata_Packet;
+                }
             });
 
             conn.on('close', () => {
@@ -202,9 +209,9 @@ export namespace Client {
                     });
                 });
 
-                call.on('close', () => {
+                call.on('close', async () => {
                     console.log('Media call closed');
-                    removeMediaConnection(remoteAgentId);
+                    await removeMediaConnection(remoteAgentId);
                 });
 
                 call.on('error', (error) => {
@@ -217,10 +224,12 @@ export namespace Client {
             }
         };
 
-        const removeMediaConnection = (agentId: string) => {
-            if (agentConnections[agentId].media.connection) {
-                agentConnections[agentId].media.connection.close();
-                agentConnections[agentId].media.connection = null;
+        const removeMediaConnection = async (agentId: string) => {
+            const agentConnection = agentConnections[agentId];
+            if (agentConnection.media.connection) {
+                agentConnection.media.connection.close();
+                await agentConnection.media.audioContext?.close();
+                agentConnection.media.connection = null;
             }
         };
 
@@ -232,7 +241,7 @@ export namespace Client {
             // Remove connections for agents no longer present
             Object.keys(agentConnections).forEach((agentId) => {
                 if (!agentList.includes(agentId)) {
-                    removeAgent(agentId);
+                    void removeAgent(agentId);
                 }
             });
 
@@ -262,14 +271,15 @@ export namespace Client {
                 media: {
                     connection: null,
                     metadata: null,
+                    audioContext: new AudioContext(),
                 },
             };
         };
 
-        const removeAgent = (agentId: string) => {
+        const removeAgent = async (agentId: string) => {
             if (agentConnections[agentId]) {
-                agentConnections[agentId].dataConnection?.close();
-                agentConnections[agentId].media.connection?.close();
+                removeDataConnection(agentId);
+                await removeMediaConnection(agentId);
                 delete agentConnections[agentId];
             }
         };
@@ -371,11 +381,11 @@ export namespace Client {
                     }, 2500);
                 });
 
-                mediaConn.on('close', () => {
+                mediaConn.on('close', async () => {
                     console.log(
                         `Media connection closed with agent ${agentId}`,
                     );
-                    removeMediaConnection(agentId);
+                    await removeMediaConnection(agentId);
                 });
 
                 mediaConn.on('error', (error) => {
@@ -440,78 +450,74 @@ export namespace Client {
             export const testAudioConnection = (
                 agentId: string,
             ): Promise<void> => {
-                return new Promise((resolve, reject) => {
-                    const connection =
-                        agentConnections[agentId]?.media.connection;
-                    const connectionStatus = connection?.open;
-                    const audioContextStatus = audioContext?.state;
-
-                    if (
-                        connectionStatus &&
-                        audioContext &&
-                        audioContextStatus === 'running'
-                    ) {
-                        const oscillator = audioContext.createOscillator();
-                        oscillator.type = 'sine';
-                        oscillator.frequency.setValueAtTime(
-                            440,
-                            audioContext.currentTime,
-                        );
-
-                        const destination =
-                            audioContext.createMediaStreamDestination();
-                        oscillator.connect(destination);
-                        oscillator.start();
-
-                        const testStream = destination.stream;
-                        const senders = connection.peerConnection.getSenders();
-                        if (senders.length === 0) {
-                            console.error(
-                                `${MEDIA_LOG_PREFIX} No senders available in peer connection.`,
-                            );
-                            reject('No senders available in peer connection.');
-                            return;
-                        }
-
-                        Promise.all(
-                            senders.map((sender) => {
-                                if (
-                                    sender.track &&
-                                    sender.track.kind === 'audio'
-                                ) {
-                                    return sender.replaceTrack(
-                                        testStream.getAudioTracks()[0],
-                                    );
-                                }
-                                return Promise.resolve();
-                            }),
-                        )
-                            .then(() => {
-                                setTimeout(() => {
-                                    oscillator.stop();
-                                    oscillator.disconnect();
-                                    console.log(
-                                        `${MEDIA_LOG_PREFIX} Sent test audio to agent ${agentId}`,
-                                    );
-                                    resolve();
-                                }, 1000);
-                            })
-                            .catch((error) => {
-                                console.error(
-                                    `${MEDIA_LOG_PREFIX} Error replacing track:`,
-                                    error,
-                                );
-                                reject(error);
-                            });
-                    } else {
-                        console.warn(
-                            `${MEDIA_LOG_PREFIX} Failed to send test audio packet ${agentId}`,
-                            connection,
-                            audioContext,
-                        );
-                        reject('Connection or audio context not ready.');
-                    }
-                });
+                // return new Promise((resolve, reject) => {
+                //     const connection =
+                //         agentConnections[agentId]?.media.connection;
+                //     const connectionStatus = connection?.open;
+                //     const audioContextStatus = audioContext?.state;
+                //     if (
+                //         connectionStatus &&
+                //         audioContext &&
+                //         audioContextStatus === 'running'
+                //     ) {
+                //         const oscillator = audioContext.createOscillator();
+                //         oscillator.type = 'sine';
+                //         oscillator.frequency.setValueAtTime(
+                //             440,
+                //             audioContext.currentTime,
+                //         );
+                //         const destination =
+                //             audioContext.createMediaStreamDestination();
+                //         oscillator.connect(destination);
+                //         oscillator.start();
+                //         const testStream = destination.stream;
+                //         const senders = connection.peerConnection.getSenders();
+                //         if (senders.length === 0) {
+                //             console.error(
+                //                 `${MEDIA_LOG_PREFIX} No senders available in peer connection.`,
+                //             );
+                //             reject('No senders available in peer connection.');
+                //             return;
+                //         }
+                //         Promise.all(
+                //             senders.map((sender) => {
+                //                 if (
+                //                     sender.track &&
+                //                     sender.track.kind === 'audio'
+                //                 ) {
+                //                     return sender.replaceTrack(
+                //                         testStream.getAudioTracks()[0],
+                //                     );
+                //                 }
+                //                 return Promise.resolve();
+                //             }),
+                //         )
+                //             .then(() => {
+                //                 setTimeout(() => {
+                //                     oscillator.stop();
+                //                     oscillator.disconnect();
+                //                     console.log(
+                //                         `${MEDIA_LOG_PREFIX} Sent test audio to agent ${agentId}`,
+                //                     );
+                //                     resolve();
+                //                 }, 1000);
+                //             })
+                //             .catch((error) => {
+                //                 console.error(
+                //                     `${MEDIA_LOG_PREFIX} Error replacing track:`,
+                //                     error,
+                //                 );
+                //                 reject(error);
+                //             });
+                //     } else {
+                //         console.warn(
+                //             `${MEDIA_LOG_PREFIX} Failed to send test audio packet ${agentId}`,
+                //             connection,
+                //             audioContext,
+                //         );
+                //         reject('Connection or audio context not ready.');
+                //     }
+                // });
             };
 
             export const updateLocalStream = async (data: {
@@ -603,15 +609,17 @@ export namespace Client {
                 stream: MediaStream;
                 agentId: string;
             }) => {
-                if (!audioContext) {
+                const agentConnection = agentConnections[data.agentId];
+
+                if (!agentConnection.media.audioContext) {
                     console.error(
-                        `${MEDIA_LOG_PREFIX} No audio context available.`,
+                        `${MEDIA_LOG_PREFIX} No audio context available for agent ${data.agentId}`,
                     );
                     return;
                 }
 
-                if (audioContext.state === 'suspended') {
-                    await audioContext.resume();
+                if (agentConnection.media.audioContext?.state === 'suspended') {
+                    await agentConnection.media.audioContext.resume();
                     console.log(
                         `${MEDIA_LOG_PREFIX} Resumed INCOMING audio context.`,
                     );
@@ -644,20 +652,26 @@ export namespace Client {
                     );
                 });
 
-                const audioSource = audioContext.createMediaStreamSource(
-                    data.stream,
-                );
+                const audioSource =
+                    agentConnection.media.audioContext.createMediaStreamSource(
+                        data.stream,
+                    );
 
-                const intervalId = `panner-update-${data.agentId}`;
-                clearInterval(intervalId);
-                const panner = createSpatialPanner(data.agentId, intervalId);
-
-                // Directly connect the audio source to the destination for echo
-                audioSource.connect(audioContext.destination);
+                // Create and configure the spatial panner
+                const panner =
+                    agentConnection.media.audioContext.createPanner();
+                panner.panningModel = 'HRTF';
+                panner.distanceModel = 'inverse';
+                panner.refDistance = 1;
+                panner.maxDistance = 10000;
+                panner.rolloffFactor = 1;
+                panner.coneInnerAngle = 360;
+                panner.coneOuterAngle = 0;
+                panner.coneOuterGain = 0;
 
                 // Connect the audio source to both the panner and the destination
                 audioSource.connect(panner);
-                panner.connect(audioContext.destination);
+                panner.connect(agentConnection.media.audioContext.destination);
 
                 console.log(
                     `${MEDIA_LOG_PREFIX} Connected incoming audio stream from agent ${data.agentId}`,
@@ -671,6 +685,100 @@ export namespace Client {
                         );
                     };
                 });
+
+                const currentMediaConnectionId = data.stream.id;
+                // Set an interval to update the panner position
+                const intervalId = setInterval(() => {
+                    if (
+                        agentConnection.media.audioContext &&
+                        agentConnection.media.audioContext.state ===
+                        'running' &&
+                        panner
+                    ) {
+                        const agentMetadata = agentConnection.media.metadata;
+                        const ourMetadata = {
+                            position: TEMP_position,
+                            orientation: TEMP_orientation,
+                        };
+
+                        if (agentMetadata) {
+                            const { audioPosition, audioOrientation } =
+                                agentMetadata;
+
+                            if (audioPosition && ourMetadata.position) {
+                                const relativePosition = {
+                                    x: audioPosition.x - ourMetadata.position.x,
+                                    y: audioPosition.y - ourMetadata.position.y,
+                                    z: audioPosition.z - ourMetadata.position.z,
+                                };
+
+                                panner.positionX.setValueAtTime(
+                                    relativePosition.x,
+                                    agentConnection.media.audioContext
+                                        .currentTime,
+                                );
+                                panner.positionY.setValueAtTime(
+                                    relativePosition.y,
+                                    agentConnection.media.audioContext
+                                        .currentTime,
+                                );
+                                panner.positionZ.setValueAtTime(
+                                    relativePosition.z,
+                                    agentConnection.media.audioContext
+                                        .currentTime,
+                                );
+                            }
+
+                            if (audioOrientation && ourMetadata.orientation) {
+                                const relativeOrientation = {
+                                    x:
+                                        audioOrientation.x -
+                                        ourMetadata.orientation.x,
+                                    y:
+                                        audioOrientation.y -
+                                        ourMetadata.orientation.y,
+                                    z:
+                                        audioOrientation.z -
+                                        ourMetadata.orientation.z,
+                                };
+
+                                panner.orientationX.setValueAtTime(
+                                    relativeOrientation.x,
+                                    agentConnection.media.audioContext
+                                        .currentTime,
+                                );
+                                panner.orientationY.setValueAtTime(
+                                    relativeOrientation.y,
+                                    agentConnection.media.audioContext
+                                        .currentTime,
+                                );
+                                panner.orientationZ.setValueAtTime(
+                                    relativeOrientation.z,
+                                    agentConnection.media.audioContext
+                                        .currentTime,
+                                );
+                            }
+                        } else {
+                            console.warn(
+                                `${MEDIA_LOG_PREFIX} No metadata available for agent ${data.agentId}`,
+                                agentConnection.media.metadata,
+                            );
+                        }
+                    } else {
+                        console.warn(
+                            `${MEDIA_LOG_PREFIX} No panner or audio context available for agent ${data.agentId}`,
+                            agentConnection.media.audioContext,
+                            panner,
+                        );
+                    }
+
+                    if (currentMediaConnectionId !== data.stream.id) {
+                        clearInterval(intervalId);
+                        console.log(
+                            `${MEDIA_LOG_PREFIX} Cleared interval for agent ${data.agentId} as the media stream connection no longer exists.`,
+                        );
+                    }
+                }, TEMP_AUDIO_METADATA_INTERVAL); // Update every 1000 ms
             };
 
             // export const handleIncomingStream = (data: {
@@ -722,87 +830,6 @@ export namespace Client {
             //         `${MEDIA_LOG_PREFIX} Connected incoming audio stream from agent ${data.agentId} to both Audio element and AudioContext.`,
             //     );
             // };
-
-            const createSpatialPanner = (
-                agentId: string,
-                intervalId: string,
-            ) => {
-                const panner = audioContext!.createPanner();
-                panner.panningModel = 'HRTF';
-                panner.distanceModel = 'inverse';
-                panner.refDistance = 1;
-                panner.maxDistance = 10000;
-                panner.rolloffFactor = 1;
-                panner.coneInnerAngle = 360;
-                panner.coneOuterAngle = 0;
-                panner.coneOuterGain = 0;
-
-                updatePannerPosition(panner, agentId, intervalId);
-
-                return panner;
-            };
-
-            const updatePannerPosition = (
-                panner: PannerNode,
-                agentId: string,
-            ) => {
-                const agentMetadata = agentConnections[agentId]?.media.metadata;
-
-                if (agentMetadata && audioContext) {
-                    const { audioPosition, audioOrientation } = agentMetadata;
-                    console.info(
-                        `${MEDIA_LOG_PREFIX} Updating panner position for agent ${agentId}`,
-                        audioPosition,
-                        audioOrientation,
-                    );
-
-                    // Set an interval to update the panner position
-                    const intervalId = setInterval(() => {
-                        if (audioPosition) {
-                            panner.positionX.setValueAtTime(
-                                audioPosition.x,
-                                audioContext.currentTime,
-                            );
-                            panner.positionY.setValueAtTime(
-                                audioPosition.y,
-                                audioContext.currentTime,
-                            );
-                            panner.positionZ.setValueAtTime(
-                                audioPosition.z,
-                                audioContext.currentTime,
-                            );
-                        }
-
-                        if (audioOrientation) {
-                            panner.orientationX.setValueAtTime(
-                                audioOrientation.x,
-                                audioContext.currentTime,
-                            );
-                            panner.orientationY.setValueAtTime(
-                                audioOrientation.y,
-                                audioContext.currentTime,
-                            );
-                            panner.orientationZ.setValueAtTime(
-                                audioOrientation.z,
-                                audioContext.currentTime,
-                            );
-                        }
-                    }, 1000); // Update every 1000 ms
-
-                    // Example condition to clear the interval
-                    // This should be replaced with a real condition based on your application's logic
-                    if (!agentConnections[agentId]) {
-                        clearInterval(intervalId);
-                        console.log(
-                            `${MEDIA_LOG_PREFIX} Cleared interval for agent ${agentId} as the connection no longer exists.`,
-                        );
-                    }
-                } else {
-                    console.warn(
-                        `${MEDIA_LOG_PREFIX} No metadata available for agent ${agentId}`,
-                    );
-                }
-            };
         }
     }
 }
