@@ -113,8 +113,12 @@ export namespace Client {
 
         export const agentConnections: {
             [key: string]: {
-                dataConnection: DataConnection | null;
+                data: {
+                    isOpening: boolean;
+                    connection: DataConnection | null;
+                };
                 media: {
+                    isOpening: boolean;
                     connection: MediaConnection | null;
                     metadata: C_AUDIO_Metadata_Packet | null;
                     currentStreamSymbol: symbol | null;
@@ -132,109 +136,102 @@ export namespace Client {
             });
 
             peer.on('connection', (conn: DataConnection) => {
-                console.log(`Incoming data connection from ${conn.peer}`);
+                console.log(
+                    `${AGENT_LOG_PREFIX} Incoming data connection from ${conn.peer}`,
+                );
                 const existingConnection =
-                    agentConnections[conn.peer]?.dataConnection;
+                    agentConnections[conn.peer]?.data.connection;
 
-                if (!agentConnections[conn.peer]) {
-                    createAgent(conn.peer);
-                } else if (existingConnection) {
+                if (existingConnection) {
                     // If a connection exists, it is either loading or open, we ASSUME that closed connections were removed from the other listeners.
-                    return;
-                }
+                    console.info(
+                        `${AGENT_LOG_PREFIX} Data connection already exists with agent ${conn.peer}. Ignoring.`,
+                    );
+                } else {
+                    if (!agentConnections[conn.peer]) {
+                        createAgent(conn.peer);
+                    }
 
-                handleDataConnection(conn);
+                    const remoteAgentId = conn.peer;
+
+                    agentConnections[remoteAgentId].data.isOpening = true;
+
+                    console.log(
+                        `Received data connection from agent ${remoteAgentId}`,
+                    );
+
+                    agentConnections[remoteAgentId].data.connection = conn;
+
+                    setupDataConnectionAfterEstablishment({
+                        agentId: remoteAgentId,
+                    });
+
+                    agentConnections[conn.peer].data.isOpening = false;
+                }
             });
 
-            peer.on('call', (call: MediaConnection) => {
-                console.log(`Incoming media connection from ${call.peer}`);
+            peer.on('call', async (call: MediaConnection) => {
+                console.log(
+                    `${AGENT_LOG_PREFIX} Incoming media connection from ${call.peer}`,
+                );
                 const existingConnection =
                     agentConnections[call.peer]?.media.connection;
 
-                if (!agentConnections[call.peer]) {
-                    createAgent(call.peer);
-                } else if (existingConnection) {
+                if (existingConnection) {
                     // If a connection exists, it is either loading or open, we ASSUME that closed connections were removed from the other listeners.
-                    return; // Exit if connection is already open
-                }
+                    console.info(
+                        `${AGENT_LOG_PREFIX} Media connection already exists with agent ${call.peer}. Ignoring.`,
+                    );
+                    // Exit if connection is already open
+                } else {
+                    if (!agentConnections[call.peer]) {
+                        createAgent(call.peer);
+                    }
 
-                void handleMediaConnection(call);
+                    const remoteAgentId = call.peer;
+
+                    agentConnections[remoteAgentId].media.isOpening = true;
+
+                    console.log(
+                        `${AGENT_LOG_PREFIX} Received a media call from:`,
+                        remoteAgentId,
+                    );
+
+                    const acceptedCall = await acceptMediaCall(call);
+
+                    if (acceptedCall) {
+                        // Recheck if the agent still exists and no new connection has been established
+                        if (
+                            agentConnections[remoteAgentId] &&
+                            !agentConnections[remoteAgentId].media.connection
+                        ) {
+                            agentConnections[remoteAgentId].media.connection =
+                                call;
+
+                            setupMediaConnectionAfterEstablishment({
+                                agentId: remoteAgentId,
+                            });
+                        } else {
+                            console.warn(
+                                `Connection state changed before assignment for agent ${remoteAgentId}`,
+                            );
+                        }
+                    }
+
+                    agentConnections[remoteAgentId].media.isOpening = false;
+                }
             });
 
             socket?.on(EPacketType.WORLD_AgentList, handleAgentListUpdate);
         };
 
-        const handleDataConnection = (conn: DataConnection) => {
-            const remoteAgentId = conn.peer;
-            console.log(`Received data connection from agent ${remoteAgentId}`);
-
-            agentConnections[remoteAgentId].dataConnection = conn;
-
-            conn.on('data', (data) => {
-                console.info(
-                    `Received data from agent ${remoteAgentId}:`,
-                    data,
-                    'is audio packet:',
-                    'audioPosition' in data && 'audioOrientation' in data, // Assuming these properties are unique to C_AUDIO_Metadata_Packet
-                );
-                if ('audioPosition' in data && 'audioOrientation' in data) {
-                    agentConnections[remoteAgentId].media.metadata =
-                        data as C_AUDIO_Metadata_Packet;
-                }
-            });
-
-            conn.on('close', () => {
-                console.log(
-                    `Data connection closed with agent ${remoteAgentId}`,
-                );
-                void removeAgent(remoteAgentId);
-            });
-        };
-
         const removeDataConnection = (agentId: string) => {
-            if (agentConnections[agentId].dataConnection) {
-                agentConnections[agentId].dataConnection.close();
-                agentConnections[agentId].dataConnection = null;
-            }
-        };
-
-        const handleMediaConnection = async (call: MediaConnection) => {
-            const remoteAgentId = call.peer;
-            console.log(
-                `${AGENT_LOG_PREFIX} Received a media call from:`,
-                remoteAgentId,
-            );
-
-            const acceptedCall = await acceptMediaCall(call);
-
-            if (acceptedCall) {
-                setTimeout(() => {
-                    void Media.testAudioConnection(remoteAgentId);
-                }, 2500);
-
-                call.on('stream', (remoteStream) => {
-                    console.info(
-                        `${AGENT_LOG_PREFIX} Received remote stream from [${remoteAgentId}]`,
-                        remoteStream,
-                    );
-                    void Media.handleIncomingStream({
-                        stream: remoteStream,
-                        agentId: remoteAgentId,
-                    });
-                });
-
-                call.on('close', () => {
-                    console.log('Media call closed');
-                    void removeMediaConnection(remoteAgentId);
-                });
-
-                call.on('error', (error) => {
-                    console.error('Media call error:', error);
-                });
-            } else {
-                console.info(
-                    `${AGENT_LOG_PREFIX} Media call rejected from [${remoteAgentId}]`,
-                );
+            const agentConnection = agentConnections[agentId];
+            if (agentConnection?.data.connection) {
+                if (agentConnection?.data.connection?.open) {
+                    agentConnection.data.connection.close();
+                }
+                agentConnection.data.connection = null;
             }
         };
 
@@ -243,8 +240,10 @@ export namespace Client {
                 `${AGENT_LOG_PREFIX} Removing media connection with agent ${agentId}`,
             );
             const agentConnection = agentConnections[agentId];
-            if (agentConnection.media.connection) {
-                agentConnection.media.connection.close();
+            if (agentConnection?.media?.connection) {
+                if (agentConnection.media.connection.open) {
+                    agentConnection.media.connection.close();
+                }
                 agentConnection.media.connection = null;
             }
         };
@@ -270,12 +269,12 @@ export namespace Client {
                         createAgent(agentId);
                     }
 
-                    if (!agentConnection.dataConnection?.open) {
-                        makeDataConnection(agentId);
+                    if (!agentConnection.data.connection) {
+                        createDataConnection(agentId);
                     }
 
-                    if (!agentConnection.media.connection?.open) {
-                        makeMediaConnection(agentId);
+                    if (!agentConnection.media.connection) {
+                        createMediaConnection(agentId);
                     }
                 }
             });
@@ -283,13 +282,20 @@ export namespace Client {
 
         const createAgent = (agentId: string) => {
             agentConnections[agentId] = {
-                dataConnection: null,
+                data: {
+                    isOpening: false,
+                    connection: null,
+                },
                 media: {
+                    isOpening: false,
                     connection: null,
                     metadata: null,
                     currentStreamSymbol: null,
                 },
             };
+            console.info(
+                `${AGENT_LOG_PREFIX} Created agent ${agentId} in agent connections`,
+            );
         };
 
         const removeAgent = async (agentId: string) => {
@@ -297,6 +303,9 @@ export namespace Client {
                 removeDataConnection(agentId);
                 removeMediaConnection(agentId);
                 delete agentConnections[agentId];
+                console.info(
+                    `${AGENT_LOG_PREFIX} Removed agent ${agentId} from agent connections`,
+                );
             }
         };
 
@@ -320,18 +329,20 @@ export namespace Client {
             mediaCall.answer(localStream);
 
             const agentConnection = agentConnections[mediaCall.peer];
-            if (agentConnection.media.connection) {
-                removeMediaConnection(mediaCall.peer);
-                agentConnection.media.connection = mediaCall;
-            } else {
+            if (!agentConnection) {
                 createAgent(mediaCall.peer);
-                agentConnection.media.connection = mediaCall;
             }
+
+            if (agentConnection?.media.connection) {
+                removeMediaConnection(mediaCall.peer);
+            }
+
+            agentConnections[mediaCall.peer].media.connection = mediaCall;
 
             return true;
         };
 
-        const makeDataConnection = (agentId: string) => {
+        const createDataConnection = (agentId: string) => {
             const agentConnection = agentConnections[agentId];
 
             if (peer && agentConnection) {
@@ -343,20 +354,19 @@ export namespace Client {
                     return;
                 }
 
-                agentConnection.dataConnection = dataConn;
+                agentConnection.data.connection = dataConn;
 
-                dataConn.on('open', () => {
-                    console.log(`Data connection opened with agent ${agentId}`);
-                });
+                console.info(
+                    `${AGENT_LOG_PREFIX} Created and established data connection with agent ${agentId}`,
+                );
 
-                dataConn.on('close', () => {
-                    console.log(`Data connection closed with agent ${agentId}`);
-                    void removeAgent(agentId);
+                setupDataConnectionAfterEstablishment({
+                    agentId,
                 });
             }
         };
 
-        const makeMediaConnection = (agentId: string) => {
+        const createMediaConnection = (agentId: string) => {
             const agentConnection = agentConnections[agentId];
             const localStream = Media.getLocalStream({ kind: 'audio' });
 
@@ -383,35 +393,12 @@ export namespace Client {
 
                 agentConnection.media.connection = mediaConn;
 
-                console.log(
-                    `${AGENT_LOG_PREFIX} Establishing media connection with agent ${agentId}`,
+                console.info(
+                    `${AGENT_LOG_PREFIX} Created and established media connection with agent ${agentId}`,
                 );
 
-                mediaConn.on('stream', (remoteStream) => {
-                    console.log(`Received remote stream from agent ${agentId}`);
-                    void Media.handleIncomingStream({
-                        stream: remoteStream,
-                        agentId,
-                    });
-
-                    // Send a test audio message after a short delay
-                    setTimeout(() => {
-                        void Media.testAudioConnection(agentId);
-                    }, 2500);
-                });
-
-                mediaConn.on('close', () => {
-                    console.log(
-                        `Media connection closed with agent ${agentId}`,
-                    );
-                    void removeAgent(agentId);
-                });
-
-                mediaConn.on('error', (error) => {
-                    console.error(
-                        `Media connection error with agent ${agentId}:`,
-                        error,
-                    );
+                setupMediaConnectionAfterEstablishment({
+                    agentId,
                 });
             } else {
                 console.error(
@@ -420,12 +407,87 @@ export namespace Client {
             }
         };
 
+        const setupDataConnectionAfterEstablishment = (data: {
+            agentId: string;
+        }) => {
+            const dataConnection =
+                agentConnections[data.agentId].data.connection;
+            dataConnection?.on('data', (dataReceived) => {
+                console.info(
+                    `Received data from agent ${data.agentId}:`,
+                    dataReceived,
+                    'is audio packet:',
+                    'audioPosition' in dataReceived &&
+                    'audioOrientation' in dataReceived, // Assuming these properties are unique to C_AUDIO_Metadata_Packet
+                );
+                if (
+                    'audioPosition' in dataReceived &&
+                    'audioOrientation' in dataReceived
+                ) {
+                    agentConnections[data.agentId].media.metadata =
+                        dataReceived as C_AUDIO_Metadata_Packet;
+                }
+            });
+
+            dataConnection?.on('close', () => {
+                agentConnections[data.agentId].data.connection = null;
+                console.log(
+                    `Data connection closed with agent ${data.agentId}`,
+                );
+            });
+
+            dataConnection?.on('open', () => {
+                console.log(
+                    `${AGENT_LOG_PREFIX} Finished establishing data connection with agent ${data.agentId}`,
+                );
+            });
+        };
+
+        const setupMediaConnectionAfterEstablishment = (data: {
+            agentId: string;
+        }) => {
+            const mediaConnection =
+                agentConnections[data.agentId].media.connection;
+            mediaConnection?.on('stream', (remoteStream) => {
+                console.log(
+                    `Received remote stream from agent ${data.agentId}`,
+                );
+                void Media.handleIncomingStream({
+                    stream: remoteStream,
+                    agentId: data.agentId,
+                });
+
+                // Send a test audio message after a short delay
+                setTimeout(() => {
+                    void Media.testAudioConnection(data.agentId);
+                }, 2500);
+            });
+
+            mediaConnection?.on('close', () => {
+                agentConnections[data.agentId].media.connection = null;
+                console.log(
+                    `Media connection closed with agent ${data.agentId}`,
+                );
+            });
+
+            mediaConnection?.on('error', (error) => {
+                console.error(
+                    `Media connection error with agent ${data.agentId}:`,
+                    error,
+                );
+            });
+
+            console.log(
+                `${AGENT_LOG_PREFIX} Finished establishing media connection with agent ${data.agentId}`,
+            );
+        };
+
         export const sendHeartbeatToAgents = () => {
             Object.entries(agentConnections).forEach(
                 ([agentId, connection]) => {
                     if (
-                        connection.dataConnection &&
-                        connection.dataConnection.open &&
+                        connection.data.connection &&
+                        connection.data.connection.open &&
                         TEMP_position &&
                         TEMP_orientation
                     ) {
@@ -434,7 +496,10 @@ export namespace Client {
                             audioPosition: TEMP_position,
                             audioOrientation: TEMP_orientation,
                         });
-                        void connection.dataConnection.send(packet);
+                        void connection.data.connection.send(packet);
+                        console.log(
+                            `${AGENT_LOG_PREFIX} Sent metadata to agent ${agentId}`,
+                        );
                     } else {
                         console.warn(
                             `${AGENT_LOG_PREFIX} Unable to send metadata to agent ${agentId}. Connection status:`,
@@ -688,15 +753,6 @@ export namespace Client {
                     `${MEDIA_LOG_PREFIX} Connected incoming audio stream from agent ${data.agentId}`,
                 );
 
-                // Log "on data received" for each audio track
-                data.stream.getTracks().forEach((track) => {
-                    track.onunmute = () => {
-                        console.log(
-                            `${MEDIA_LOG_PREFIX} on data received from agent ${data.agentId}`,
-                        );
-                    };
-                });
-
                 // Set an interval to update the panner position
                 const intervalId = setInterval(() => {
                     if (
@@ -704,7 +760,8 @@ export namespace Client {
                         audioContext.state === 'running' &&
                         panner
                     ) {
-                        const agentMetadata = agentConnection.media.metadata;
+                        const agentMetadata =
+                            agentConnections[data.agentId].media.metadata;
                         const ourMetadata = {
                             position: TEMP_position,
                             orientation: TEMP_orientation,
@@ -765,6 +822,7 @@ export namespace Client {
                             console.warn(
                                 `${MEDIA_LOG_PREFIX} No metadata available for agent ${data.agentId}`,
                                 agentConnection.media.metadata,
+                                agentConnection.data.connection,
                             );
                         }
                     } else {
