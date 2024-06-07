@@ -10,7 +10,7 @@ interface I_BASE_Packet {
     receiverId?: string | null;
 }
 
-export class C_AGENT_Heartbeat_Packet implements I_BASE_Packet {
+export class C_AGENT_WorldHeartbeat_Packet implements I_BASE_Packet {
     type: EPacketType.AGENT_Heartbeat = EPacketType.AGENT_Heartbeat;
     senderId: string | null;
 

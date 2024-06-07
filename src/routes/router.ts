@@ -1,7 +1,7 @@
 import {
     EPacketType,
     C_AUDIO_Metadata_Packet,
-    C_AGENT_Heartbeat_Packet,
+    C_AGENT_WorldHeartbeat_Packet,
     C_WORLD_AgentList_Packet,
 } from './meta';
 
@@ -56,16 +56,30 @@ export namespace WorldTransport {
 
         signalActiveUsersInterval = setInterval(() => {
             const connectedPeers = Array.from(agentSocketMap.keys());
+            // Validate active connections
+            connectedPeers.forEach((agentId) => {
+                const socketId = agentSocketMap.get(agentId);
+                if (!socketId) {
+                    return;
+                }
+                const socket =
+                    WorldTransportServer?.sockets.sockets.get(socketId);
+                if (!socket) {
+                    agentSocketMap.delete(agentId);
+                    console.log('Removed inactive agent:', agentId);
+                }
+            });
+
             WorldTransportServer?.emit(
                 EPacketType.WORLD_AgentList,
                 new C_WORLD_AgentList_Packet({
                     senderId: TEMP_ROUTER_USER_ID,
-                    agentList: connectedPeers,
+                    agentList: Array.from(agentSocketMap.keys()),
                 }),
             );
             console.log(
                 'Periodic broadcasting of connected peers:',
-                connectedPeers,
+                Array.from(agentSocketMap.keys()),
             );
         }, 1000);
 
@@ -86,6 +100,7 @@ export namespace WorldTransport {
 
                 if (agentId) {
                     agentSocketMap.delete(agentId);
+                    console.log('User disconnected and removed:', agentId);
                 }
                 WorldTransportServer?.emit(
                     EPacketType.WORLD_AgentList,
@@ -94,8 +109,6 @@ export namespace WorldTransport {
                         agentList: Array.from(agentSocketMap.keys()),
                     }),
                 );
-
-                console.log('User disconnected:', socket.id);
             });
 
             Agent.InitializeAgentModule(socket);
@@ -108,7 +121,7 @@ export namespace WorldTransport {
         export function InitializeAgentModule(socket: Socket): void {
             socket.on(
                 EPacketType.AGENT_Heartbeat,
-                (data: C_AGENT_Heartbeat_Packet) => {
+                (data: C_AGENT_WorldHeartbeat_Packet) => {
                     console.log(
                         `${LOG_PREFIX} Received WORLD_Maintain from:`,
                         data.senderId,
