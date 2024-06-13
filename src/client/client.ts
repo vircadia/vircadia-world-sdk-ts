@@ -10,7 +10,7 @@ import {
     C_AUDIO_Metadata_Packet,
 } from '../routes/meta';
 
-// FIXME: This should be defined in config.
+// FIXME: These should be defined in config.
 const TEMP_ICE_SERVERS = [
     {
         urls: ['stun:stun.l.google.com:19302'],
@@ -20,6 +20,9 @@ const TEMP_ICE_SERVERS = [
 const TEMP_AUDIO_METADATA_INTERVAL = 250;
 
 export namespace Client {
+    let host: string | null = null;
+    let port: number | null = null;
+
     let socket: Socket | null = null;
     let TEMP_agentId: string | null = null;
     // FIXME: This is temp, avatars shouldn't exist, all avatars should simply be entities.
@@ -68,6 +71,8 @@ export namespace Client {
             }
 
             socket = io(`${data.host}:${data.port}`, {});
+            host = data.host;
+            port = data.port;
 
             Agent.InitializeAgentModule(data.agentId);
 
@@ -129,10 +134,17 @@ export namespace Client {
         export const InitializeAgentModule = (agentId: string) => {
             Media.InitializeMediaModule();
 
+            if (!host || !port) {
+                console.error(
+                    'Host and port must be set before initializing the agent module.',
+                );
+                return;
+            }
+
             peer = new Peer(agentId, {
-                host: '/',
+                host,
                 path: '/peerjs',
-                port: 3000,
+                port,
             });
 
             peer.on('connection', (conn: DataConnection) => {
@@ -190,35 +202,44 @@ export namespace Client {
 
                     const remoteAgentId = call.peer;
 
-                    agentConnections[remoteAgentId].media.isOpening = true;
+                    try {
+                        agentConnections[remoteAgentId].media.isOpening = true;
 
-                    console.log(
-                        `${AGENT_LOG_PREFIX} Received a media call from:`,
-                        remoteAgentId,
-                    );
+                        console.log(
+                            `${AGENT_LOG_PREFIX} Received a media call from:`,
+                            remoteAgentId,
+                        );
 
-                    const acceptedCall = await acceptMediaCall(call);
+                        const acceptedCall = await acceptMediaCall(call);
 
-                    if (acceptedCall) {
-                        // Recheck if the agent still exists and no new connection has been established
-                        if (
-                            agentConnections[remoteAgentId] &&
-                            !agentConnections[remoteAgentId].media.connection
-                        ) {
-                            agentConnections[remoteAgentId].media.connection =
-                                call;
+                        if (acceptedCall) {
+                            // Recheck if the agent still exists and no new connection has been established
+                            if (
+                                agentConnections[remoteAgentId] &&
+                                !agentConnections[remoteAgentId].media
+                                    .connection
+                            ) {
+                                agentConnections[
+                                    remoteAgentId
+                                ].media.connection = call;
 
-                            setupMediaConnectionAfterEstablishment({
-                                agentId: remoteAgentId,
-                            });
-                        } else {
-                            console.warn(
-                                `Connection state changed before assignment for agent ${remoteAgentId}`,
-                            );
+                                setupMediaConnectionAfterEstablishment({
+                                    agentId: remoteAgentId,
+                                });
+                            } else {
+                                console.warn(
+                                    `Connection state changed before assignment for agent ${remoteAgentId}`,
+                                );
+                            }
                         }
+                    } catch (error) {
+                        console.error(
+                            `${AGENT_LOG_PREFIX} Error accepting media call from agent ${remoteAgentId}:`,
+                            error,
+                        );
+                    } finally {
+                        agentConnections[remoteAgentId].media.isOpening = false;
                     }
-
-                    agentConnections[remoteAgentId].media.isOpening = false;
                 }
             });
 
@@ -263,17 +284,15 @@ export namespace Client {
             // Establish new connections for new agents
             agentList.forEach((agentId) => {
                 if (agentId !== peer?.id) {
-                    const agentConnection = agentConnections[agentId];
-
-                    if (!agentConnection) {
+                    if (!agentConnections[agentId]) {
                         createAgent(agentId);
                     }
 
-                    if (!agentConnection.data.connection) {
+                    if (!agentConnections[agentId].data.connection) {
                         createDataConnection(agentId);
                     }
 
-                    if (!agentConnection.media.connection) {
+                    if (!agentConnections[agentId].media.connection) {
                         createMediaConnection(agentId);
                     }
                 }
@@ -298,7 +317,7 @@ export namespace Client {
             );
         };
 
-        const removeAgent = async (agentId: string) => {
+        const removeAgent = (agentId: string) => {
             if (agentConnections[agentId]) {
                 removeDataConnection(agentId);
                 removeMediaConnection(agentId);
