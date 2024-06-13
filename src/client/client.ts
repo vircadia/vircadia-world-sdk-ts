@@ -141,8 +141,12 @@ export namespace Client {
                 return;
             }
 
+            const peerHost = ['localhost', '127.0.0.1'].includes(host)
+                ? '/'
+                : host;
+
             peer = new Peer(agentId, {
-                host,
+                host: peerHost,
                 path: '/peerjs',
                 port,
             });
