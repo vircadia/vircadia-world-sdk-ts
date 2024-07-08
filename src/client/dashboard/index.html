@@ -1,30 +1,19 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>SDK Test Page</title>
-    </head>
-    <body>
-        <button id="streamButton">Stream Audio</button>
-        <script type="module" lang="ts">
-            import { Client } from '/client.ts';
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LibP2P WebRTC Demo</title>
+</head>
+<body>
+    <h1>LibP2P WebRTC Demo</h1>
+    <div id="status">Initializing...</div>
+    <div id="peerId"></div>
+    <div id="connections"></div>
 
-            if (!Client.isConnected()) {
-                Client.establishConnection();
-            }
-
-            const button = document.getElementById('streamButton');
-            button.addEventListener('click', async () => {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        audio: true,
-                    });
-                    Client.TEMP_broadcastAudioStreams(stream);
-                } catch (error) {
-                    console.error('Error accessing media devices:', error);
-                }
-            });
-        </script>
-    </body>
+    <script type="module">
+        import { initNode } from './main.ts';
+        initNode().catch(console.error);
+    </script>
+</body>
 </html>
