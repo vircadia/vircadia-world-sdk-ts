@@ -30,27 +30,37 @@ npm run dev
 This document outlines the design for a flexible, scalable, and secure game framework that supports peer-to-peer interactions with central server validation. The framework is built on a foundation of Conflict-free Replicated Data Types (CRDTs) to manage distributed state and uses glTF files for world representation.
 
 ### 2. Architecture
-The framework is structured in layers:
-- Network Layer
-- CRDT Layer
-- Store (Actions/Mutations)
-- Game Logic Layer
-- Management Layer
+The framework is structured in layers, with components shared between client and server:
 
-#### 2.1 Network Layer
-Handles peer-to-peer connections and communication with the central server.
+Server-only Layer:
+- Management and Storage Layer
 
-#### 2.2 CRDT Layer
-Manages distributed state using CRDTs to ensure eventual consistency across all peers.
+Shared Layers (Client and Server):
+- Networking Layer
+- CRDT and glTF Data State Layer
+- Actions/Mutations Layer
 
-#### 2.3 Store
-Combines storage and actions (mutations) into a single layer, similar to Vuex in Vue 2.
+Client-only Layer:
+- Engine/Client Layer (External)
 
-#### 2.4 Game Logic Layer
-Implements game-specific logic and rules.
+#### 2.1 Management and Storage Layer (Server-only)
+Handles server-side management of connections, permissions, and data storage.
 
-#### 2.5 Management Layer
-Handles higher-level concerns such as interest management, connection management, and permissions.
+#### 2.2 Networking Layer (Shared)
+Manages communication between clients and the server, including peer-to-peer connections.
+
+#### 2.3 CRDT and glTF Data State Layer (Shared)
+Maintains the distributed state using CRDTs and glTF data, ensuring consistency across clients and server.
+
+#### 2.4 Actions/Mutations Layer (Shared)
+Defines and validates state changes through actions, ensuring data integrity and preventing unauthorized modifications.
+
+#### 2.5 Engine/Client Layer (External, Client-only)
+Responsible for interpreting and rendering the game state, including:
+- Rendering and graphics
+- User interface
+- Camera and controls
+- Client-specific game logic
 
 ### 3. Key Components
 #### 3.1 Store
@@ -82,6 +92,16 @@ Implements visibility checks on the server to prevent cheating.
 #### 4.5 Permissions System
 - Controls access to different parts of the game world
 - Integrated with the interest management system
+
+#### 4.6 Shared Action Validation
+- Action scripts are present on both client and server SDKs
+- Allows clients to validate data locally before sending to the server
+- Server performs final validation to ensure data integrity
+
+#### 4.7 Interpolation in Action Scripts
+- Interpolation logic is implemented within individual action scripts
+- Actions like "move" or "apply force" include their own interpolation methods
+- Allows for action-specific smoothing and prediction
 
 ### 5. Optimizations
 #### 5.1 Delta CRDTs
@@ -123,12 +143,17 @@ The server periodically validates the full game state to detect any inconsistenc
 - Challenge: Malicious clients modifying local code or state.
 - Solution: Server-side validation, obfuscation, and cryptographic signing of actions.
 
+#### 7.5 Balancing Client-side Prediction and Server Authority
+- Challenge: Maintaining responsive gameplay while ensuring server-authoritative state
+- Solution: Implement client-side prediction in action scripts, with server reconciliation
+
 ### 8. Future Considerations
-- Implement a versioning system for world segments
-- Develop tools for content creation and world editing
-- Explore integration with existing game engines
-- Investigate machine learning for dynamic interest management and anti-cheat systems
+- Develop a standardized format for action scripts, including interpolation logic
+- Create tools for easy creation and testing of custom actions
+- Investigate advanced CRDT techniques for improved conflict resolution
+- Explore optimizations for large-scale world simulations with many concurrent actions
+- Research machine learning approaches for dynamic action interpolation and prediction
 
 ### 9. Conclusion
 
-This framework provides a flexible and secure foundation for building multiplayer games with distributed state management. By leveraging CRDTs, peer-to-peer networking, and central server validation, it offers a balance of responsiveness and consistency. The layered architecture allows for easy extension and modification to suit various game types and requirements.
+This framework provides a flexible and secure foundation for building multiplayer games with distributed state management. By sharing critical components like networking, CRDT-based state management, and action validation between client and server, it ensures consistency and security while allowing for responsive gameplay. The clear separation of the engine/client layer allows for diverse implementations while maintaining a standardized core. This architecture offers a scalable and performant solution for networked games, with built-in mechanisms for smooth interpolation and client-side prediction through action-specific logic.
