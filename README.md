@@ -43,6 +43,23 @@ Shared Layers (Client and Server):
 Client-only Layer:
 - Engine/Client Layer (External)
 
+```mermaid
+graph TD
+    A[Management/Storage Layer] -->|Server Only| B
+    subgraph B [Shared Layers]
+        direction LR
+        C[Networking Layer] --- D[CRDT & glTF Data State Layer] --- E[Actions/Mutations Layer]
+    end
+    B -->|Client Only| F[Engine/Client Layer]
+
+    style A fill:#f9d5e5,stroke:#333,stroke-width:2px
+    style B fill:#eeac99,stroke:#333,stroke-width:2px
+    style C fill:#e06377,stroke:#333,stroke-width:2px
+    style D fill:#c83349,stroke:#333,stroke-width:2px
+    style E fill:#5b9aa0,stroke:#333,stroke-width:2px
+    style F fill:#41b3a3,stroke:#333,stroke-width:2px
+```
+
 #### 2.1 Management and Storage Layer (Server-only)
 Handles server-side management of connections, permissions, and data storage.
 
