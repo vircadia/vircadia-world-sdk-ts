@@ -45,26 +45,43 @@ Client-only Layer:
 
 ```mermaid
 graph TD
-    A[Management/Storage Layer] -->|Server Only| B
-    subgraph B [Shared Layers]
-        direction LR
+    subgraph CentralServer [Central Server]
+        A[Management/Storage Layer]
+    end
+
+    subgraph SharedLayers [Shared Layers]
         C[Networking Layer]
         D[CRDT & glTF Data State Layer]
         E[Actions/Mutations Layer]
-        C <--> |Propose Changes| E
-        E -->|Validated Changes| D
-        D -->|Sync State| C
     end
-    B -->|Client Only| F[Engine/Client Layer]
 
-    E -->|Deterministic Validation| E
+    subgraph Clients [Clients]
+        Client1[Client 1]
+        Client2[Client 2]
+        ClientN[Client N]
+    end
 
-    style A fill:#f9d5e5,stroke:#333,stroke-width:2px
-    style B fill:#eeac99,stroke:#333,stroke-width:2px
-    style C fill:#e06377,stroke:#333,stroke-width:2px
-    style D fill:#c83349,stroke:#333,stroke-width:2px
-    style E fill:#5b9aa0,stroke:#333,stroke-width:2px
-    style F fill:#41b3a3,stroke:#333,stroke-width:2px
+    A --> SharedLayers
+    CentralServer <--> SharedLayers
+    Client1 <--> SharedLayers
+    Client2 <--> SharedLayers
+    ClientN <--> SharedLayers
+    Client1 <-->|P2P| Client2
+    Client1 <-->|P2P| ClientN
+    Client2 <-->|P2P| ClientN
+
+    C <-->|Propose Changes| E
+    E -->|Validated Changes| D
+    D -->|Sync State| C
+
+    E -->|Deterministic Validation & Simulation| E
+
+    style CentralServer fill:#f9d5e5,stroke:#333,stroke-width:2px
+    style SharedLayers fill:#eeac99,stroke:#333,stroke-width:2px
+    style Clients fill:#e06377,stroke:#333,stroke-width:2px
+    style C fill:#c83349,stroke:#333,stroke-width:2px
+    style D fill:#5b9aa0,stroke:#333,stroke-width:2px
+    style E fill:#41b3a3,stroke:#333,stroke-width:2px
 ```
 
 #### 2.1 Management and Storage Layer (Server-only)
