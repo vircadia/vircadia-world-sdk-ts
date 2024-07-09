@@ -55,6 +55,10 @@ graph TD
         end
         E[Actions/Mutations Layer]
         F[Broadcast State Layer]
+        subgraph G [Transient Data]
+            G1[Audio/Voice]
+            G2[Text]
+        end
     end
 
     subgraph Clients [Clients]
@@ -80,6 +84,10 @@ graph TD
     E <-->|Filter| D2
     F <-->|Filter| D2
 
+    C <--> G
+    G1 <--> C
+    G2 <--> C
+
     style CentralServer fill:#f9d5e5,stroke:#333,stroke-width:2px
     style SharedLayers fill:#eeac99,stroke:#333,stroke-width:2px
     style Clients fill:#e06377,stroke:#333,stroke-width:2px
@@ -89,6 +97,9 @@ graph TD
     style D2 fill:#82b74b,stroke:#333,stroke-width:2px
     style E fill:#41b3a3,stroke:#333,stroke-width:2px
     style F fill:#ff9ff3,stroke:#333,stroke-width:2px
+    style G fill:#ffd700,stroke:#333,stroke-width:2px
+    style G1 fill:#ff6b6b,stroke:#333,stroke-width:2px
+    style G2 fill:#4ecdc4,stroke:#333,stroke-width:2px
 ```
 
 
@@ -112,6 +123,7 @@ graph TD
 ### 4. Actions/Mutations Layer (Shared)
 - Defines and validates state changes through actions, ensuring data integrity and preventing unauthorized modifications.
 - Each action has a unique ID to prevent resubmission to the sender once validated.
+- Prefer using physical actions instead of spamming "complete state" to compensate for processing lag and latency lag, allowing the client(s) and server to simulate actions and do costly sync ups at keyframes instead.
 - Implements client-side prediction in action scripts, with server reconciliation for responsive gameplay.
 - Actions like "move" or "apply force" include their own interpolation methods for smooth transitions.
 
