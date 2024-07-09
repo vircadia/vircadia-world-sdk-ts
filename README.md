@@ -48,9 +48,16 @@ graph TD
     A[Management/Storage Layer] -->|Server Only| B
     subgraph B [Shared Layers]
         direction LR
-        C[Networking Layer] --- D[CRDT & glTF Data State Layer] --- E[Actions/Mutations Layer]
+        C[Networking Layer]
+        D[CRDT & glTF Data State Layer]
+        E[Actions/Mutations Layer]
+        C <--> |Propose Changes| E
+        E -->|Validated Changes| D
+        D -->|Sync State| C
     end
     B -->|Client Only| F[Engine/Client Layer]
+
+    E -->|Deterministic Validation| E
 
     style A fill:#f9d5e5,stroke:#333,stroke-width:2px
     style B fill:#eeac99,stroke:#333,stroke-width:2px
