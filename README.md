@@ -25,13 +25,6 @@ npm run dev
 
 ## Architecture
 
-
-### 1. Overview
-This document outlines the design for a flexible, scalable, and secure game framework that supports peer-to-peer interactions with central server validation. The framework is built on a foundation of Conflict-free Replicated Data Types (CRDTs) to manage distributed state and uses glTF files for world representation.
-
-### 2. Architecture
-The framework is structured in layers, with components shared between client and server:
-
 Server-only Layer:
 - Management and Storage Layer
 
@@ -51,8 +44,17 @@ graph TD
 
     subgraph SharedLayers [Shared Layers]
         C[Networking Layer]
-        D[CRDT & glTF Data State Layer]
+        subgraph D [Data State Layer]
+            D1[CRDT Commit Filter]
+            D2[Permissions Layer]
+            subgraph D2 [Permissions Layer]
+                D2a[Interest Zones]
+                D2b[Permissions System]
+                D2c[Role-based Access Control]
+            end
+        end
         E[Actions/Mutations Layer]
+        F[Broadcast State Layer]
     end
 
     subgraph Clients [Clients]
@@ -71,130 +73,97 @@ graph TD
     Client2 <-->|P2P| ClientN
 
     C <-->|Propose Changes| E
-    E -->|Validated Changes| D
-    D -->|Sync State| C
+    E -->|Validated Changes| D1
+    D1 -->|Committed State| F
+    F -->|Filtered State| C
 
-    E -->|Deterministic Validation & Simulation| E
+    E <-->|Filter| D2
+    F <-->|Filter| D2
 
     style CentralServer fill:#f9d5e5,stroke:#333,stroke-width:2px
     style SharedLayers fill:#eeac99,stroke:#333,stroke-width:2px
     style Clients fill:#e06377,stroke:#333,stroke-width:2px
     style C fill:#c83349,stroke:#333,stroke-width:2px
     style D fill:#5b9aa0,stroke:#333,stroke-width:2px
+    style D1 fill:#82b74b,stroke:#333,stroke-width:2px
+    style D2 fill:#82b74b,stroke:#333,stroke-width:2px
     style E fill:#41b3a3,stroke:#333,stroke-width:2px
+    style F fill:#ff9ff3,stroke:#333,stroke-width:2px
 ```
 
-#### 2.1 Management and Storage Layer (Server-only)
-Handles server-side management of connections, permissions, and data storage.
 
-#### 2.2 Networking Layer (Shared)
-Manages communication between clients and the server, including peer-to-peer connections.
+### 1. Management/Storage Layer (Server-only)
+- Handles server-side management of connections, permissions, and data storage.
+- Implements periodic full state validation to detect any inconsistencies.
 
-#### 2.3 CRDT and glTF Data State Layer (Shared)
-Maintains the distributed state using CRDTs and glTF data, ensuring consistency across clients and server.
+### 2. Networking Layer (Shared)
+- Manages communication between clients and the server, including peer-to-peer connections.
+- Implements adaptive update rates to adjust frequency based on network conditions and game requirements.
 
-#### 2.4 Actions/Mutations Layer (Shared)
-Defines and validates state changes through actions, ensuring data integrity and preventing unauthorized modifications.
+### 3. Data State Layer (Shared)
+- CRDT Commit Filter:
+  - Ensures eventual consistency across all peers.
+  - Uses delta-based CRDTs to reduce bandwidth usage by only sending changes.
+- Permissions Layer:
+  - Interest Zones: Determines which game objects each client needs to know about.
+  - Permissions System: Controls access to different parts of the game world.
+  - Role-based Access Control: Implements tiered, numerical role-based permissions for granular control over actions.
 
-#### 2.5 Engine/Client Layer (External, Client-only)
-Responsible for interpreting and rendering the game state, including:
-- Rendering and graphics
-- User interface
-- Camera and controls
-- Client-specific game logic
+### 4. Actions/Mutations Layer (Shared)
+- Defines and validates state changes through actions, ensuring data integrity and preventing unauthorized modifications.
+- Each action has a unique ID to prevent resubmission to the sender once validated.
+- Implements client-side prediction in action scripts, with server reconciliation for responsive gameplay.
+- Actions like "move" or "apply force" include their own interpolation methods for smooth transitions.
 
-### 3. Key Components
-#### 3.1 Store
-The central component for state management and mutations.
+### 5. Broadcast State Layer (Shared)
+- Handles the broadcasting of state to clients or the server.
+- Applies permission filtering to ensure clients only receive data they should see.
 
-#### 3.2 World Representation
-The game world is represented using glTF files, which are managed and segmented for efficient loading and rendering.
+### 6. Engine/Client Layer (External, Client-only)
+- Responsible for interpreting and rendering the game state, including:
+  - Rendering and graphics
+  - User interface
+  - Camera and controls
+  - Client-specific game logic
 
-#### 3.3 Server-side Culling
-Implements visibility checks on the server to prevent cheating.
+### Key Features and Optimizations
 
-### 4. Key Features
-#### 4.1 Peer-to-Peer with Central Validation
-- Clients connect peer-to-peer and to a central server
-- All changes are validated by the central server
+1. Peer-to-Peer with Central Validation:
+   - Clients connect peer-to-peer and to a central server.
+   - All changes are validated by the central server.
 
-#### 4.2 Action-based State Changes
-- State changes are defined as "actions" with associated rules
-- Actions are validated against rulesets before application
+2. CRDT-based State Management:
+   - Handles concurrent edits without central coordination.
+   - Implements batching to group multiple CRDT operations into a single network message.
+   - Applies compression techniques to CRDT messages to further reduce bandwidth usage.
 
-#### 4.3 CRDT-based State Management
-- Ensures eventual consistency across all peers
-- Handles concurrent edits without central coordination
+3. Security Measures:
+   - Server-side validation for all critical game logic and state changes.
+   - Cryptographic signing of actions to prevent tampering.
+   - Obfuscation techniques to protect client-side code.
 
-#### 4.4 Interest Management
-- Implemented in the Management Layer
-- Determines which game objects each client needs to know about
+4. World Representation:
+   - Uses glTF files for efficient loading and rendering of the game world.
+   - Implements server-side culling for visibility checks to prevent cheating.
 
-#### 4.5 Permissions System
-- Controls access to different parts of the game world
-- Integrated with the interest management system
+### Challenges and Solutions
 
-#### 4.6 Shared Action Validation
-- Action scripts are present on both client and server SDKs
-- Allows clients to validate data locally before sending to the server
-- Server performs final validation to ensure data integrity
+1. Latency:
+   - Challenge: P2P connections can introduce variable latency.
+   - Solution: Implement client-side prediction and server reconciliation.
 
-#### 4.7 Interpolation in Action Scripts
-- Interpolation logic is implemented within individual action scripts
-- Actions like "move" or "apply force" include their own interpolation methods
-- Allows for action-specific smoothing and prediction
+2. Scalability:
+   - Challenge: Increased network traffic and processing load with many peers.
+   - Solution: Use interest management and spatial partitioning to limit update scope.
 
-### 5. Optimizations
-#### 5.1 Delta CRDTs
-Use delta-based CRDTs to reduce bandwidth usage by only sending changes.
+3. Cheating Prevention:
+   - Challenge: Malicious clients modifying local code or state.
+   - Solution: Each client, and the server, validate the state through actions to ensure "impossible" actions are not committed and are instead flagged.
 
-#### 5.2 Batching
-Group multiple CRDT operations into a single network message to reduce overhead.
+### Future Considerations
 
-#### 5.3 Compression
-Apply compression techniques to CRDT messages to further reduce bandwidth usage.
-
-#### 5.4 Adaptive Update Rates
-Adjust update frequency based on network conditions and game requirements.
-
-### 6. Security Measures
-#### 6.1 Server-side Validation
-All critical game logic and state changes are validated on the server.
-
-#### 6.2 Cryptographic Signing
-Actions are cryptographically signed to prevent tampering.
-
-#### 6.3 Periodic Full State Validation
-The server periodically validates the full game state to detect any inconsistencies.
-
-### 7. Challenges and Solutions
-#### 7.1 Latency
-- Challenge: P2P connections can introduce variable latency.
-- Solution: Implement client-side prediction and server reconciliation.
-
-#### 7.2 Scalability
-- Challenge: Increased network traffic and processing load with many peers.
-- Solution: Use interest management and spatial partitioning to limit update scope.
-
-#### 7.3 Synchronization Complexity
-- Challenge: Ensuring consistent world state across all peers.
-- Solution: Use CRDTs for eventual consistency, with server as final arbiter.
-
-#### 7.4 Cheating Prevention
-- Challenge: Malicious clients modifying local code or state.
-- Solution: Server-side validation, obfuscation, and cryptographic signing of actions.
-
-#### 7.5 Balancing Client-side Prediction and Server Authority
-- Challenge: Maintaining responsive gameplay while ensuring server-authoritative state
-- Solution: Implement client-side prediction in action scripts, with server reconciliation
-
-### 8. Future Considerations
-- Develop a standardized format for action scripts, including interpolation logic
-- Create tools for easy creation and testing of custom actions
-- Investigate advanced CRDT techniques for improved conflict resolution
-- Explore optimizations for large-scale world simulations with many concurrent actions
-- Research machine learning approaches for dynamic action interpolation and prediction
-
-### 9. Conclusion
-
-This framework provides a flexible and secure foundation for building multiplayer games with distributed state management. By sharing critical components like networking, CRDT-based state management, and action validation between client and server, it ensures consistency and security while allowing for responsive gameplay. The clear separation of the engine/client layer allows for diverse implementations while maintaining a standardized core. This architecture offers a scalable and performant solution for networked games, with built-in mechanisms for smooth interpolation and client-side prediction through action-specific logic.
+- Develop a standardized format for action scripts, including interpolation logic.
+- Create tools for easy creation and testing of custom actions.
+- Investigate advanced CRDT techniques for improved conflict resolution.
+- Explore optimizations for large-scale world simulations with many concurrent actions.
+- Research machine learning approaches for dynamic action interpolation and prediction.
