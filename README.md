@@ -25,17 +25,6 @@ npm run dev
 
 ## Architecture
 
-Server-only Layer:
-- Management and Storage Layer
-
-Shared Layers (Client and Server):
-- Networking Layer
-- CRDT and glTF Data State Layer
-- Actions/Mutations Layer
-
-Client-only Layer:
-- Engine/Client Layer (External)
-
 ```mermaid
 graph TD
     subgraph CentralServer [Central Server]
@@ -53,7 +42,15 @@ graph TD
                 D2c[Role-based Access Control]
             end
         end
-        E[Actions/Mutations Layer]
+        subgraph E [Actions/Mutations Layer]
+            E1[Engine]
+            subgraph E1 [Engine]
+                E1a[Objects]
+                subgraph E1a [Objects]
+                    E1a1[Constraint Scripts]
+                end
+            end
+        end
         F[Broadcast State Layer]
         subgraph G [Transient Data]
             G1[Audio/Voice]
@@ -96,6 +93,9 @@ graph TD
     style D1 fill:#82b74b,stroke:#333,stroke-width:2px
     style D2 fill:#82b74b,stroke:#333,stroke-width:2px
     style E fill:#41b3a3,stroke:#333,stroke-width:2px
+    style E1 fill:#ff9ff3,stroke:#333,stroke-width:2px
+    style E1a fill:#ffd700,stroke:#333,stroke-width:2px
+    style E1a1 fill:#ff6b6b,stroke:#333,stroke-width:2px
     style F fill:#ff9ff3,stroke:#333,stroke-width:2px
     style G fill:#ffd700,stroke:#333,stroke-width:2px
     style G1 fill:#ff6b6b,stroke:#333,stroke-width:2px
@@ -157,6 +157,22 @@ graph TD
 4. World Representation:
    - Uses glTF files for efficient loading and rendering of the game world.
    - Implements server-side culling for visibility checks to prevent cheating.
+
+5. Transient Data Handling:
+   - Manages real-time, non-persistent data such as audio/voice and text communication.
+   - Implements low-latency protocols for voice chat and instant messaging.
+   - Applies spatial audio techniques for immersive voice communication.
+   - Integrates with the Permissions Layer to control access to communication channels.
+
+6. Engine and Object Constraint Scripts:
+   - The Actions/Mutations Layer includes an Engine component for managing world objects.
+   - Objects can have associated Constraint Scripts that define their behavior and limitations.
+   - Scripts are executed in a try-catch block, isolating them from the main framework:
+     - If a script throws an error, the change is rejected.
+     - If a script runs successfully, it validates that the object performed a valid action.
+   - Example: A script might check an object's position and rotation, ensuring it's at 180 degrees instead of 270 degrees.
+   - This approach allows for flexible object behavior while maintaining system stability and integrity.
+   - Constraint Scripts can interact with the Engine to access and modify object properties safely.
 
 ### Challenges and Solutions
 
