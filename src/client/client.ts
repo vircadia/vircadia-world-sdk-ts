@@ -130,9 +130,10 @@ export namespace Client {
             Media.InitializeMediaModule();
 
             peer = new Peer(agentId, {
-                host: '/',
-                path: '/peerjs',
-                port: 3000,
+                host: 'digisomni.worlds.cps.t-systems.net',
+                /* path: '/peerjs', */
+                port: 444,
+				debug: 3
             });
 
             peer.on('connection', (conn: DataConnection) => {
@@ -177,7 +178,7 @@ export namespace Client {
                 const existingConnection =
                     agentConnections[call.peer]?.media.connection;
 
-                if (existingConnection) {
+                if (false) {
                     // If a connection exists, it is either loading or open, we ASSUME that closed connections were removed from the other listeners.
                     console.info(
                         `${AGENT_LOG_PREFIX} Media connection already exists with agent ${call.peer}. Ignoring.`,
@@ -263,11 +264,13 @@ export namespace Client {
             // Establish new connections for new agents
             agentList.forEach((agentId) => {
                 if (agentId !== peer?.id) {
-                    const agentConnection = agentConnections[agentId];
+                    let agentConnection = agentConnections[agentId];
 
                     if (!agentConnection) {
                         createAgent(agentId);
                     }
+
+                    agentConnection = agentConnections[agentId];
 
                     if (!agentConnection.data.connection) {
                         createDataConnection(agentId);
