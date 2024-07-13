@@ -1,7 +1,6 @@
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import { ExpressPeerServer } from 'peer';
 
 import { MetaRequest, WorldTransport } from '../routes/router';
 
@@ -38,14 +37,6 @@ function init() {
         },
     });
     WorldTransport.Router(socketIO);
-
-    // Peer server setup
-    const peerServer = ExpressPeerServer(expressServer, {
-        port: TEMP_PORT,
-        allow_discovery: true,
-        // proxied: true,
-    });
-    expressApp.use('/peerjs', peerServer);
 
     // Launch
     expressServer.listen(TEMP_PORT, () => {

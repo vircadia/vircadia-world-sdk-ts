@@ -86,6 +86,32 @@ export namespace WorldTransport {
         WorldTransportServer?.on('connection', (socket) => {
             console.log('A user connected:', socket.id);
 
+            socket.on(EPacketType.AGENT_Join, async ({ agentId }) => {
+                await socket.join(agentId);
+                socket.broadcast.emit(EPacketType.AGENT_Join, agentId);
+            });
+
+            socket.on(EPacketType.AGENT_Offer, ({ offer, to }) => {
+                socket.to(to).emit(EPacketType.AGENT_Offer, {
+                    offer,
+                    from: socket.id,
+                });
+            });
+
+            socket.on(EPacketType.AGENT_Answer, ({ answer, to }) => {
+                socket.to(to).emit(EPacketType.AGENT_Answer, {
+                    answer,
+                    from: socket.id,
+                });
+            });
+
+            socket.on(EPacketType.AGENT_ICE_Candidate, ({ candidate, to }) => {
+                socket.to(to).emit(EPacketType.AGENT_ICE_Candidate, {
+                    candidate,
+                    from: socket.id,
+                });
+            });
+
             socket.on('disconnect', () => {
                 socket.removeAllListeners();
 
