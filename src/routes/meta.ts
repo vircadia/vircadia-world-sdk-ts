@@ -1,11 +1,12 @@
+/* eslint-disable no-unused-vars */
 export enum EPacketType {
-    AGENT_Join = 'agent-agent-join-packet',
-    AGENT_Offer = 'agent-agent-offer-packet',
-    AGENT_Answer = 'agent-agent-answer-packet',
-    AGENT_ICE_Candidate = 'agent-agent-ice-candidate-packet',
-    AGENT_Heartbeat = 'world-agent-heartbeat-packet',
-    WORLD_AgentList = 'world-agent-list-packet',
-    AUDIO_Metadata = 'agent-agent-audio-metadata-packet',
+    AGENT_Join = "agent-agent-join-packet",
+    AGENT_Offer = "agent-agent-offer-packet",
+    AGENT_Answer = "agent-agent-answer-packet",
+    AGENT_ICE_Candidate = "agent-agent-ice-candidate-packet",
+    AGENT_Heartbeat = "world-agent-heartbeat-packet",
+    WORLD_AgentList = "world-agent-list-packet",
+    AUDIO_Metadata = "agent-agent-audio-metadata-packet",
 }
 
 interface I_BASE_Packet {

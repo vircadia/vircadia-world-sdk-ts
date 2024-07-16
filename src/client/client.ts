@@ -1,5 +1,5 @@
 // Agent <-> Server
-import { io, Socket } from 'socket.io-client';
+import { io, Socket } from "socket.io-client";
 // Agent <-> Agent
 
 import {
@@ -7,12 +7,12 @@ import {
     C_AGENT_WorldHeartbeat_Packet,
     C_WORLD_AgentList_Packet,
     C_AUDIO_Metadata_Packet,
-} from '../routes/meta';
+} from "../routes/meta";
 
 // FIXME: These should be defined in config.
 const TEMP_ICE_SERVERS = [
     {
-        urls: ['stun:stun.l.google.com:19302'],
+        urls: ["stun:stun.l.google.com:19302"],
     },
 ];
 
@@ -59,24 +59,24 @@ export namespace Client {
             TEMP_agentId = data.agentId;
 
             if (socket && socket.connected) {
-                console.log('Already connected to the server.');
+                console.log("Already connected to the server.");
                 return;
             }
 
             if (socket) {
                 socket.removeAllListeners();
                 socket.close();
-                console.log('Closed existing socket.');
+                console.log("Closed existing socket.");
             }
 
             socket = io(`${data.host}:${data.port}`, {});
             host = data.host;
             port = data.port;
 
-            Agent.InitializeAgentModule(data.agentId);
+            Agent.InitializeAgentModule();
 
             // Listening to events
-            socket.on('connect', () => {
+            socket.on("connect", () => {
                 console.log(`Connected to server at ${data.host}:${data.port}`);
 
                 heartbeatInterval = setInterval(() => {
@@ -84,16 +84,16 @@ export namespace Client {
                 }, TEMP_AUDIO_METADATA_INTERVAL); // TODO: Use a constant or configuration variable for the interval duration
             });
 
-            socket.on('disconnect', () => {
+            socket.on("disconnect", () => {
                 socket?.removeAllListeners();
                 clearInterval(
                     heartbeatInterval as ReturnType<typeof setInterval>,
                 );
-                console.log('Disconnected from server');
+                console.log("Disconnected from server");
             });
 
-            socket.on('connect_error', (error) => {
-                console.error('Connection error:', error);
+            socket.on("connect_error", (error) => {
+                console.error("Connection error:", error);
                 // Handle the connection error, e.g., retry connection or notify the user
             });
         };
@@ -109,7 +109,7 @@ export namespace Client {
     }
 
     export namespace Agent {
-        const AGENT_LOG_PREFIX = '[AGENT]';
+        const AGENT_LOG_PREFIX = "[AGENT]";
 
         export const hasAgentsConnected = () =>
             Object.keys(agentConnections).length > 0;
@@ -130,12 +130,12 @@ export namespace Client {
             };
         } = {};
 
-        export const InitializeAgentModule = (agentId: string) => {
+        export const InitializeAgentModule = () => {
             Media.InitializeMediaModule();
 
             if (!host || !port) {
                 console.error(
-                    'Host and port must be set before initializing the agent module.',
+                    "Host and port must be set before initializing the agent module.",
                 );
                 return;
             }
@@ -236,7 +236,7 @@ export namespace Client {
 
                 rtcConnection.onicecandidate = (event) => {
                     if (event.candidate) {
-                        socket?.emit('ice-candidate', {
+                        socket?.emit("ice-candidate", {
                             candidate: event.candidate,
                             targetAgentId: agentId,
                         });
@@ -252,14 +252,14 @@ export namespace Client {
                 };
 
                 // Create data channel
-                const dataChannel = rtcConnection.createDataChannel('data');
+                const dataChannel = rtcConnection.createDataChannel("data");
                 agentConnection.data.channel = dataChannel;
                 setupDataChannelListeners(agentId, dataChannel);
 
                 // Create and send offer
                 const offer = await rtcConnection.createOffer();
                 await rtcConnection.setLocalDescription(offer);
-                socket?.emit('offer', { offer, targetAgentId: agentId });
+                socket?.emit("offer", { offer, targetAgentId: agentId });
 
                 console.info(
                     `${AGENT_LOG_PREFIX} Created RTC connection for agent ${agentId}`,
@@ -277,23 +277,23 @@ export namespace Client {
                 );
             };
 
-            dataChannel.onmessage = (event) => {
-                const dataReceived = JSON.parse(event.data);
-                console.info(
-                    `Received data from agent ${agentId}:`,
-                    dataReceived,
-                    'is audio packet:',
-                    'audioPosition' in dataReceived &&
-                    'audioOrientation' in dataReceived,
-                );
-                if (
-                    'audioPosition' in dataReceived &&
-                    'audioOrientation' in dataReceived
-                ) {
-                    agentConnections[agentId].media.metadata =
-                        dataReceived as C_AUDIO_Metadata_Packet;
-                }
-            };
+            // dataChannel.onmessage = (event) => {
+            //     const dataReceived = JSON.parse(event.data as string);
+            //     console.info(
+            //         `Received data from agent ${agentId}:`,
+            //         dataReceived,
+            //         'is audio packet:',
+            //         'audioPosition' in dataReceived &&
+            //         'audioOrientation' in dataReceived,
+            //     );
+            //     if (
+            //         'audioPosition' in dataReceived &&
+            //         'audioOrientation' in dataReceived
+            //     ) {
+            //         agentConnections[agentId].media.metadata =
+            //             dataReceived as C_AUDIO_Metadata_Packet;
+            //     }
+            // };
 
             dataChannel.onclose = () => {
                 console.log(`Data channel closed with agent ${agentId}`);
@@ -306,7 +306,7 @@ export namespace Client {
                 ([agentId, connection]) => {
                     if (
                         connection.data.channel &&
-                        connection.data.channel.readyState === 'open' &&
+                        connection.data.channel.readyState === "open" &&
                         TEMP_position &&
                         TEMP_orientation
                     ) {
@@ -323,9 +323,9 @@ export namespace Client {
                         console.warn(
                             `${AGENT_LOG_PREFIX} Unable to send metadata to agent ${agentId}. Connection status:`,
                             connection,
-                            'Position:',
+                            "Position:",
                             TEMP_position,
-                            'Orientation:',
+                            "Orientation:",
                             TEMP_orientation,
                         );
                     }
@@ -349,7 +349,7 @@ export namespace Client {
 
             rtcConnection.onicecandidate = (event) => {
                 if (event.candidate) {
-                    socket?.emit('ice-candidate', {
+                    socket?.emit("ice-candidate", {
                         candidate: event.candidate,
                         targetAgentId: fromAgentId,
                     });
@@ -375,7 +375,7 @@ export namespace Client {
             );
             const answer = await rtcConnection.createAnswer();
             await rtcConnection.setLocalDescription(answer);
-            socket?.emit('answer', { answer, targetAgentId: fromAgentId });
+            socket?.emit("answer", { answer, targetAgentId: fromAgentId });
         };
 
         const handleAnswer = async (data: {
@@ -405,7 +405,7 @@ export namespace Client {
         };
 
         export namespace Media {
-            const MEDIA_LOG_PREFIX = '[MEDIA]';
+            const MEDIA_LOG_PREFIX = "[MEDIA]";
 
             let audioContext: AudioContext | null = null;
             // eslint-disable-next-line prefer-const
@@ -416,88 +416,88 @@ export namespace Client {
                 audioContext = new AudioContext();
             };
 
-            export const testAudioConnection = (
-                agentId: string,
-            ): Promise<void> => {
-                // return new Promise((resolve, reject) => {
-                //     const connection =
-                //         agentConnections[agentId]?.media.connection;
-                //     const connectionStatus = connection?.open;
-                //     const audioContextStatus = audioContext?.state;
-                //     if (
-                //         connectionStatus &&
-                //         audioContext &&
-                //         audioContextStatus === 'running'
-                //     ) {
-                //         const oscillator = audioContext.createOscillator();
-                //         oscillator.type = 'sine';
-                //         oscillator.frequency.setValueAtTime(
-                //             440,
-                //             audioContext.currentTime,
-                //         );
-                //         const destination =
-                //             audioContext.createMediaStreamDestination();
-                //         oscillator.connect(destination);
-                //         oscillator.start();
-                //         const testStream = destination.stream;
-                //         const senders = connection.peerConnection.getSenders();
-                //         if (senders.length === 0) {
-                //             console.error(
-                //                 `${MEDIA_LOG_PREFIX} No senders available in peer connection.`,
-                //             );
-                //             reject('No senders available in peer connection.');
-                //             return;
-                //         }
-                //         Promise.all(
-                //             senders.map((sender) => {
-                //                 if (
-                //                     sender.track &&
-                //                     sender.track.kind === 'audio'
-                //                 ) {
-                //                     return sender.replaceTrack(
-                //                         testStream.getAudioTracks()[0],
-                //                     );
-                //                 }
-                //                 return Promise.resolve();
-                //             }),
-                //         )
-                //             .then(() => {
-                //                 setTimeout(() => {
-                //                     oscillator.stop();
-                //                     oscillator.disconnect();
-                //                     console.log(
-                //                         `${MEDIA_LOG_PREFIX} Sent test audio to agent ${agentId}`,
-                //                     );
-                //                     resolve();
-                //                 }, 1000);
-                //             })
-                //             .catch((error) => {
-                //                 console.error(
-                //                     `${MEDIA_LOG_PREFIX} Error replacing track:`,
-                //                     error,
-                //                 );
-                //                 reject(error);
-                //             });
-                //     } else {
-                //         console.warn(
-                //             `${MEDIA_LOG_PREFIX} Failed to send test audio packet ${agentId}`,
-                //             connection,
-                //             audioContext,
-                //         );
-                //         reject('Connection or audio context not ready.');
-                //     }
-                // });
-            };
+            // export const testAudioConnection = (
+            //     agentId: string,
+            // ): Promise<void> => {
+            //     return new Promise((resolve, reject) => {
+            //         const connection =
+            //             agentConnections[agentId]?.media.connection;
+            //         const connectionStatus = connection?.open;
+            //         const audioContextStatus = audioContext?.state;
+            //         if (
+            //             connectionStatus &&
+            //             audioContext &&
+            //             audioContextStatus === 'running'
+            //         ) {
+            //             const oscillator = audioContext.createOscillator();
+            //             oscillator.type = 'sine';
+            //             oscillator.frequency.setValueAtTime(
+            //                 440,
+            //                 audioContext.currentTime,
+            //             );
+            //             const destination =
+            //                 audioContext.createMediaStreamDestination();
+            //             oscillator.connect(destination);
+            //             oscillator.start();
+            //             const testStream = destination.stream;
+            //             const senders = connection.peerConnection.getSenders();
+            //             if (senders.length === 0) {
+            //                 console.error(
+            //                     `${MEDIA_LOG_PREFIX} No senders available in peer connection.`,
+            //                 );
+            //                 reject('No senders available in peer connection.');
+            //                 return;
+            //             }
+            //             Promise.all(
+            //                 senders.map((sender) => {
+            //                     if (
+            //                         sender.track &&
+            //                         sender.track.kind === 'audio'
+            //                     ) {
+            //                         return sender.replaceTrack(
+            //                             testStream.getAudioTracks()[0],
+            //                         );
+            //                     }
+            //                     return Promise.resolve();
+            //                 }),
+            //             )
+            //                 .then(() => {
+            //                     setTimeout(() => {
+            //                         oscillator.stop();
+            //                         oscillator.disconnect();
+            //                         console.log(
+            //                             `${MEDIA_LOG_PREFIX} Sent test audio to agent ${agentId}`,
+            //                         );
+            //                         resolve();
+            //                     }, 1000);
+            //                 })
+            //                 .catch((error) => {
+            //                     console.error(
+            //                         `${MEDIA_LOG_PREFIX} Error replacing track:`,
+            //                         error,
+            //                     );
+            //                     reject(error);
+            //                 });
+            //         } else {
+            //             console.warn(
+            //                 `${MEDIA_LOG_PREFIX} Failed to send test audio packet ${agentId}`,
+            //                 connection,
+            //                 audioContext,
+            //             );
+            //             reject('Connection or audio context not ready.');
+            //         }
+            //     });
+            // };
 
             export const updateLocalStream = async (data: {
                 newStream: MediaStream;
-                kind: 'video' | 'audio';
+                kind: "video" | "audio";
             }) => {
                 localAudioStream = data.newStream;
 
                 // Connect the local stream to the audio context destination for echo
-                if (audioContext && data.kind === 'audio') {
-                    if (audioContext.state === 'suspended') {
+                if (audioContext && data.kind === "audio") {
+                    if (audioContext.state === "suspended") {
                         await audioContext.resume();
                         console.log(
                             `${MEDIA_LOG_PREFIX} Resumed OUTGOING audio context.`,
@@ -565,12 +565,12 @@ export namespace Client {
             };
 
             export const getLocalStream = (data: {
-                kind: 'video' | 'audio';
+                kind: "video" | "audio";
             }): MediaStream | null => {
-                if (data.kind === 'video') {
+                if (data.kind === "video") {
                     return localVideoStream;
                 }
-                if (data.kind === 'audio') {
+                if (data.kind === "audio") {
                     return localAudioStream;
                 }
                 return null;
@@ -581,14 +581,14 @@ export namespace Client {
                 agentId: string;
             }) => {
                 const agentConnection = agentConnections[data.agentId];
-                const streamSymbol = Symbol('stream');
+                const streamSymbol = Symbol("stream");
                 agentConnection.media.currentStreamSymbol = streamSymbol;
 
-                if (!audioContext || audioContext.state === 'closed') {
+                if (!audioContext || audioContext.state === "closed") {
                     audioContext = new AudioContext();
                 }
 
-                if (audioContext?.state === 'suspended') {
+                if (audioContext?.state === "suspended") {
                     await audioContext.resume();
                     console.log(
                         `${MEDIA_LOG_PREFIX} Resumed INCOMING audio context.`,
@@ -628,8 +628,8 @@ export namespace Client {
 
                 // Create and configure the spatial panner
                 const panner = audioContext.createPanner();
-                panner.panningModel = 'HRTF';
-                panner.distanceModel = 'inverse';
+                panner.panningModel = "HRTF";
+                panner.distanceModel = "inverse";
                 panner.refDistance = 1;
                 panner.maxDistance = 10000;
                 panner.rolloffFactor = 1;
@@ -649,7 +649,7 @@ export namespace Client {
                 const intervalId = setInterval(() => {
                     if (
                         audioContext &&
-                        audioContext.state === 'running' &&
+                        audioContext.state === "running" &&
                         panner
                     ) {
                         const agentMetadata =
