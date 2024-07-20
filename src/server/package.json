@@ -4,16 +4,11 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch server",
-    "build": "esbuild server --bundle --packages=external --platform=node --format=esm --outdir=dist --sourcemap",
-    "setup-supabase": "tsx ./modules/supabase/supabase-scripts/supabase-setup.ts",
-    "resync-supabase": "tsx ./modules/supabase/supabase-scripts/supabase-resync.ts",
-    "check-supabase": "tsx ./modules/supabase/supabase-scripts/supabase-checkStatus.ts",
-    "restart-supabase": "tsx ./modules/supabase/supabase-scripts/supabase-restart.ts",
-    "stop-supabase": "tsx ./modules/supabase/supabase-scripts/supabase-stop.ts",
-    "start-supabase": "tsx ./modules/supabase/supabase-scripts/supabase-start.ts"
+    "build": "esbuild server --bundle --packages=external --platform=node --format=esm --outdir=dist --sourcemap"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
+    "execa": "^9.3.0",
     "express": "^4.19.0",
     "peer": "^1.0.2",
     "socket.io": "^4.7.5"

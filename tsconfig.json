@@ -6,7 +6,8 @@
         "strict": true,
         "moduleResolution": "node",
         "noEmit": true,
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "module": "NodeNext"
     },
     "include": ["src/**/*", ".eslintrc.cjs"],
     "exclude": ["node_modules"]
