@@ -5,8 +5,12 @@
   "scripts": {
     "dev": "tsx watch server",
     "build": "esbuild server --bundle --packages=external --platform=node --format=esm --outdir=dist --sourcemap",
-    "setup-supabase": "chmod +x ./modules/supabase/supabase-scripts/setup-supabase.sh && ./modules/supabase/supabase-scripts/setup-supabase.sh",
-    "resync-supabase": "chmod +x ./modules/supabase/supabase-scripts/resync-supabase.sh && ./modules/supabase/supabase-scripts/resync-supabase.sh"
+    "setup-supabase": "tsx ./modules/supabase/supabase-scripts/supabase-setup.ts",
+    "resync-supabase": "tsx ./modules/supabase/supabase-scripts/supabase-resync.ts",
+    "check-supabase": "tsx ./modules/supabase/supabase-scripts/supabase-checkStatus.ts",
+    "restart-supabase": "tsx ./modules/supabase/supabase-scripts/supabase-restart.ts",
+    "stop-supabase": "tsx ./modules/supabase/supabase-scripts/supabase-stop.ts",
+    "start-supabase": "tsx ./modules/supabase/supabase-scripts/supabase-start.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
