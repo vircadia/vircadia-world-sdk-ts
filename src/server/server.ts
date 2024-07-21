@@ -15,11 +15,16 @@ async function init() {
     const supabase = new Supabase();
 
     // Check Supabase status
-    const status = await supabase.checkStatus();
+    const status = await supabase.status();
 
     if (status.status === 'not_configured') {
-        console.error('Supabase is not configured. Please run setup-supabase script first.');
-        process.exit(1);
+        await supabase.setup();
+
+        const newStatus = await supabase.status();
+        if (newStatus.status === 'not_configured') {
+            console.error('Failed to setup Supabase. Exiting.');
+            process.exit(1);
+        }
     }
 
     if (status.status === 'failed') {
@@ -27,13 +32,13 @@ async function init() {
         await supabase.start();
         
         // Check status again after starting
-        const newStatus = await supabase.checkStatus();
+        const newStatus = await supabase.status();
         if (newStatus.status !== 'running') {
             console.error('Failed to start Supabase services. Attempting to resync and restart...');
             await supabase.resyncConfiguration();
             
             // Final check after resync
-            const finalStatus = await supabase.checkStatus();
+            const finalStatus = await supabase.status();
             if (finalStatus.status !== 'running') {
                 console.error('Failed to start Supabase services after resync. Exiting.');
                 process.exit(1);

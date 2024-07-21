@@ -3,7 +3,7 @@ import * as path from 'path';
 import dotenv from 'dotenv';
 import * as execa from 'execa';
 
-const SUPABASE_PATH = path.resolve('./supabase');
+const CONFIG_PATH = path.resolve('./modules/supabase/config');
 const CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 class Supabase {
@@ -16,26 +16,25 @@ class Supabase {
     }
     
     private loadEnvironmentVariables(): void {
-        dotenv.config({ path: path.join(SUPABASE_PATH, '.env') });
+        dotenv.config({ path: path.join(CONFIG_PATH, '.env') });
         this.supabaseUrl = process.env.SUPABASE_URL || '';
         this.supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
         this.supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
     }
 
-    async setupSupabase(): Promise<void> {
+    async setup(): Promise<void> {
         console.log('Setting up Supabase...');
     
         // Check if Supabase CLI is installed
         try {
             await this.runCommand('supabase --version');
         } catch (error) {
-            console.error('Supabase CLI is not installed. Please install it and try again.');
-            console.error('You can install it using: brew install supabase/tap/supabase');
+            console.error('Supabase CLI is not installed. Please install the project first with npm or variants');
             throw error;
         }
     
         // Initialize Supabase project if it doesn't exist
-        if (!fs.existsSync(SUPABASE_PATH)) {
+        if (!fs.existsSync(CONFIG_PATH)) {
             console.log('Initializing Supabase project...');
             await this.runCommand('supabase init', process.cwd());
         } else {
@@ -54,7 +53,7 @@ class Supabase {
     
         // Update .env file with new credentials
         const envContent = `SUPABASE_URL=${url}\nSUPABASE_ANON_KEY=${anonKey}\nSUPABASE_SERVICE_ROLE_KEY=${serviceRoleKey}`;
-        fs.writeFileSync(path.join(SUPABASE_PATH, '.env'), envContent);
+        fs.writeFileSync(path.join(CONFIG_PATH, '.env'), envContent);
     
         console.log('Supabase setup complete. Credentials have been saved to .env file.');
         this.loadEnvironmentVariables(); // Reload environment variables after setup
@@ -81,7 +80,7 @@ class Supabase {
         await this.start();
     }
 
-    async checkStatus(): Promise<{ status: 'running' | 'failed' | 'not_configured', failedServices?: string[] }> {
+    async status(): Promise<{ status: 'running' | 'failed' | 'not_configured', failedServices?: string[] }> {
         if (!this.supabaseUrl || !this.supabaseAnonKey || !this.supabaseServiceRoleKey) {
             return { status: 'not_configured' };
         }
@@ -119,19 +118,19 @@ class Supabase {
 
         // Update .env file with new credentials
         const envContent = `SUPABASE_URL=${newUrl}\nSUPABASE_ANON_KEY=${newAnonKey}\nSUPABASE_SERVICE_ROLE_KEY=${newServiceRoleKey}`;
-        fs.writeFileSync(path.join(SUPABASE_PATH, '.env'), envContent);
+        fs.writeFileSync(path.join(CONFIG_PATH, '.env'), envContent);
 
         this.loadEnvironmentVariables(); // Reload environment variables after resync
         console.log('Supabase configuration resynced successfully. New credentials have been saved to .env file.');
     }
 
     private startPeriodicCheck(): void {
-        setInterval(() => this.checkStatus(), CHECK_INTERVAL);
+        setInterval(() => this.status(), CHECK_INTERVAL);
     }
 
     private async runCommand(command: string, cwd?: string): Promise<string> {
         try {
-            const { stdout } = await execa.execaCommand(command, { cwd: cwd ?? SUPABASE_PATH, shell: true });
+            const { stdout } = await execa.execaCommand(command, { cwd: cwd ?? CONFIG_PATH, shell: true });
             return stdout.trim();
         } catch (error) {
             console.error(`Error executing command: ${command}`, error);
