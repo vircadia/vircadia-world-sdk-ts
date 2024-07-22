@@ -3,23 +3,40 @@ import * as path from 'path';
 import dotenv from 'dotenv';
 import * as execa from 'execa';
 
-const CONFIG_PATH = path.resolve('./modules/supabase/config');
+const SUPABASE_DIR = path.resolve('./modules/supabase');
+const APP_PATH = path.resolve(SUPABASE_DIR, 'app');
 const CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 class Supabase {
     private supabaseUrl: string;
     private supabaseAnonKey: string;
     private supabaseServiceRoleKey: string;
+    private projectDir: string;
+    private configDir: string;
 
     constructor() {
+        this.projectDir = APP_PATH;
+        this.configDir = path.resolve(SUPABASE_DIR, 'config');
         this.loadEnvironmentVariables();
     }
     
     private loadEnvironmentVariables(): void {
-        dotenv.config({ path: path.join(CONFIG_PATH, '.env') });
+        const envPath = path.join(this.configDir, '.env');
+        if (fs.existsSync(envPath)) {
+            dotenv.config({ path: envPath });
+        } else {
+            console.warn(`Warning: .env file not found at ${envPath}`);
+        }
         this.supabaseUrl = process.env.SUPABASE_URL || '';
         this.supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
         this.supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    }
+
+    private async updateConfigAndWriteEnv(): Promise<void> {
+        const config = await this.runCommand('supabase status');
+        const envContent = `SUPABASE_URL=${config.match(/API URL:\s*(\S+)/)?.[1] || ''}\nSUPABASE_ANON_KEY=${config.match(/anon key:\s*(\S+)/)?.[1] || ''}\nSUPABASE_SERVICE_ROLE_KEY=${config.match(/service_role key:\s*(\S+)/)?.[1] || ''}\n`;
+        fs.writeFileSync(path.join(this.configDir, '.env'), envContent);
+        console.info('Credentials have been saved to .env file.');
     }
 
     async setup(): Promise<void> {
@@ -29,33 +46,27 @@ class Supabase {
         try {
             await this.runCommand('supabase --version');
         } catch (error) {
-            console.error('Supabase CLI is not installed. Please install the project first with npm or variants');
+            console.error('Supabase CLI is not installed. Please install it first.');
             throw error;
         }
     
-        // Initialize Supabase project if it doesn't exist
-        if (!fs.existsSync(CONFIG_PATH)) {
-            console.log('Initializing Supabase project...');
-            await this.runCommand('supabase init', process.cwd());
-        } else {
+        // Check if Supabase project already exists
+        const configPath = path.join(this.projectDir, 'supabase', 'config.toml');
+        if (fs.existsSync(configPath)) {
             console.log('Supabase project already initialized. Skipping init step.');
+        } else {
+            console.log('Initializing Supabase project...');
+            await this.runCommand('supabase init');
         }
-
+    
         // Start Supabase services
         console.log('Starting Supabase services...');
         await this.runCommand('supabase start');
     
-        // Get Supabase credentials
-        const config = await this.runCommand('supabase status');
-        const url = config.match(/API URL:\s*(\S+)/)?.[1] || '';
-        const anonKey = config.match(/anon key:\s*(\S+)/)?.[1] || '';
-        const serviceRoleKey = config.match(/service_role key:\s*(\S+)/)?.[1] || '';
+        // Update config
+        await this.updateConfigAndWriteEnv();
     
-        // Update .env file with new credentials
-        const envContent = `SUPABASE_URL=${url}\nSUPABASE_ANON_KEY=${anonKey}\nSUPABASE_SERVICE_ROLE_KEY=${serviceRoleKey}`;
-        fs.writeFileSync(path.join(CONFIG_PATH, '.env'), envContent);
-    
-        console.log('Supabase setup complete. Credentials have been saved to .env file.');
+        console.log('Supabase setup complete.');
         this.loadEnvironmentVariables(); // Reload environment variables after setup
     }
 
@@ -80,26 +91,24 @@ class Supabase {
         await this.start();
     }
 
-    async status(): Promise<{ status: 'running' | 'failed' | 'not_configured', failedServices?: string[] }> {
+    async status(): Promise<{ status: 'running' | 'failed' | 'not_setup', failedServices?: string[] }> {
         if (!this.supabaseUrl || !this.supabaseAnonKey || !this.supabaseServiceRoleKey) {
-            return { status: 'not_configured' };
+            return { status: 'not_setup' };
         }
 
         try {
             const output = await this.runCommand('supabase status');
-            if (output.includes('All services are running')) {
+
+            if (output.includes('not running') || output.includes('exited')) {
+                console.error('Supabase services are not running.');
+                return { status: 'failed' };
+            } else {
                 console.log('All Supabase services are running.');
                 return { status: 'running' };
-            } else {
-                const failedServices = output.split('\n')
-                    .filter(line => line.includes('not running'))
-                    .map(line => line.trim());
-                console.error('The following services have failed:', failedServices);
-                return { status: 'failed', failedServices };
             }
         } catch (error) {
-            console.error('Error checking Supabase status:', error);
-            return { status: 'not_configured' };
+            console.error('Error checking status', error);
+            return { status: 'not_setup' };
         }
     }
 
@@ -111,14 +120,7 @@ class Supabase {
         await this.start();
 
         // Get the new credentials
-        const config = await this.runCommand('supabase status');
-        const newUrl = config.match(/API URL:\s*(\S+)/)?.[1] || '';
-        const newAnonKey = config.match(/anon key:\s*(\S+)/)?.[1] || '';
-        const newServiceRoleKey = config.match(/service_role key:\s*(\S+)/)?.[1] || '';
-
-        // Update .env file with new credentials
-        const envContent = `SUPABASE_URL=${newUrl}\nSUPABASE_ANON_KEY=${newAnonKey}\nSUPABASE_SERVICE_ROLE_KEY=${newServiceRoleKey}`;
-        fs.writeFileSync(path.join(CONFIG_PATH, '.env'), envContent);
+        await this.updateConfigAndWriteEnv();
 
         this.loadEnvironmentVariables(); // Reload environment variables after resync
         console.log('Supabase configuration resynced successfully. New credentials have been saved to .env file.');
@@ -128,9 +130,9 @@ class Supabase {
         setInterval(() => this.status(), CHECK_INTERVAL);
     }
 
-    private async runCommand(command: string, cwd?: string): Promise<string> {
+    private async runCommand(command: string): Promise<string> {
         try {
-            const { stdout } = await execa.execaCommand(command, { cwd: cwd ?? CONFIG_PATH, shell: true });
+            const { stdout } = await execa.execaCommand(command, { cwd: this.projectDir, shell: true });
             return stdout.trim();
         } catch (error) {
             console.error(`Error executing command: ${command}`, error);

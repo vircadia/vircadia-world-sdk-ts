@@ -17,11 +17,11 @@ async function init() {
     // Check Supabase status
     const status = await supabase.status();
 
-    if (status.status === 'not_configured') {
+    if (status.status === 'not_setup') {
         await supabase.setup();
 
         const newStatus = await supabase.status();
-        if (newStatus.status === 'not_configured') {
+        if (newStatus.status === 'not_setup') {
             console.error('Failed to setup Supabase. Exiting.');
             process.exit(1);
         }
