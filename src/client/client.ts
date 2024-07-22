@@ -131,8 +131,8 @@ export namespace Client {
 
             peer = new Peer(agentId, {
                 host: 'digisomni.worlds.cps.t-systems.net',
-                /* path: '/peerjs', */
-                port: 444,
+                path: '/peerjs',
+                port: 443,
 				debug: 3
             });
 

@@ -1,11 +1,12 @@
 import express from 'express';
-import { createServer } from 'http';
+import { createServer } from 'https';
 import { Server } from 'socket.io';
 import { ExpressPeerServer } from 'peer';
+import fs from 'fs';
 
 import { MetaRequest, WorldTransport } from '../routes/router';
 
-const TEMP_PORT = 3000;
+const TEMP_PORT = 443;
 const TEMP_ALLOWED_ORIGINS = '*';
 const TEMP_ALLOWED_METHODS_REQ = 'GET, POST, PUT, DELETE, OPTIONS';
 const TEMP_ALLOWED_HEADERS_REQ = 'Content-Type, Authorization';
@@ -27,8 +28,11 @@ function init() {
 
     expressApp.use('/', MetaRequest);
 
-    // Create HTTP server
-    const expressServer = createServer(expressApp);
+    const cert = fs.readFileSync("/home/ubuntu/vircadia-cert.crt");
+    const key = fs.readFileSync("/home/ubuntu/vircadia-cert.key");
+
+    // Create HTTPS server
+    const expressServer = createServer({ key, cert }, expressApp);
 
     // Webtransport via Socket.io
     const socketIO = new Server(expressServer, {
