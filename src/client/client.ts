@@ -133,7 +133,18 @@ export namespace Client {
                 host: 'digisomni.worlds.cps.t-systems.net',
                 path: '/peerjs',
                 port: 443,
-				debug: 3
+                debug: 3,
+                secure: true,
+                config: {
+                    iceServers: [
+                        { urls: "stun:turn-dev.worlds.cps.t-systems.net:443" },
+                        {
+                            urls: "turn:turn-dev.worlds.cps.t-systems.net:443?transport=tcp",
+                            username: "vircadia",
+                            credential: "vircadia"
+                        }
+                    ]
+                }
             });
 
             peer.on('connection', (conn: DataConnection) => {
