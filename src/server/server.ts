@@ -13,7 +13,7 @@ const TEMP_ALLOWED_HEADERS_REQ = "Content-Type, Authorization";
 const TEMP_ALLOWED_METHODS_WT = "GET, POST";
 
 async function init() {
-    const supabase = new Supabase(true); // Enable debug mode
+    const supabase = new Supabase(false); // Enable debug mode
     try {
         await supabase.initializeAndStart();
     } catch (error) {

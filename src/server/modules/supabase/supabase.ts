@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import dotenv from 'dotenv';
+import * as toml from 'toml';
+import * as dotenv from 'dotenv';
 import * as execa from 'execa';
 
 export class SupabaseError extends Error {
@@ -14,38 +15,91 @@ export class Supabase {
     private supabaseUrl: string;
     private supabaseAnonKey: string;
     private supabaseServiceRoleKey: string;
+    private siteUrl: string;
     private projectDir: string;
     private configDir: string;
     private debug: boolean;
 
     constructor(debug: boolean = false) {
         this.projectDir = path.resolve('./modules/supabase/app');
-        this.configDir = path.resolve('./modules/supabase/config');
+        this.configDir = path.join(this.projectDir, 'supabase');
         this.supabaseUrl = '';
         this.supabaseAnonKey = '';
         this.supabaseServiceRoleKey = '';
+        this.siteUrl = '';
         this.debug = debug;
+        this.loadConfig();
     }
     
-    private loadEnvironmentVariables(): void {
-        const envPath = path.join(this.configDir, '.env');
-        if (fs.existsSync(envPath)) {
+    private async loadConfig(): Promise<void> {
+        // Load config.toml
+        const configPath = path.join(this.configDir, 'config.toml');
+        if (fs.existsSync(configPath)) {
+            const config = toml.parse(fs.readFileSync(configPath, 'utf-8'));
+            this.siteUrl = config.auth.site_url;
+            // Use other config values as needed
+        } else {
+            console.warn('Config file not found. Some Supabase configurations may be missing.');
+        }
+
+        // Load or create .env file
+        const envPath = path.join(this.projectDir, '.env');
+        if (!fs.existsSync(envPath)) {
+            console.log('.env file not found. Creating and syncing with Supabase...');
+            await this.createAndSyncEnv();
+        } else {
             dotenv.config({ path: envPath });
             this.supabaseUrl = process.env.SUPABASE_URL || '';
             this.supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
             this.supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-        } else {
-            console.warn('Environment file not found. Supabase credentials not loaded.');
+
+            // If any of the required variables are missing, re-sync with Supabase
+            if (!this.supabaseUrl || !this.supabaseAnonKey || !this.supabaseServiceRoleKey) {
+                console.log('Some Supabase environment variables are missing. Re-syncing with Supabase...');
+                await this.createAndSyncEnv();
+            }
+        }
+
+        if (!this.supabaseUrl || !this.supabaseAnonKey || !this.supabaseServiceRoleKey) {
+            throw new SupabaseError('Failed to load Supabase configuration');
         }
     }
 
-    private async updateConfigAndWriteEnv(): Promise<void> {
-        console.log('Fetching Supabase configuration...');
-        const config = await this.runCommand('supabase status');
-        const envContent = `SUPABASE_URL=${config.match(/API URL:\s*(\S+)/)?.[1] || ''}\nSUPABASE_ANON_KEY=${config.match(/anon key:\s*(\S+)/)?.[1] || ''}\nSUPABASE_SERVICE_ROLE_KEY=${config.match(/service_role key:\s*(\S+)/)?.[1] || ''}\n`;
-        fs.writeFileSync(path.join(this.configDir, '.env'), envContent);
-        console.info('Credentials have been saved to .env file.');
-        this.loadEnvironmentVariables();
+    private async createAndSyncEnv(): Promise<void> {
+        try {
+            const output = await this.runCommand('supabase status --output json');
+            
+            // Extract JSON part from the output
+            const jsonMatch = output.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+                throw new Error('Failed to extract JSON from Supabase status output');
+            }
+            
+            const status = JSON.parse(jsonMatch[0]);
+    
+            let envContent: string = '';
+            if (status && status.API_URL && status.ANON_KEY && status.SERVICE_ROLE_KEY) {
+                envContent = `
+    SUPABASE_URL=${status.API_URL}
+    SUPABASE_ANON_KEY=${status.ANON_KEY}
+    SUPABASE_SERVICE_ROLE_KEY=${status.SERVICE_ROLE_KEY}
+                `.trim();
+            } else {
+                throw new Error('Failed to get required Supabase status information');
+            }
+    
+            fs.writeFileSync(path.join(this.projectDir, '.env'), envContent);
+            console.log('.env file created and synced with Supabase.');
+    
+            // Reload environment variables
+            dotenv.config({ path: path.join(this.projectDir, '.env') });
+            this.supabaseUrl = process.env.SUPABASE_URL || '';
+            this.supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+            this.supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+        } catch (error) {
+            console.error('Failed to create and sync .env file:', error);
+            throw new SupabaseError('Failed to create and sync .env file');
+        }
     }
 
     async initializeAndStart(): Promise<void> {
@@ -70,7 +124,6 @@ export class Supabase {
         try {
             await this.runCommand('supabase start');
             console.log('Supabase services started successfully.');
-            return;
         } catch (error) {
             console.error(`Attempt to start Supabase failed:`, error);
             console.log('Attempting to stop and restart Supabase...');
@@ -81,11 +134,8 @@ export class Supabase {
             });
         }
     
-        await this.updateConfigAndWriteEnv();
-    
-        if (!this.supabaseUrl || !this.supabaseAnonKey || !this.supabaseServiceRoleKey) {
-            throw new SupabaseError('Supabase environment variables are not set correctly after initialization');
-        }
+        // Re-sync .env after starting Supabase
+        await this.loadConfig();
 
         console.log('Supabase initialization and startup complete.');
     }
@@ -136,6 +186,10 @@ export class Supabase {
 
     getSupabaseServiceRoleKey(): string {
         return this.supabaseServiceRoleKey;
+    }
+
+    getSiteUrl(): string {
+        return this.siteUrl;
     }
 
     async debugSupabaseStatus(): Promise<void> {
