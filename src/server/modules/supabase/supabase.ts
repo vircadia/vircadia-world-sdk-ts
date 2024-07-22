@@ -5,7 +5,13 @@ import * as execa from 'execa';
 
 const SUPABASE_DIR = path.resolve('./modules/supabase');
 const APP_PATH = path.resolve(SUPABASE_DIR, 'app');
-const CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+export class SupabaseError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'SupabaseError';
+    }
+}
 
 class Supabase {
     private supabaseUrl: string;
@@ -17,7 +23,9 @@ class Supabase {
     constructor() {
         this.projectDir = APP_PATH;
         this.configDir = path.resolve(SUPABASE_DIR, 'config');
-        this.loadEnvironmentVariables();
+        this.supabaseUrl = '';
+        this.supabaseAnonKey = '';
+        this.supabaseServiceRoleKey = '';
     }
     
     private loadEnvironmentVariables(): void {
@@ -37,47 +45,56 @@ class Supabase {
         const envContent = `SUPABASE_URL=${config.match(/API URL:\s*(\S+)/)?.[1] || ''}\nSUPABASE_ANON_KEY=${config.match(/anon key:\s*(\S+)/)?.[1] || ''}\nSUPABASE_SERVICE_ROLE_KEY=${config.match(/service_role key:\s*(\S+)/)?.[1] || ''}\n`;
         fs.writeFileSync(path.join(this.configDir, '.env'), envContent);
         console.info('Credentials have been saved to .env file.');
+        this.loadEnvironmentVariables();
     }
 
-    async setup(): Promise<void> {
-        console.log('Setting up Supabase...');
+    async initializeAndStart(): Promise<void> {
+        console.log('Initializing and starting Supabase...');
     
-        // Check if Supabase CLI is installed
         try {
             await this.runCommand('supabase --version');
         } catch (error) {
-            console.error('Supabase CLI is not installed. Please install it first.');
-            throw error;
+            throw new SupabaseError('Supabase CLI is not installed. Please install it first.');
         }
     
-        // Check if Supabase project already exists
         const configPath = path.join(this.projectDir, 'supabase', 'config.toml');
-        if (fs.existsSync(configPath)) {
-            console.log('Supabase project already initialized. Skipping init step.');
-        } else {
-            console.log('Initializing Supabase project...');
+        if (!fs.existsSync(configPath)) {
+            console.log('Supabase project not initialized. Initializing now...');
             await this.runCommand('supabase init');
+            console.log('Supabase project initialized.');
+        } else {
+            console.log('Supabase project already initialized.');
         }
     
-        // Start Supabase services
         console.log('Starting Supabase services...');
-        await this.runCommand('supabase start');
+        await this.startSupabaseWithRetry();
     
-        // Update config
         await this.updateConfigAndWriteEnv();
     
-        console.log('Supabase setup complete.');
-        this.loadEnvironmentVariables(); // Reload environment variables after setup
-    }
-
-    async start(): Promise<void> {
         if (!this.supabaseUrl || !this.supabaseAnonKey || !this.supabaseServiceRoleKey) {
-            throw new Error('Supabase environment variables are not set correctly');
+            throw new SupabaseError('Supabase environment variables are not set correctly after initialization');
         }
 
-        console.log('Starting Supabase services...');
-        await this.runCommand('supabase start');
-        this.startPeriodicCheck();
+        console.log('Supabase initialization and startup complete.');
+    }
+
+    private async startSupabaseWithRetry(retries = 3): Promise<void> {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                await this.runCommand('supabase start');
+                console.log('Supabase services started successfully.');
+                return;
+            } catch (error) {
+                console.error(`Attempt ${attempt} to start Supabase failed:`, error);
+                if (attempt < retries) {
+                    console.log('Attempting to stop and restart Supabase...');
+                    await this.runCommand('supabase stop').catch(() => {});
+                    await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds
+                } else {
+                    throw new SupabaseError('Failed to start Supabase services after multiple attempts');
+                }
+            }
+        }
     }
 
     async stop(): Promise<void> {
@@ -86,48 +103,25 @@ class Supabase {
     }
 
     async restart(): Promise<void> {
-        console.log('Restarting Supabase services...');
         await this.stop();
-        await this.start();
+        await this.initializeAndStart();
     }
 
-    async status(): Promise<{ status: 'running' | 'failed' | 'not_setup', failedServices?: string[] }> {
-        if (!this.supabaseUrl || !this.supabaseAnonKey || !this.supabaseServiceRoleKey) {
-            return { status: 'not_setup' };
-        }
-
+    async isRunning(): Promise<boolean> {
         try {
             const output = await this.runCommand('supabase status');
-
-            if (output.includes('not running') || output.includes('exited')) {
-                console.error('Supabase services are not running.');
-                return { status: 'failed' };
-            } else {
-                console.log('All Supabase services are running.');
-                return { status: 'running' };
-            }
+            return !output.includes('not running') && !output.includes('exited');
         } catch (error) {
-            console.error('Error checking status', error);
-            return { status: 'not_setup' };
+            console.error('Error checking Supabase status', error);
+            return false;
         }
     }
 
     async resyncConfiguration(): Promise<void> {
         console.log('Resyncing Supabase configuration...');
-
-        // Stop and restart Supabase to apply any configuration changes
         await this.stop();
-        await this.start();
-
-        // Get the new credentials
-        await this.updateConfigAndWriteEnv();
-
-        this.loadEnvironmentVariables(); // Reload environment variables after resync
-        console.log('Supabase configuration resynced successfully. New credentials have been saved to .env file.');
-    }
-
-    private startPeriodicCheck(): void {
-        setInterval(() => this.status(), CHECK_INTERVAL);
+        await this.initializeAndStart();
+        console.log('Supabase configuration resynced successfully.');
     }
 
     private async runCommand(command: string): Promise<string> {
@@ -136,7 +130,7 @@ class Supabase {
             return stdout.trim();
         } catch (error) {
             console.error(`Error executing command: ${command}`, error);
-            throw error;
+            throw new SupabaseError(`Command failed: ${command}`);
         }
     }
 

@@ -1,7 +1,9 @@
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
+
 import Supabase from "./modules/supabase/supabase";
+import { SupabaseError } from "./modules/supabase/supabase";
 
 import { MetaRequest, WorldTransport } from "../routes/router";
 
@@ -14,36 +16,19 @@ const TEMP_ALLOWED_METHODS_WT = "GET, POST";
 async function init() {
     const supabase = new Supabase();
 
-    // Check Supabase status
-    const status = await supabase.status();
-
-    if (status.status === 'not_setup') {
-        await supabase.setup();
-
-        const newStatus = await supabase.status();
-        if (newStatus.status === 'not_setup') {
-            console.error('Failed to setup Supabase. Exiting.');
+    try {
+        await supabase.initializeAndStart();
+    } catch (error) {
+        if (error instanceof SupabaseError) {
+            console.error('Failed to initialize and start Supabase:', error.message);
             process.exit(1);
         }
+        throw error;
     }
 
-    if (status.status === 'failed') {
-        console.log('Supabase services are not running. Attempting to start...');
-        await supabase.start();
-        
-        // Check status again after starting
-        const newStatus = await supabase.status();
-        if (newStatus.status !== 'running') {
-            console.error('Failed to start Supabase services. Attempting to resync and restart...');
-            await supabase.resyncConfiguration();
-            
-            // Final check after resync
-            const finalStatus = await supabase.status();
-            if (finalStatus.status !== 'running') {
-                console.error('Failed to start Supabase services after resync. Exiting.');
-                process.exit(1);
-            }
-        }
+    if (!(await supabase.isRunning())) {
+        console.error('Supabase services are not running after initialization. Exiting.');
+        process.exit(1);
     }
 
     console.log('Supabase services are running correctly.');
