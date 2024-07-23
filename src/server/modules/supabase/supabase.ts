@@ -93,7 +93,10 @@ export class Supabase {
     async isRunning(): Promise<boolean> {
         try {
             const output = await this.runCommand('supabase status');
-            return !output.includes('not running') && !output.includes('exited');
+            return !output.includes('not running') && 
+                   !output.includes('exited') && 
+                   !output.includes('failed to inspect container health') &&
+                   !output.includes('No such container: supabase_db_app');
         } catch (error) {
             return false;
         }
