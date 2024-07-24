@@ -1,12 +1,12 @@
 import {
-    EPacketType,
+    E_PacketType,
     C_AUDIO_Metadata_Packet,
     C_AGENT_WorldHeartbeat_Packet,
     C_WORLD_AgentList_Packet,
 } from './meta';
 
 export interface IRouter {
-    [EPacketType.AUDIO_Metadata]: (
+    [E_PacketType.AUDIO_Metadata]: (
         socket: Socket,
         data: C_AUDIO_Metadata_Packet,
     ) => void;
@@ -14,27 +14,6 @@ export interface IRouter {
 
 // TODO:
 const TEMP_ROUTER_USER_ID = 'xxx';
-
-//
-//
-// Meta Requests (internals, like status, config, etc.)
-//
-//
-
-import { Router as ExpressRouter } from 'express';
-
-// Create a router instance
-const router = ExpressRouter();
-
-// Define an example route
-router.get('/status', (req, res) => {
-    res.json({
-        message:
-            'We should return the config and the status of the server, mainly to assist in initiating connections with the WS and other services provided.',
-    });
-});
-
-export { router as MetaRequest };
 
 //
 //
@@ -71,7 +50,7 @@ export namespace WorldTransport {
             });
 
             WorldTransportServer?.emit(
-                EPacketType.WORLD_AgentList,
+                E_PacketType.WORLD_AgentList,
                 new C_WORLD_AgentList_Packet({
                     senderId: TEMP_ROUTER_USER_ID,
                     agentList: Array.from(agentSocketMap.keys()),
@@ -86,27 +65,27 @@ export namespace WorldTransport {
         WorldTransportServer?.on('connection', (socket) => {
             console.log('A user connected:', socket.id);
 
-            socket.on(EPacketType.AGENT_Join, async ({ agentId }) => {
+            socket.on(E_PacketType.AGENT_Join, async ({ agentId }) => {
                 await socket.join(agentId);
-                socket.broadcast.emit(EPacketType.AGENT_Join, agentId);
+                socket.broadcast.emit(E_PacketType.AGENT_Join, agentId);
             });
 
-            socket.on(EPacketType.AGENT_Offer, ({ offer, to }) => {
-                socket.to(to).emit(EPacketType.AGENT_Offer, {
+            socket.on(E_PacketType.AGENT_Offer, ({ offer, to }) => {
+                socket.to(to).emit(E_PacketType.AGENT_Offer, {
                     offer,
                     from: socket.id,
                 });
             });
 
-            socket.on(EPacketType.AGENT_Answer, ({ answer, to }) => {
-                socket.to(to).emit(EPacketType.AGENT_Answer, {
+            socket.on(E_PacketType.AGENT_Answer, ({ answer, to }) => {
+                socket.to(to).emit(E_PacketType.AGENT_Answer, {
                     answer,
                     from: socket.id,
                 });
             });
 
-            socket.on(EPacketType.AGENT_ICE_Candidate, ({ candidate, to }) => {
-                socket.to(to).emit(EPacketType.AGENT_ICE_Candidate, {
+            socket.on(E_PacketType.AGENT_ICE_Candidate, ({ candidate, to }) => {
+                socket.to(to).emit(E_PacketType.AGENT_ICE_Candidate, {
                     candidate,
                     from: socket.id,
                 });
@@ -129,7 +108,7 @@ export namespace WorldTransport {
                     console.log('User disconnected and removed:', agentId);
                 }
                 WorldTransportServer?.emit(
-                    EPacketType.WORLD_AgentList,
+                    E_PacketType.WORLD_AgentList,
                     new C_WORLD_AgentList_Packet({
                         senderId: TEMP_ROUTER_USER_ID,
                         agentList: Array.from(agentSocketMap.keys()),
@@ -146,7 +125,7 @@ export namespace WorldTransport {
 
         export function InitializeAgentModule(socket: Socket): void {
             socket.on(
-                EPacketType.AGENT_Heartbeat,
+                E_PacketType.AGENT_Heartbeat,
                 (data: C_AGENT_WorldHeartbeat_Packet) => {
                     console.log(
                         `${LOG_PREFIX} Received WORLD_Maintain from:`,
@@ -155,7 +134,7 @@ export namespace WorldTransport {
                     if (data.senderId) {
                         agentSocketMap.set(data.senderId, socket.id);
                         WorldTransportServer?.emit(
-                            EPacketType.WORLD_AgentList,
+                            E_PacketType.WORLD_AgentList,
                             new C_WORLD_AgentList_Packet({
                                 senderId: TEMP_ROUTER_USER_ID,
                                 agentList: Array.from(agentSocketMap.keys()),

@@ -3,7 +3,7 @@ import { io, Socket } from "socket.io-client";
 // Agent <-> Agent
 
 import {
-    EPacketType,
+    E_PacketType,
     C_AGENT_WorldHeartbeat_Packet,
     C_WORLD_AgentList_Packet,
     C_AUDIO_Metadata_Packet,
@@ -100,7 +100,7 @@ export namespace Client {
 
         const sendHeartbeatPacketToWorld = () => {
             socket?.emit(
-                EPacketType.AGENT_Heartbeat,
+                E_PacketType.AGENT_Heartbeat,
                 new C_AGENT_WorldHeartbeat_Packet({
                     senderId: TEMP_agentId,
                 }),
@@ -140,10 +140,10 @@ export namespace Client {
                 return;
             }
 
-            socket?.on(EPacketType.AGENT_Offer, handleOffer);
-            socket?.on(EPacketType.AGENT_Answer, handleAnswer);
-            socket?.on(EPacketType.AGENT_ICE_Candidate, handleIceCandidate);
-            socket?.on(EPacketType.WORLD_AgentList, handleAgentListUpdate);
+            socket?.on(E_PacketType.AGENT_Offer, handleOffer);
+            socket?.on(E_PacketType.AGENT_Answer, handleAnswer);
+            socket?.on(E_PacketType.AGENT_ICE_Candidate, handleIceCandidate);
+            socket?.on(E_PacketType.WORLD_AgentList, handleAgentListUpdate);
         };
 
         const removeDataConnection = (agentId: string) => {

@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as execa from 'execa';
 
+const CONFIG_TOML_FILE = 'config.toml';
+
 export class SupabaseError extends Error {
     constructor(message: string) {
         super(message);
@@ -9,9 +11,9 @@ export class SupabaseError extends Error {
     }
 }
 
-const CONFIG_TOML_FILE = 'config.toml';
-
 export class Supabase {
+    private static instance: Supabase | null = null;
+
     private appDir: string;
     private configDir: string;
     private debug: boolean;
@@ -22,6 +24,13 @@ export class Supabase {
         this.debug = debug;
 
         this.loadConfig();
+    }
+
+    public static getInstance(debug: boolean = false): Supabase {
+        if (!Supabase.instance) {
+            Supabase.instance = new Supabase(debug);
+        }
+        return Supabase.instance;
     }
     
     private loadConfig(): void {
@@ -119,7 +128,7 @@ export class Supabase {
         }
     }
 
-    async debugSupabaseStatus(): Promise<void> {
+    async debugStatus(): Promise<void> {
         console.log('Running Supabase debug commands...');
         try {
             const status = await this.runCommand('supabase status --debug');
@@ -137,4 +146,45 @@ export class Supabase {
             console.error('Error running debug commands:', error);
         }
     }
+
+    async status(): Promise<{
+        apiUrl: string | null;
+        graphqlUrl: string | null;
+        s3StorageUrl: string | null;
+        dbUrl: string | null;
+        studioUrl: string | null;
+        inbucketUrl: string | null;
+        jwtSecret: string | null;
+        anonKey: string | null;
+        serviceRoleKey: string | null;
+        s3AccessKey: string | null;
+        s3SecretKey: string | null;
+        s3Region: string | null;
+    }> {
+        console.log('Running Supabase status commands...');
+        const output = await this.runCommand('supabase status');
+        
+        const parseValue = (key: string): string | null => {
+            const regex = new RegExp(`${key}:\\s*(.+)`);
+            const match = output.match(regex);
+            return match ? match[1].trim() : null;
+        };
+    
+        return {
+            apiUrl: parseValue('API URL'),
+            graphqlUrl: parseValue('GraphQL URL'),
+            s3StorageUrl: parseValue('S3 Storage URL'),
+            dbUrl: parseValue('DB URL'),
+            studioUrl: parseValue('Studio URL'),
+            inbucketUrl: parseValue('Inbucket URL'),
+            jwtSecret: parseValue('JWT secret'),
+            anonKey: parseValue('anon key'),
+            serviceRoleKey: parseValue('service_role key'),
+            s3AccessKey: parseValue('S3 Access Key'),
+            s3SecretKey: parseValue('S3 Secret Key'),
+            s3Region: parseValue('S3 Region'),
+        };
+    }
 }
+
+export default Supabase.getInstance();

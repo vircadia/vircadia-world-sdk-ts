@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-export enum EPacketType {
+export enum E_PacketType {
     AGENT_Join = "agent-agent-join-packet",
     AGENT_Offer = "agent-agent-offer-packet",
     AGENT_Answer = "agent-agent-answer-packet",
@@ -9,14 +9,23 @@ export enum EPacketType {
     AUDIO_Metadata = "agent-agent-audio-metadata-packet",
 }
 
+export enum E_RequestType {
+    STATUS = '/status',
+}
+
+export interface I_REQUEST_StatusResponse {
+    REALTIME_API_URL: string | null;
+    S3_STORAGE_URL: string | null;
+}
+
 interface I_BASE_Packet {
-    type: EPacketType;
+    type: E_PacketType;
     senderId: string | null;
     receiverId?: string | null;
 }
 
 export class C_AGENT_WorldHeartbeat_Packet implements I_BASE_Packet {
-    type: EPacketType.AGENT_Heartbeat = EPacketType.AGENT_Heartbeat;
+    type: E_PacketType.AGENT_Heartbeat = E_PacketType.AGENT_Heartbeat;
     senderId: string | null;
 
     constructor(data: { senderId: string | null }) {
@@ -25,7 +34,7 @@ export class C_AGENT_WorldHeartbeat_Packet implements I_BASE_Packet {
 }
 
 export class C_WORLD_AgentList_Packet implements I_BASE_Packet {
-    type: EPacketType.WORLD_AgentList = EPacketType.WORLD_AgentList;
+    type: E_PacketType.WORLD_AgentList = E_PacketType.WORLD_AgentList;
     senderId: string | null;
     agentList: string[];
 
@@ -36,7 +45,7 @@ export class C_WORLD_AgentList_Packet implements I_BASE_Packet {
 }
 
 export class C_AUDIO_Metadata_Packet implements I_BASE_Packet {
-    type: EPacketType.AUDIO_Metadata = EPacketType.AUDIO_Metadata;
+    type: E_PacketType.AUDIO_Metadata = E_PacketType.AUDIO_Metadata;
     audioPosition: {
         x: number;
         y: number;

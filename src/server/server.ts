@@ -2,9 +2,10 @@ import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 
-import { SupabaseError, Supabase } from "./modules/supabase/supabase";
+import { Supabase } from "./modules/supabase/supabase";
 
-import { MetaRequest, WorldTransport } from "../routes/router";
+import { WorldTransport } from "../routes/worldTransportRouter";
+import { HTTPTransport } from "../routes/httpRouter";
 
 const TEMP_PORT = 3000;
 const TEMP_ALLOWED_ORIGINS = "*";
@@ -15,14 +16,14 @@ const TEMP_ALLOWED_METHODS_WT = "GET, POST";
 async function init() {
     const forceRestartSupabase = process.argv.includes('--force-restart-supabase');
     
-    const supabase = new Supabase(false); // Enable debug mode
+    const supabase = Supabase.getInstance(false);
     try {
         await supabase.initializeAndStart({
             forceRestart: forceRestartSupabase
         });
     } catch (error) {
         console.error('Failed to initialize and start Supabase:', error);
-        await supabase.debugSupabaseStatus();
+        await supabase.debugStatus();
     }
 
     if (!(await supabase.isRunning())) {
@@ -45,7 +46,7 @@ async function init() {
         return next();
     });
 
-    expressApp.use("/", MetaRequest);
+    expressApp.use("/", HTTPTransport.Routes);
 
     // Create HTTP server
     const expressServer = createServer(expressApp);

@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch server",
+    "start": "node dist/server.js",
     "build": "esbuild server --bundle --packages=external --platform=node --format=esm --outdir=dist --sourcemap"
   },
   "dependencies": {
