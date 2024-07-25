@@ -1,12 +1,16 @@
 // Agent <-> Server
 import { io, Socket } from "socket.io-client";
+import { createClient } from '@supabase/supabase-js'
+import axios from 'axios';
 // Agent <-> Agent
 
 import {
     E_PacketType,
+    E_RequestType,
     C_AGENT_WorldHeartbeat_Packet,
     C_WORLD_AgentList_Packet,
     C_AUDIO_Metadata_Packet,
+    I_REQUEST_StatusResponse
 } from "../routes/meta";
 
 // FIXME: These should be defined in config.
@@ -19,6 +23,8 @@ const TEMP_ICE_SERVERS = [
 const TEMP_AUDIO_METADATA_INTERVAL = 250;
 
 export namespace Client {
+    let serverStatus: I_REQUEST_StatusResponse | null = null;
+
     let host: string | null = null;
     let port: number | null = null;
 
@@ -51,11 +57,22 @@ export namespace Client {
     export namespace Setup {
         let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
-        export const InitializeWorldModule = (data: {
+        export const InitializeWorldModule = async (data: {
             host: string;
             port: number;
             agentId: string;
         }) => {
+            // Retrieve the status.
+            try {
+                const response = await axios.get<I_REQUEST_StatusResponse>(
+                    `${data.host}:${data.port}${E_RequestType.STATUS}`
+                );
+                serverStatus = response.data;
+                console.log("Server status:", serverStatus);
+            } catch (error) {
+                console.error("Failed to retrieve server status:", error);
+            }
+
             TEMP_agentId = data.agentId;
 
             if (socket && socket.connected) {
