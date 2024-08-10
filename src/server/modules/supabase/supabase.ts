@@ -76,7 +76,7 @@ export class Supabase {
                     cwd: this.appDir,
                 },
             );
-            this.log(`Supabase CLI version: ${stdout.trim()}`, 'info');
+            this.log(`Supabase CLI version: ${stdout.trim()}`, 'success');
         } catch (error) {
             throw new SupabaseError(
                 'Supabase CLI is not installed. Please install it first.',
@@ -97,29 +97,34 @@ export class Supabase {
             });
             this.log('Supabase project initialized.', 'success');
         } else {
-            this.log('Supabase project already initialized.', 'info');
+            this.log('Supabase project already initialized.', 'success');
         }
     }
 
     private async startSupabase(forceRestart: boolean): Promise<void> {
-        forceRestart
-            ? this.log('Restarting Supabase services...', 'info')
-            : this.log('Starting Supabase services...', 'info');
-
-        if (await this.isStarting()) {
+        if (forceRestart) {
+            this.log(
+                'Stopping Supabase services for a forced restart...',
+                'info',
+            );
+            await this.stopSupabase();
+        } else if (await this.isStarting()) {
             this.log(
                 'Supabase is already starting up. Waiting for it to complete...',
                 'info',
             );
             await this.waitForStartup();
             return;
-        }
-
-        if (forceRestart || !(await this.isRunning())) {
+        } else if (!(await this.isRunning())) {
+            this.log(
+                'Supabase services are not running. Starting them...',
+                'info',
+            );
             await this.stopSupabase();
         }
 
         try {
+            this.log('Starting Supabase services...', 'info');
             await this.runSupabaseCommand({
                 command: 'start',
                 appendWorkdir: true,

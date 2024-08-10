@@ -19,7 +19,7 @@ async function init() {
     );
 
     const supabase = Supabase.getInstance(false);
-    if (!(await supabase.isRunning())) {
+    if (!(await supabase.isRunning()) || forceRestartSupabase) {
         try {
             await supabase.initializeAndStart({
                 forceRestart: forceRestartSupabase,
