@@ -1,34 +1,40 @@
-import express from "express";
-import { createServer } from "http";
-import { Server } from "socket.io";
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 
-import { Supabase } from "./modules/supabase/supabase";
+import { Supabase } from './modules/supabase/supabase';
 
-import { WorldTransport } from "../routes/worldTransportRouter";
-import { HTTPTransport } from "../routes/httpRouter";
+import { WorldTransport } from '../routes/worldTransportRouter';
+import { HTTPTransport } from '../routes/httpRouter';
 
 const TEMP_PORT = 3000;
-const TEMP_ALLOWED_ORIGINS = "*";
-const TEMP_ALLOWED_METHODS_REQ = "GET, POST, PUT, DELETE, OPTIONS";
-const TEMP_ALLOWED_HEADERS_REQ = "Content-Type, Authorization";
-const TEMP_ALLOWED_METHODS_WT = "GET, POST";
+const TEMP_ALLOWED_ORIGINS = '*';
+const TEMP_ALLOWED_METHODS_REQ = 'GET, POST, PUT, DELETE, OPTIONS';
+const TEMP_ALLOWED_HEADERS_REQ = 'Content-Type, Authorization';
+const TEMP_ALLOWED_METHODS_WT = 'GET, POST';
 
 async function init() {
-    const forceRestartSupabase = process.argv.includes('--force-restart-supabase');
-    
-    const supabase = Supabase.getInstance(false);
-    try {
-        await supabase.initializeAndStart({
-            forceRestart: forceRestartSupabase
-        });
-    } catch (error) {
-        console.error('Failed to initialize and start Supabase:', error);
-        await supabase.debugStatus();
-    }
+    const forceRestartSupabase = process.argv.includes(
+        '--force-restart-supabase',
+    );
 
+    const supabase = Supabase.getInstance(false);
     if (!(await supabase.isRunning())) {
-        console.error('Supabase services are not running after initialization. Exiting.');
-        process.exit(1);
+        try {
+            await supabase.initializeAndStart({
+                forceRestart: forceRestartSupabase,
+            });
+        } catch (error) {
+            console.error('Failed to initialize and start Supabase:', error);
+            await supabase.debugStatus();
+        }
+
+        if (!(await supabase.isRunning())) {
+            console.error(
+                'Supabase services are not running after initialization. Exiting.',
+            );
+            process.exit(1);
+        }
     }
 
     console.log('Supabase services are running correctly.');
@@ -37,16 +43,16 @@ async function init() {
 
     // Requests via Express
     expressApp.use(function (req, res, next) {
-        res.setHeader("Access-Control-Allow-Origin", TEMP_ALLOWED_ORIGINS);
-        res.setHeader("Access-Control-Allow-Methods", TEMP_ALLOWED_METHODS_REQ);
-        res.setHeader("Access-Control-Allow-Headers", TEMP_ALLOWED_HEADERS_REQ);
-        if (req.method === "OPTIONS") {
+        res.setHeader('Access-Control-Allow-Origin', TEMP_ALLOWED_ORIGINS);
+        res.setHeader('Access-Control-Allow-Methods', TEMP_ALLOWED_METHODS_REQ);
+        res.setHeader('Access-Control-Allow-Headers', TEMP_ALLOWED_HEADERS_REQ);
+        if (req.method === 'OPTIONS') {
             return res.sendStatus(200);
         }
         return next();
     });
 
-    expressApp.use("/", HTTPTransport.Routes);
+    expressApp.use('/', HTTPTransport.Routes);
 
     // Create HTTP server
     const expressServer = createServer(expressApp);
