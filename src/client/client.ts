@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Supabase } from './modules/supabase/supabase.js';
+import { REALTIME_CHANNEL_STATES } from '@supabase/supabase-js';
 import {
     E_RequestType,
     E_AgentChannels,
@@ -92,8 +93,11 @@ export namespace Client {
                         Supabase.getSupabaseClient()?.channel(
                             E_AgentChannels.AGENT_METADATA,
                         );
+
+                    // Subscribe to the channel first
                     presenceChannel?.subscribe(async (status) => {
                         if (status === 'SUBSCRIBED') {
+                            // Only track presence after successful subscription
                             await presenceChannel.track({
                                 agent_id: TEMP_agentId,
                                 online_at: new Date().toISOString(),
@@ -196,12 +200,14 @@ export namespace Client {
             const presenceChannel = Supabase.getSupabaseClient()?.channel(
                 E_AgentChannels.AGENT_METADATA,
             );
-            presenceChannel?.track({
-                agent_id: TEMP_agentId,
-                position: TEMP_position,
-                orientation: TEMP_orientation,
-                online_at: new Date().toISOString(),
-            });
+            if (presenceChannel?.state === REALTIME_CHANNEL_STATES.joined) {
+                presenceChannel.track({
+                    agent_id: TEMP_agentId,
+                    position: TEMP_position,
+                    orientation: TEMP_orientation,
+                    online_at: new Date().toISOString(),
+                });
+            }
         };
 
         export const handleAgentListUpdate = (agentList: string[]) => {
