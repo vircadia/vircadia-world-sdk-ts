@@ -82,11 +82,11 @@ export namespace Client {
             // Initialize Supabase client
             if (serverConfigAndStatus && serverConfigAndStatus.API_URL) {
                 const url = `${data.host}:${data.port}${serverConfigAndStatus.API_URL}`;
-                const key = 'your-supabase-anon-key'; // Replace with your actual key
+                const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
                 Supabase.initializeSupabaseClient(url, key);
 
                 try {
-                    await Supabase.connectRealtime();
+                    Supabase.connectRealtime();
                     console.log('Successfully connected to Supabase Realtime');
 
                     // Set up presence channel
