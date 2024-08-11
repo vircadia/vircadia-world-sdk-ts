@@ -355,3 +355,33 @@ UPDATE
 CREATE TRIGGER update_sprite_managers_modtime BEFORE
 UPDATE
   ON sprite_managers FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
+-- Enable Realtime for all tables
+ALTER PUBLICATION supabase_realtime ADD TABLE world_metadata;
+ALTER PUBLICATION supabase_realtime ADD TABLE babylon_objects;
+ALTER PUBLICATION supabase_realtime ADD TABLE scenes;
+ALTER PUBLICATION supabase_realtime ADD TABLE cameras;
+ALTER PUBLICATION supabase_realtime ADD TABLE lights;
+ALTER PUBLICATION supabase_realtime ADD TABLE geometries;
+ALTER PUBLICATION supabase_realtime ADD TABLE materials;
+ALTER PUBLICATION supabase_realtime ADD TABLE multi_materials;
+ALTER PUBLICATION supabase_realtime ADD TABLE particle_systems;
+ALTER PUBLICATION supabase_realtime ADD TABLE lens_flare_systems;
+ALTER PUBLICATION supabase_realtime ADD TABLE shadow_generators;
+ALTER PUBLICATION supabase_realtime ADD TABLE skeletons;
+ALTER PUBLICATION supabase_realtime ADD TABLE morph_target_managers;
+ALTER PUBLICATION supabase_realtime ADD TABLE meshes;
+ALTER PUBLICATION supabase_realtime ADD TABLE transform_nodes;
+ALTER PUBLICATION supabase_realtime ADD TABLE sounds;
+ALTER PUBLICATION supabase_realtime ADD TABLE attached_sounds;
+ALTER PUBLICATION supabase_realtime ADD TABLE action_managers;
+ALTER PUBLICATION supabase_realtime ADD TABLE layers;
+ALTER PUBLICATION supabase_realtime ADD TABLE textures;
+ALTER PUBLICATION supabase_realtime ADD TABLE reflection_probes;
+ALTER PUBLICATION supabase_realtime ADD TABLE animations;
+ALTER PUBLICATION supabase_realtime ADD TABLE animation_groups;
+ALTER PUBLICATION supabase_realtime ADD TABLE environment_textures;
+ALTER PUBLICATION supabase_realtime ADD TABLE effect_layers;
+ALTER PUBLICATION supabase_realtime ADD TABLE procedural_textures;
+ALTER PUBLICATION supabase_realtime ADD TABLE sprites;
+ALTER PUBLICATION supabase_realtime ADD TABLE sprite_managers;
