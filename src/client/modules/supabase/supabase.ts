@@ -4,6 +4,7 @@ import {
     RealtimeChannel,
     RealtimePostgresChangesPayload,
     REALTIME_LISTEN_TYPES,
+    REALTIME_POSTGRES_CHANGES_LISTEN_EVENT,
 } from '@supabase/supabase-js';
 import { E_WorldTransportChannels } from '../../../routes/meta.js';
 
@@ -41,21 +42,24 @@ export namespace Supabase {
     export function subscribeToTable(
         channel: E_WorldTransportChannels,
         callback: (payload: RealtimePostgresChangesPayload<any>) => void,
-        event: 'INSERT' | 'UPDATE' | 'DELETE' | '*' = '*',
+        event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT = REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
     ): void {
         if (!supabaseClient) {
             throw new Error('Supabase client not initialized');
         }
 
         const subscription = supabaseClient
-            .channel(`${channel}_changes`)
+            .channel(`${channel}`)
             .on(
                 REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
-                { event, schema: 'public', table: channel },
+                {
+                    event: event,
+                    schema: 'public',
+                    table: channel,
+                },
                 callback,
             )
             .subscribe();
-
         activeSubscriptions.set(channel, subscription);
     }
 
@@ -87,5 +91,12 @@ export namespace Supabase {
             supabaseClient.realtime.disconnect();
             console.log('Disconnected from Supabase Realtime');
         }
+    }
+
+    export function getActiveSubscriptions(): Map<
+        E_WorldTransportChannels,
+        RealtimeChannel
+    > {
+        return activeSubscriptions;
     }
 }

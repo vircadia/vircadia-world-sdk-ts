@@ -117,6 +117,11 @@ export namespace Client {
                             // Handle the received data
                         },
                     );
+
+                    console.info(
+                        'Active subscriptions:',
+                        Supabase.getActiveSubscriptions(),
+                    );
                 } catch (error) {
                     console.error(
                         'Failed to connect to Supabase Realtime:',
