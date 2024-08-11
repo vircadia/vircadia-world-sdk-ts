@@ -20,10 +20,10 @@ export enum E_HTTPRoutes {
 }
 
 export enum E_RequestType {
-    STATUS = '/status',
+    CONFIG_AND_STATUS = '/config-and-status',
 }
 
-export interface I_REQUEST_StatusResponse {
+export interface I_REQUEST_ConfigAndStatusResponse {
     REALTIME_API_URL: string | null;
     S3_STORAGE_URL: string | null;
 }

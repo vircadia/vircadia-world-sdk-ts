@@ -42,9 +42,6 @@ async function init() {
             await supabase.debugStatus();
         }
 
-        // Set up reverse proxies for Supabase services
-        await supabase.setupReverseProxies(expressApp);
-
         if (!(await supabase.isRunning())) {
             console.error(
                 'Supabase services are not running after initialization. Exiting.',
@@ -52,6 +49,9 @@ async function init() {
             process.exit(1);
         }
     }
+
+    // Set up reverse proxies for Supabase services
+    await supabase.setupReverseProxies(expressApp);
 
     console.log('Supabase services are running correctly.');
 

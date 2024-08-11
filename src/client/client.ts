@@ -1,7 +1,7 @@
 // Agent <-> Server
 import { io, Socket } from 'socket.io-client';
-import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
+import { Supabase, SupabaseChannels } from './modules/supabase/supabase';
 // Agent <-> Agent
 
 import {
@@ -11,7 +11,7 @@ import {
     C_AGENT_WorldHeartbeat_Packet,
     C_WORLD_AgentList_Packet,
     C_AUDIO_Metadata_Packet,
-    I_REQUEST_StatusResponse,
+    I_REQUEST_ConfigAndStatusResponse,
 } from '../routes/meta';
 
 // FIXME: These should be defined in config.
@@ -24,7 +24,7 @@ const TEMP_ICE_SERVERS = [
 const TEMP_AUDIO_METADATA_INTERVAL = 250;
 
 export namespace Client {
-    let serverStatus: I_REQUEST_StatusResponse | null = null;
+    let serverConfigAndStatus: I_REQUEST_ConfigAndStatusResponse | null = null;
 
     let host: string | null = null;
     let port: number | null = null;
@@ -65,11 +65,12 @@ export namespace Client {
         }) => {
             // Retrieve the status.
             try {
-                const response = await axios.get<I_REQUEST_StatusResponse>(
-                    `${data.host}:${data.port}${E_RequestType.STATUS}`,
-                );
-                serverStatus = response.data;
-                console.log('Server status:', serverStatus);
+                const response =
+                    await axios.get<I_REQUEST_ConfigAndStatusResponse>(
+                        `${data.host}:${data.port}${E_RequestType.CONFIG_AND_STATUS}`,
+                    );
+                serverConfigAndStatus = response.data;
+                console.log('Server status:', serverConfigAndStatus);
             } catch (error) {
                 console.error('Failed to retrieve server status:', error);
             }
@@ -90,6 +91,39 @@ export namespace Client {
             socket = io(`${data.host}:${data.port}`, {});
             host = data.host;
             port = data.port;
+
+            // Link up with the world transport layer.
+            if (
+                serverConfigAndStatus &&
+                serverConfigAndStatus.REALTIME_API_URL
+            ) {
+                const url = serverConfigAndStatus.REALTIME_API_URL;
+                const key =
+                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+                Supabase.initializeSupabaseClient(url, key);
+
+                try {
+                    await Supabase.connectRealtime();
+                    console.log('Successfully connected to Supabase Realtime');
+
+                    // Example subscription
+                    Supabase.subscribe(
+                        SupabaseChannels.EXAMPLE_CHANNEL,
+                        (payload) => {
+                            console.log(
+                                'Received update from Supabase:',
+                                payload,
+                            );
+                            // Handle the received data
+                        },
+                    );
+                } catch (error) {
+                    console.error(
+                        'Failed to connect to Supabase Realtime:',
+                        error,
+                    );
+                }
+            }
 
             Agent.InitializeAgentModule();
 
