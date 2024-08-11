@@ -2,10 +2,10 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 
-import { Supabase } from './modules/supabase/supabase';
+import { Supabase } from './modules/supabase/supabase.js';
 
-import { WorldTransport } from '../routes/worldTransportRouter';
-import { HTTPTransport } from '../routes/httpRouter';
+import { WorldTransport } from '../routes/worldTransportRouter.js';
+import { HTTPTransport } from '../routes/httpRouter.js';
 
 const TEMP_PORT = 3000;
 const TEMP_ALLOWED_ORIGINS = '*';

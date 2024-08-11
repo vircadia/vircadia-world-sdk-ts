@@ -1,7 +1,7 @@
 // Agent <-> Server
 import { io, Socket } from 'socket.io-client';
 import axios from 'axios';
-import { Supabase, SupabaseChannels } from './modules/supabase/supabase';
+import { Supabase, SupabaseChannels } from './modules/supabase/supabase.js';
 // Agent <-> Agent
 
 import {
@@ -12,7 +12,7 @@ import {
     C_WORLD_AgentList_Packet,
     C_AUDIO_Metadata_Packet,
     I_REQUEST_ConfigAndStatusResponse,
-} from '../routes/meta';
+} from '../routes/meta.js';
 
 // FIXME: These should be defined in config.
 const TEMP_ICE_SERVERS = [
