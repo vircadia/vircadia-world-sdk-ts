@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as execa from 'execa';
 import express from 'express';
-import chalk from 'chalk';
+import { log } from '../../../modules/log.js';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { E_HTTPRoutes } from '../../../routes/meta.js';
 
@@ -63,10 +63,7 @@ export class Supabase {
                     }),
                 );
                 this.routes[path as E_HTTPRoutes] = target;
-                this.log(
-                    `Reverse proxy set up for ${path} -> ${target}`,
-                    'success',
-                );
+                log(`Reverse proxy set up for ${path} -> ${target}`, 'success');
             }
         };
 
@@ -78,36 +75,22 @@ export class Supabase {
         setupProxy(E_HTTPRoutes.DB, statusUrls.dbUrl);
     }
 
-    private log(
-        message: string,
-        type: 'info' | 'success' | 'error' | 'warning' = 'info',
-    ): void {
-        const prefix = {
-            info: chalk.blue('ℹ'),
-            success: chalk.green('✔'),
-            error: chalk.red('✖'),
-            warning: chalk.yellow('⚠'),
-        }[type];
-
-        console.log(`${prefix} ${message}`);
-    }
-
     async initializeAndStart(data: { forceRestart: boolean }): Promise<void> {
-        this.log('Initializing and starting Supabase...', 'info');
+        log('Initializing and starting Supabase...', 'info');
 
         try {
             await this.checkSupabaseCLI();
             await this.initializeProjectIfNeeded();
             await this.startSupabase(data.forceRestart);
         } catch (error) {
-            this.log(
+            log(
                 `Failed to initialize and start Supabase: ${error.message}`,
                 'error',
             );
             throw error;
         }
 
-        this.log('Supabase initialization and startup complete.', 'success');
+        log('Supabase initialization and startup complete.', 'success');
     }
 
     private async checkSupabaseCLI(): Promise<void> {
@@ -118,7 +101,7 @@ export class Supabase {
                     cwd: this.appDir,
                 },
             );
-            this.log(`Supabase CLI version: ${stdout.trim()}`, 'success');
+            log(`Supabase CLI version: ${stdout.trim()}`, 'success');
         } catch (error) {
             throw new SupabaseError(
                 'Supabase CLI is not installed. Please install it first.',
@@ -129,7 +112,7 @@ export class Supabase {
     private async initializeProjectIfNeeded(): Promise<void> {
         const configPath = path.join(this.configDir, CONFIG_TOML_FILE);
         if (!fs.existsSync(configPath)) {
-            this.log(
+            log(
                 'Supabase project not initialized. Initializing now...',
                 'info',
             );
@@ -137,57 +120,51 @@ export class Supabase {
                 command: 'init',
                 appendWorkdir: true,
             });
-            this.log('Supabase project initialized.', 'success');
+            log('Supabase project initialized.', 'success');
         } else {
-            this.log('Supabase project already initialized.', 'success');
+            log('Supabase project already initialized.', 'success');
         }
     }
 
     private async startSupabase(forceRestart: boolean): Promise<void> {
         if (forceRestart) {
-            this.log(
-                'Stopping Supabase services for a forced restart...',
-                'info',
-            );
+            log('Stopping Supabase services for a forced restart...', 'info');
             await this.stopSupabase();
         } else if (await this.isStarting()) {
-            this.log(
+            log(
                 'Supabase is already starting up. Waiting for it to complete...',
                 'info',
             );
             await this.waitForStartup();
             return;
         } else if (!(await this.isRunning())) {
-            this.log(
-                'Supabase services are not running. Starting them...',
-                'info',
-            );
+            log('Supabase services are not running. Starting them...', 'info');
             await this.stopSupabase();
         }
 
         try {
-            this.log('Starting Supabase services...', 'info');
+            log('Starting Supabase services...', 'info');
             await this.runSupabaseCommand({
                 command: 'start',
                 appendWorkdir: true,
             });
-            this.log('Supabase services started successfully.', 'success');
+            log('Supabase services started successfully.', 'success');
         } catch (error) {
-            this.log(`Failed to start Supabase: ${error.message}`, 'error');
+            log(`Failed to start Supabase: ${error.message}`, 'error');
             throw error;
         }
     }
 
     private async stopSupabase(): Promise<void> {
-        this.log('Stopping Supabase services...', 'info');
+        log('Stopping Supabase services...', 'info');
         try {
             await this.runSupabaseCommand({
                 command: 'stop',
                 appendWorkdir: true,
             });
-            this.log('Supabase services stopped.', 'success');
+            log('Supabase services stopped.', 'success');
         } catch (error) {
-            this.log(`Failed to stop Supabase: ${error.message}`, 'warning');
+            log(`Failed to stop Supabase: ${error.message}`, 'warning');
         }
     }
 
@@ -256,9 +233,9 @@ export class Supabase {
             });
             return stdout.trim();
         } catch (error) {
-            this.log(`Error executing command: ${fullCommand}`, 'error');
+            log(`Error executing command: ${fullCommand}`, 'error');
             if (this.debug) {
-                this.log(
+                log(
                     `Full error details: ${JSON.stringify(error, null, 2)}`,
                     'error',
                 );
@@ -268,18 +245,18 @@ export class Supabase {
     }
 
     async debugStatus(): Promise<void> {
-        this.log('Running Supabase debug commands...', 'info');
+        log('Running Supabase debug commands...', 'info');
         try {
             const status = await this.runSupabaseCommand({
                 command: 'status --debug',
                 appendWorkdir: true,
             });
-            this.log(`Supabase Status (Debug): ${status}`, 'info');
+            log(`Supabase Status (Debug): ${status}`, 'info');
 
             const dockerPs = await execa.execaCommand('docker ps -a', {
                 cwd: this.appDir,
             });
-            this.log(`Docker Containers: ${dockerPs}`, 'info');
+            log(`Docker Containers: ${dockerPs}`, 'info');
 
             const dockerLogs = await execa.execaCommand(
                 'docker logs supabase_db_app',
@@ -287,7 +264,7 @@ export class Supabase {
                     cwd: this.appDir,
                 },
             );
-            this.log(`Supabase DB App Logs: ${dockerLogs}`, 'info');
+            log(`Supabase DB App Logs: ${dockerLogs}`, 'info');
 
             const dockerInspect = await execa.execaCommand(
                 'docker inspect supabase_db_app',
@@ -295,9 +272,9 @@ export class Supabase {
                     cwd: this.appDir,
                 },
             );
-            this.log(`Supabase DB App Inspect: ${dockerInspect}`, 'info');
+            log(`Supabase DB App Inspect: ${dockerInspect}`, 'info');
         } catch (error) {
-            this.log(`Error running debug commands: ${error}`, 'error');
+            log(`Error running debug commands: ${error}`, 'error');
         }
     }
 

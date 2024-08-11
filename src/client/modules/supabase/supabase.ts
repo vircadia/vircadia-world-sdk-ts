@@ -7,16 +7,23 @@ import {
     REALTIME_POSTGRES_CHANGES_LISTEN_EVENT,
 } from '@supabase/supabase-js';
 import { E_WorldTransportChannels } from '../../../routes/meta.js';
+import { log } from '../../../modules/log.js';
 
 export namespace Supabase {
     let supabaseClient: SupabaseClient | null = null;
     const activeSubscriptions: Map<E_WorldTransportChannels, RealtimeChannel> =
         new Map();
 
+    let supabaseUrl: string | null = null;
+    let supabaseKey: string | null = null;
+
     export function initializeSupabaseClient(
         url: string,
         key: string,
     ): SupabaseClient {
+        supabaseUrl = url;
+        supabaseKey = key;
+        log(`Initializing Supabase client at ${url}`, 'info');
         supabaseClient = createClient(url, key);
         return supabaseClient;
     }
@@ -32,9 +39,9 @@ export namespace Supabase {
 
         try {
             supabaseClient.realtime.connect();
-            console.log('Connected to Supabase Realtime');
+            log(`Connected to Supabase Realtime at ${supabaseUrl}`, 'info');
         } catch (error) {
-            console.error('Failed to connect to Supabase Realtime:', error);
+            log(`Failed to connect to Supabase Realtime: ${error}`, 'error');
             throw error;
         }
     }
@@ -89,7 +96,7 @@ export namespace Supabase {
     export function disconnectRealtime(): void {
         if (supabaseClient) {
             supabaseClient.realtime.disconnect();
-            console.log('Disconnected from Supabase Realtime');
+            log('Disconnected from Supabase Realtime', 'info');
         }
     }
 

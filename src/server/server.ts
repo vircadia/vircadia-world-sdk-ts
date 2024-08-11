@@ -4,6 +4,7 @@ import { createServer } from 'http';
 import { Supabase } from './modules/supabase/supabase.js';
 
 import { HTTPTransport } from '../routes/httpRouter.js';
+import { log } from '../modules/log.js';
 
 const TEMP_PORT = 3000;
 const TEMP_ALLOWED_ORIGINS = '*';
@@ -35,13 +36,14 @@ async function init() {
                 forceRestart: forceRestartSupabase,
             });
         } catch (error) {
-            console.error('Failed to initialize and start Supabase:', error);
+            log(`Failed to initialize and start Supabase: ${error}`, 'error');
             await supabase.debugStatus();
         }
 
         if (!(await supabase.isRunning())) {
-            console.error(
+            log(
                 'Supabase services are not running after initialization. Exiting.',
+                'error',
             );
             process.exit(1);
         }
@@ -50,7 +52,7 @@ async function init() {
     // Set up reverse proxies for Supabase services
     await supabase.setupReverseProxies(expressApp);
 
-    console.log('Supabase services are running correctly.');
+    log('Supabase services are running correctly.', 'info');
 
     expressApp.use('/', HTTPTransport.Routes);
 
@@ -59,7 +61,7 @@ async function init() {
 
     // Launch
     expressServer.listen(TEMP_PORT, () => {
-        console.log(`Server is running on port ${TEMP_PORT}`);
+        log(`Server is running on port ${TEMP_PORT}`, 'info');
     });
 }
 
