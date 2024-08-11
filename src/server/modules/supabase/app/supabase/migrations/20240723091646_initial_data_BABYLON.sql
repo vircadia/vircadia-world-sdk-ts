@@ -235,14 +235,13 @@ CREATE TABLE sprite_managers (
 );
 
 -- Create a trigger function to update the updated_at column
-CREATE
-OR REPLACE FUNCTION update_modified_column() RETURNS TRIGGER AS $ $ BEGIN NEW.updated_at = now();
-
-RETURN NEW;
-
+CREATE OR REPLACE FUNCTION update_modified_column() 
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
 END;
-
-$ $ language 'plpgsql';
+$$ LANGUAGE plpgsql;
 
 -- Apply the trigger to all tables
 CREATE TRIGGER update_world_metadata_modtime BEFORE
