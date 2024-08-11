@@ -1,12 +1,22 @@
 /* eslint-disable no-unused-vars */
 export enum E_PacketType {
-    AGENT_Join = "agent-agent-join-packet",
-    AGENT_Offer = "agent-agent-offer-packet",
-    AGENT_Answer = "agent-agent-answer-packet",
-    AGENT_ICE_Candidate = "agent-agent-ice-candidate-packet",
-    AGENT_Heartbeat = "world-agent-heartbeat-packet",
-    WORLD_AgentList = "world-agent-list-packet",
-    AUDIO_Metadata = "agent-agent-audio-metadata-packet",
+    AGENT_Join = 'agent-agent-join-packet',
+    AGENT_Offer = 'agent-agent-offer-packet',
+    AGENT_Answer = 'agent-agent-answer-packet',
+    AGENT_ICE_Candidate = 'agent-agent-ice-candidate-packet',
+    AGENT_Heartbeat = 'world-agent-heartbeat-packet',
+    WORLD_AgentList = 'world-agent-list-packet',
+    AUDIO_Metadata = 'agent-agent-audio-metadata-packet',
+}
+
+export enum E_HTTPRoutes {
+    REALTIME = '/realtime',
+    API = '/api',
+    GRAPHQL = '/graphql',
+    STORAGE = '/storage',
+    STUDIO = '/studio',
+    INBUCKET = '/inbucket',
+    DB = '/db',
 }
 
 export enum E_RequestType {

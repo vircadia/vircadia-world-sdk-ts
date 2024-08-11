@@ -4,7 +4,7 @@ This project must be small (fewer lines of code, though no code golf). The scale
 
 Stack:
 
-1. Node.js (runtime)
+1. Node.js (runtime) (req Node.js >= 22)
 1. tRPC with Express (router)
 
 ## Install

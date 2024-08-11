@@ -14,6 +14,19 @@ const TEMP_ALLOWED_HEADERS_REQ = 'Content-Type, Authorization';
 const TEMP_ALLOWED_METHODS_WT = 'GET, POST';
 
 async function init() {
+    const expressApp = express();
+
+    // Requests via Express
+    expressApp.use(function (req, res, next) {
+        res.setHeader('Access-Control-Allow-Origin', TEMP_ALLOWED_ORIGINS);
+        res.setHeader('Access-Control-Allow-Methods', TEMP_ALLOWED_METHODS_REQ);
+        res.setHeader('Access-Control-Allow-Headers', TEMP_ALLOWED_HEADERS_REQ);
+        if (req.method === 'OPTIONS') {
+            return res.sendStatus(200);
+        }
+        return next();
+    });
+
     const forceRestartSupabase = process.argv.includes(
         '--force-restart-supabase',
     );
@@ -29,6 +42,9 @@ async function init() {
             await supabase.debugStatus();
         }
 
+        // Set up reverse proxies for Supabase services
+        await supabase.setupReverseProxies(expressApp);
+
         if (!(await supabase.isRunning())) {
             console.error(
                 'Supabase services are not running after initialization. Exiting.',
@@ -38,19 +54,6 @@ async function init() {
     }
 
     console.log('Supabase services are running correctly.');
-
-    const expressApp = express();
-
-    // Requests via Express
-    expressApp.use(function (req, res, next) {
-        res.setHeader('Access-Control-Allow-Origin', TEMP_ALLOWED_ORIGINS);
-        res.setHeader('Access-Control-Allow-Methods', TEMP_ALLOWED_METHODS_REQ);
-        res.setHeader('Access-Control-Allow-Headers', TEMP_ALLOWED_HEADERS_REQ);
-        if (req.method === 'OPTIONS') {
-            return res.sendStatus(200);
-        }
-        return next();
-    });
 
     expressApp.use('/', HTTPTransport.Routes);
 

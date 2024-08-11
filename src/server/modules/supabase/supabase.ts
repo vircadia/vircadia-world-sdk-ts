@@ -1,7 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as execa from 'execa';
+import express from 'express';
 import chalk from 'chalk';
+import { createProxyMiddleware } from 'http-proxy-middleware';
+import { E_HTTPRoutes } from '../../../routes/meta';
 
 const CONFIG_TOML_FILE = 'config.toml';
 
@@ -18,6 +21,17 @@ export class Supabase {
     private appDir: string;
     private configDir: string;
     private debug: boolean;
+    private routes: {
+        [key in E_HTTPRoutes]: string | null;
+    } = {
+        [E_HTTPRoutes.REALTIME]: null,
+        [E_HTTPRoutes.API]: null,
+        [E_HTTPRoutes.GRAPHQL]: null,
+        [E_HTTPRoutes.STORAGE]: null,
+        [E_HTTPRoutes.DB]: null,
+        [E_HTTPRoutes.STUDIO]: null,
+        [E_HTTPRoutes.INBUCKET]: null,
+    };
 
     constructor(debug: boolean = false) {
         this.appDir = path.resolve('./modules/supabase/app');
@@ -35,6 +49,36 @@ export class Supabase {
     }
 
     private loadConfig(): void {}
+
+    async setupReverseProxies(app: express.Application): Promise<void> {
+        const statusUrls = await this.getStatus();
+
+        const setupProxy = (path: E_HTTPRoutes, target: string | null) => {
+            if (target) {
+                app.use(
+                    path,
+                    createProxyMiddleware({
+                        target,
+                        changeOrigin: true,
+                        pathRewrite: { [`^${path}`]: '' },
+                    }),
+                );
+                this.routes[path as E_HTTPRoutes] = target;
+                this.log(
+                    `Reverse proxy set up for ${path} -> ${target}`,
+                    'success',
+                );
+            }
+        };
+
+        setupProxy(E_HTTPRoutes.API, statusUrls.apiUrl);
+        setupProxy(E_HTTPRoutes.GRAPHQL, statusUrls.graphqlUrl);
+        setupProxy(E_HTTPRoutes.STORAGE, statusUrls.s3StorageUrl);
+        setupProxy(E_HTTPRoutes.STUDIO, statusUrls.studioUrl);
+        setupProxy(E_HTTPRoutes.INBUCKET, statusUrls.inbucketUrl);
+        setupProxy(E_HTTPRoutes.DB, statusUrls.dbUrl);
+        setupProxy(E_HTTPRoutes.REALTIME, statusUrls.realtimeUrl);
+    }
 
     private log(
         message: string,
@@ -226,18 +270,18 @@ export class Supabase {
     }
 
     async debugStatus(): Promise<void> {
-        console.log('Running Supabase debug commands...');
+        this.log('Running Supabase debug commands...', 'info');
         try {
             const status = await this.runSupabaseCommand({
                 command: 'status --debug',
                 appendWorkdir: true,
             });
-            console.log('Supabase Status (Debug):', status);
+            this.log(`Supabase Status (Debug): ${status}`, 'info');
 
             const dockerPs = await execa.execaCommand('docker ps -a', {
                 cwd: this.appDir,
             });
-            console.log('Docker Containers:', dockerPs);
+            this.log(`Docker Containers: ${dockerPs}`, 'info');
 
             const dockerLogs = await execa.execaCommand(
                 'docker logs supabase_db_app',
@@ -245,7 +289,7 @@ export class Supabase {
                     cwd: this.appDir,
                 },
             );
-            console.log('Supabase DB App Logs:', dockerLogs);
+            this.log(`Supabase DB App Logs: ${dockerLogs}`, 'info');
 
             const dockerInspect = await execa.execaCommand(
                 'docker inspect supabase_db_app',
@@ -253,19 +297,20 @@ export class Supabase {
                     cwd: this.appDir,
                 },
             );
-            console.log('Supabase DB App Inspect:', dockerInspect);
+            this.log(`Supabase DB App Inspect: ${dockerInspect}`, 'info');
         } catch (error) {
-            console.error('Error running debug commands:', error);
+            this.log(`Error running debug commands: ${error}`, 'error');
         }
     }
 
-    async status(): Promise<{
+    async getStatus(): Promise<{
         apiUrl: string | null;
         graphqlUrl: string | null;
         s3StorageUrl: string | null;
         dbUrl: string | null;
         studioUrl: string | null;
         inbucketUrl: string | null;
+        realtimeUrl: string | null; // Add this line
         jwtSecret: string | null;
         anonKey: string | null;
         serviceRoleKey: string | null;
@@ -286,7 +331,6 @@ export class Supabase {
         const S3_SECRET_KEY = 'S3 Secret Key';
         const S3_REGION = 'S3 Region';
 
-        console.log('Running Supabase status commands...');
         const output = await this.runSupabaseCommand({
             command: 'status',
             appendWorkdir: true,
@@ -298,13 +342,19 @@ export class Supabase {
             return match ? match[1].trim() : null;
         };
 
+        const apiUrl = parseValue(API_URL);
+        const realtimeUrl = apiUrl
+            ? `${apiUrl}/realtime/v1`.replace('http', 'ws')
+            : null;
+
         return {
-            apiUrl: parseValue(API_URL),
+            apiUrl,
             graphqlUrl: parseValue(GRAPHQL_URL),
             s3StorageUrl: parseValue(S3_STORAGE_URL),
             dbUrl: parseValue(DB_URL),
             studioUrl: parseValue(STUDIO_URL),
             inbucketUrl: parseValue(INBUCKET_URL),
+            realtimeUrl, // Add this line
             jwtSecret: parseValue(JWT_SECRET),
             anonKey: parseValue(ANON_KEY),
             serviceRoleKey: parseValue(SERVICE_ROLE_KEY),
@@ -312,6 +362,10 @@ export class Supabase {
             s3SecretKey: parseValue(S3_SECRET_KEY),
             s3Region: parseValue(S3_REGION),
         };
+    }
+
+    async getRoutes(): Promise<{ [key in E_HTTPRoutes]: string | null }> {
+        return this.routes;
     }
 }
 
