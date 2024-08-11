@@ -107,8 +107,8 @@ export namespace Client {
                     console.log('Successfully connected to Supabase Realtime');
 
                     // Example subscription
-                    Supabase.subscribe(
-                        E_WorldTransportChannels.METADATA,
+                    Supabase.subscribeToTable(
+                        E_WorldTransportChannels.WORLD_METADATA,
                         (payload) => {
                             console.log(
                                 'Received update from Supabase:',

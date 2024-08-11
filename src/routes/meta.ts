@@ -10,7 +10,7 @@ export enum E_PacketType {
 }
 
 export enum E_WorldTransportChannels {
-    METADATA = 'metadata',
+    WORLD_METADATA = 'world_metadata',
     SCENES = 'scenes',
     CAMERAS = 'cameras',
     LIGHTS = 'lights',

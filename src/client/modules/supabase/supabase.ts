@@ -2,6 +2,8 @@ import {
     createClient,
     SupabaseClient,
     RealtimeChannel,
+    RealtimePostgresChangesPayload,
+    REALTIME_LISTEN_TYPES,
 } from '@supabase/supabase-js';
 import { E_WorldTransportChannels } from '../../../routes/meta.js';
 
@@ -36,28 +38,48 @@ export namespace Supabase {
         }
     }
 
-    export function subscribe(
+    export function subscribeToTable(
         channel: E_WorldTransportChannels,
-        callback: (payload: any) => void,
+        callback: (payload: RealtimePostgresChangesPayload<any>) => void,
+        event: 'INSERT' | 'UPDATE' | 'DELETE' | '*' = '*',
     ): void {
         if (!supabaseClient) {
             throw new Error('Supabase client not initialized');
         }
 
         const subscription = supabaseClient
-            .channel(channel)
-            .on('broadcast', { event: 'update' }, callback)
+            .channel(`${channel}_changes`)
+            .on(
+                REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+                { event, schema: 'public', table: channel },
+                callback,
+            )
             .subscribe();
 
         activeSubscriptions.set(channel, subscription);
     }
 
-    export function unsubscribe(channel: E_WorldTransportChannels): void {
+    export function unsubscribeFromTable(
+        channel: E_WorldTransportChannels,
+    ): void {
         const subscription = activeSubscriptions.get(channel);
         if (subscription) {
             subscription.unsubscribe();
             activeSubscriptions.delete(channel);
         }
+    }
+
+    export function subscribeToAllTables(
+        callback: (payload: any) => void,
+        event: 'INSERT' | 'UPDATE' | 'DELETE' | '*' = '*',
+    ): void {
+        Object.values(E_WorldTransportChannels).forEach((channel) =>
+            subscribeToTable(channel, callback, event),
+        );
+    }
+
+    export function unsubscribeFromAllTables(): void {
+        Object.values(E_WorldTransportChannels).forEach(unsubscribeFromTable);
     }
 
     export function disconnectRealtime(): void {
