@@ -3,7 +3,7 @@ import {
     C_AUDIO_Metadata_Packet,
     C_AGENT_WorldHeartbeat_Packet,
     C_WORLD_AgentList_Packet,
-} from './meta';
+} from './meta.js';
 
 export interface IRouter {
     [E_PacketType.AUDIO_Metadata]: (

@@ -4,11 +4,6 @@ import {
     RealtimeChannel,
 } from '@supabase/supabase-js';
 
-export enum SupabaseChannels {
-    EXAMPLE_CHANNEL = 'example_channel',
-    // Add more channels as needed
-}
-
 export namespace Supabase {
     let supabaseClient: SupabaseClient | null = null;
     const activeSubscriptions: Map<SupabaseChannels, RealtimeChannel> =
@@ -32,7 +27,7 @@ export namespace Supabase {
         }
 
         try {
-            await supabaseClient.realtime.connect();
+            supabaseClient.realtime.connect();
             console.log('Connected to Supabase Realtime');
         } catch (error) {
             console.error('Failed to connect to Supabase Realtime:', error);

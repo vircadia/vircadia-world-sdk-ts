@@ -1,13 +1,13 @@
 // Agent <-> Server
 import { io, Socket } from 'socket.io-client';
 import axios from 'axios';
-import { Supabase, SupabaseChannels } from './modules/supabase/supabase.js';
+import { Supabase } from './modules/supabase/supabase.js';
 // Agent <-> Agent
 
 import {
     E_PacketType,
     E_RequestType,
-    E_HTTPRoutes,
+    E_WorldTransportChannels,
     C_AGENT_WorldHeartbeat_Packet,
     C_WORLD_AgentList_Packet,
     C_AUDIO_Metadata_Packet,
@@ -97,7 +97,10 @@ export namespace Client {
                 const url = serverConfigAndStatus.API_URL;
                 const key =
                     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
-                Supabase.initializeSupabaseClient(url, key);
+                const supabaseClient = Supabase.initializeSupabaseClient(
+                    url,
+                    key,
+                );
 
                 try {
                     await Supabase.connectRealtime();
@@ -105,7 +108,7 @@ export namespace Client {
 
                     // Example subscription
                     Supabase.subscribe(
-                        SupabaseChannels.EXAMPLE_CHANNEL,
+                        E_WorldTransportChannels.METADATA,
                         (payload) => {
                             console.log(
                                 'Received update from Supabase:',

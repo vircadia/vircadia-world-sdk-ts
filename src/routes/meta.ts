@@ -9,6 +9,24 @@ export enum E_PacketType {
     AUDIO_Metadata = 'agent-agent-audio-metadata-packet',
 }
 
+export enum E_WorldTransportChannels {
+    METADATA = 'metadata',
+    CAMERAS = 'cameras',
+    LIGHTS = 'lights',
+    REFLECTION_PROBES = 'reflection_probes',
+    MATERIALS = 'materials',
+    GEOMETRIES = 'geometries',
+    MESHES = 'meshes',
+    MULTI_MATERIALS = 'multi_materials',
+    SHADOW_GENERATORS = 'shadow_generators',
+    SKELETONS = 'skeletons',
+    PARTICLE_SYSTEMS = 'particle_systems',
+    LENS_FLARE_SYSTEMS = 'lens_flare_systems',
+    ACTIONS = 'actions',
+    SOUNDS = 'sounds',
+    ANIMATIONS = 'animations',
+}
+
 export enum E_HTTPRoutes {
     API = '/api',
     GRAPHQL = '/graphql',
