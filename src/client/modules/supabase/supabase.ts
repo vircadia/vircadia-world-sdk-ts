@@ -3,10 +3,11 @@ import {
     SupabaseClient,
     RealtimeChannel,
 } from '@supabase/supabase-js';
+import { E_WorldTransportChannels } from '../../../routes/meta.js';
 
 export namespace Supabase {
     let supabaseClient: SupabaseClient | null = null;
-    const activeSubscriptions: Map<SupabaseChannels, RealtimeChannel> =
+    const activeSubscriptions: Map<E_WorldTransportChannels, RealtimeChannel> =
         new Map();
 
     export function initializeSupabaseClient(
@@ -36,7 +37,7 @@ export namespace Supabase {
     }
 
     export function subscribe(
-        channel: SupabaseChannels,
+        channel: E_WorldTransportChannels,
         callback: (payload: any) => void,
     ): void {
         if (!supabaseClient) {
@@ -51,7 +52,7 @@ export namespace Supabase {
         activeSubscriptions.set(channel, subscription);
     }
 
-    export function unsubscribe(channel: SupabaseChannels): void {
+    export function unsubscribe(channel: E_WorldTransportChannels): void {
         const subscription = activeSubscriptions.get(channel);
         if (subscription) {
             subscription.unsubscribe();

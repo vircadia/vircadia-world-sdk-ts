@@ -31,6 +31,17 @@ CREATE TYPE object_type AS ENUM (
   'spriteManager'
 );
 
+-- Create metadata table for world/scene
+CREATE TABLE world_metadata (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  version VARCHAR(50),
+  author VARCHAR(255),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create base table for all objects
 CREATE TABLE babylon_objects (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -234,6 +245,10 @@ END;
 $ $ language 'plpgsql';
 
 -- Apply the trigger to all tables
+CREATE TRIGGER update_world_metadata_modtime BEFORE
+UPDATE
+  ON world_metadata FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
 CREATE TRIGGER update_babylon_objects_modtime BEFORE
 UPDATE
   ON babylon_objects FOR EACH ROW EXECUTE FUNCTION update_modified_column();
