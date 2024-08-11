@@ -9,12 +9,10 @@ import { Supabase } from '../server/modules/supabase/supabase.js';
 // Create a router instance
 const router = ExpressRouter();
 
-router.get(E_RequestType.CONFIG_AND_STATUS, async (req, res) => {
-    const routes = await Supabase.getInstance(false).getRoutes();
-
+router.get(E_RequestType.CONFIG_AND_STATUS, (req, res) => {
     const response: I_REQUEST_ConfigAndStatusResponse = {
-        API_URL: routes[E_HTTPRoutes.API],
-        S3_STORAGE_URL: routes[E_HTTPRoutes.STORAGE],
+        API_URL: E_HTTPRoutes.API,
+        S3_STORAGE_URL: E_HTTPRoutes.STORAGE,
     };
 
     res.json(response);

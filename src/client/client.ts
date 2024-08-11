@@ -7,6 +7,7 @@ import {
     C_AUDIO_Metadata_Packet,
     I_REQUEST_ConfigAndStatusResponse,
 } from '../routes/meta.js';
+import { log } from '../modules/log.js';
 
 // FIXME: These should be defined in config.
 const TEMP_ICE_SERVERS = [
@@ -42,7 +43,7 @@ export namespace Client {
         TEMP_position = metadata.position;
         TEMP_orientation = metadata.orientation;
 
-        Agent.updatePresence();
+        void Agent.updatePresence();
     };
 
     export const worldConnected = () => Supabase.getSupabaseClient() !== null;
@@ -80,7 +81,7 @@ export namespace Client {
 
             // Initialize Supabase client
             if (serverConfigAndStatus && serverConfigAndStatus.API_URL) {
-                const url = serverConfigAndStatus.API_URL;
+                const url = `${data.host}:${data.port}${serverConfigAndStatus.API_URL}`;
                 const key = 'your-supabase-anon-key'; // Replace with your actual key
                 Supabase.initializeSupabaseClient(url, key);
 
@@ -112,7 +113,7 @@ export namespace Client {
                             'broadcast',
                             { event: 'webrtc-signal' },
                             ({ payload }) => {
-                                Agent.handleWebRTCSignal(payload);
+                                void Agent.handleWebRTCSignal(payload);
                             },
                         )
                         .subscribe();
@@ -136,7 +137,7 @@ export namespace Client {
 
             // Start presence update interval
             presenceUpdateInterval = setInterval(() => {
-                Agent.updatePresence();
+                void Agent.updatePresence();
             }, TEMP_AUDIO_METADATA_INTERVAL);
         };
 
@@ -191,17 +192,17 @@ export namespace Client {
             Supabase.getSupabaseClient()
                 ?.channel(E_AgentChannels.SIGNALING_CHANNEL)
                 .on('broadcast', { event: 'webrtc-signal' }, ({ payload }) => {
-                    handleWebRTCSignal(payload);
+                    void handleWebRTCSignal(payload);
                 })
                 .subscribe();
         };
 
-        export const updatePresence = () => {
+        export const updatePresence = async () => {
             const presenceChannel = Supabase.getSupabaseClient()?.channel(
                 E_AgentChannels.AGENT_METADATA,
             );
             if (presenceChannel?.state === REALTIME_CHANNEL_STATES.joined) {
-                presenceChannel.track({
+                await presenceChannel.track({
                     agent_id: TEMP_agentId,
                     position: TEMP_position,
                     orientation: TEMP_orientation,
@@ -296,9 +297,9 @@ export namespace Client {
                 });
                 agentConnection.rtcConnection = rtcConnection;
 
-                rtcConnection.onicecandidate = (event) => {
+                rtcConnection.onicecandidate = async (event) => {
                     if (event.candidate) {
-                        sendWebRTCSignal({
+                        await sendWebRTCSignal({
                             type: 'ice-candidate',
                             candidate: event.candidate,
                             targetAgentId: agentId,
@@ -322,7 +323,7 @@ export namespace Client {
                 // Create and send offer
                 const offer = await rtcConnection.createOffer();
                 await rtcConnection.setLocalDescription(offer);
-                sendWebRTCSignal({
+                await sendWebRTCSignal({
                     type: 'offer',
                     offer,
                     targetAgentId: agentId,
@@ -350,8 +351,8 @@ export namespace Client {
             };
         };
 
-        const sendWebRTCSignal = (signal: any) => {
-            Supabase.getSupabaseClient()
+        const sendWebRTCSignal = async (signal: any) => {
+            await Supabase.getSupabaseClient()
                 ?.channel(E_AgentChannels.SIGNALING_CHANNEL)
                 .send({
                     type: 'broadcast',
@@ -363,7 +364,9 @@ export namespace Client {
         export const handleWebRTCSignal = async (signal: any) => {
             const { type, targetAgentId } = signal;
 
-            if (targetAgentId !== TEMP_agentId) return;
+            if (targetAgentId !== TEMP_agentId) {
+                return;
+            }
 
             switch (type) {
                 case 'offer':
@@ -375,6 +378,11 @@ export namespace Client {
                 case 'ice-candidate':
                     await handleIceCandidate(signal);
                     break;
+                default:
+                    log(
+                        `${AGENT_LOG_PREFIX} Unknown WebRTC signal type: ${type}`,
+                        'error',
+                    );
             }
         };
 
@@ -391,9 +399,9 @@ export namespace Client {
             });
             agentConnections[fromAgentId].rtcConnection = rtcConnection;
 
-            rtcConnection.onicecandidate = (event) => {
+            rtcConnection.onicecandidate = async (event) => {
                 if (event.candidate) {
-                    sendWebRTCSignal({
+                    await sendWebRTCSignal({
                         type: 'ice-candidate',
                         candidate: event.candidate,
                         targetAgentId: fromAgentId,
@@ -420,7 +428,7 @@ export namespace Client {
             );
             const answer = await rtcConnection.createAnswer();
             await rtcConnection.setLocalDescription(answer);
-            sendWebRTCSignal({
+            await sendWebRTCSignal({
                 type: 'answer',
                 answer,
                 targetAgentId: fromAgentId,

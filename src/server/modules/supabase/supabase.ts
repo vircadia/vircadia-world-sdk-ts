@@ -24,13 +24,13 @@ export class Supabase {
     private routes: {
         [key in E_HTTPRoutes]: string | null;
     } = {
-        [E_HTTPRoutes.API]: null,
-        [E_HTTPRoutes.GRAPHQL]: null,
-        [E_HTTPRoutes.STORAGE]: null,
-        [E_HTTPRoutes.DB]: null,
-        [E_HTTPRoutes.STUDIO]: null,
-        [E_HTTPRoutes.INBUCKET]: null,
-    };
+            [E_HTTPRoutes.API]: null,
+            [E_HTTPRoutes.GRAPHQL]: null,
+            [E_HTTPRoutes.STORAGE]: null,
+            [E_HTTPRoutes.DB]: null,
+            [E_HTTPRoutes.STUDIO]: null,
+            [E_HTTPRoutes.INBUCKET]: null,
+        };
 
     constructor(debug: boolean = false) {
         this.appDir = path.resolve('./modules/supabase/app');
@@ -47,7 +47,7 @@ export class Supabase {
         return Supabase.instance;
     }
 
-    private loadConfig(): void {}
+    private loadConfig(): void { }
 
     async setupReverseProxies(app: express.Application): Promise<void> {
         const statusUrls = await this.getStatus();
@@ -206,7 +206,7 @@ export class Supabase {
         }
     }
 
-    private async waitForStartup(timeout: number = 300000): Promise<void> {
+    private async waitForStartup(timeout: number = 30000): Promise<void> {
         const startTime = Date.now();
         while (Date.now() - startTime < timeout) {
             if (await this.isRunning()) {
@@ -221,9 +221,8 @@ export class Supabase {
         command: string;
         appendWorkdir: boolean;
     }): Promise<string> {
-        const fullCommand = `npx supabase ${data.command}${
-            data.appendWorkdir ? ` --workdir ${this.appDir}` : ''
-        }`;
+        const fullCommand = `npx supabase ${data.command}${data.appendWorkdir ? ` --workdir ${this.appDir}` : ''
+            }`;
 
         try {
             const { stdout, stderr } = await execa.execaCommand(fullCommand, {
@@ -311,7 +310,7 @@ export class Supabase {
         });
 
         const parseValue = (key: string): string | null => {
-            const regex = new RegExp(`${key}:\\s*(.+)`);
+            const regex = new RegExp(`${key}:\\s*(.+)`, 'u');
             const match = output.match(regex);
             return match ? match[1].trim() : null;
         };
@@ -330,10 +329,6 @@ export class Supabase {
             s3SecretKey: parseValue(S3_SECRET_KEY),
             s3Region: parseValue(S3_REGION),
         };
-    }
-
-    async getRoutes(): Promise<{ [key in E_HTTPRoutes]: string | null }> {
-        return this.routes;
     }
 }
 

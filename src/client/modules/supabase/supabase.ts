@@ -32,7 +32,7 @@ export namespace Supabase {
         return supabaseClient;
     }
 
-    export async function connectRealtime(): Promise<void> {
+    export function connectRealtime(): void {
         if (!supabaseClient) {
             throw new Error('Supabase client not initialized');
         }
@@ -60,7 +60,7 @@ export namespace Supabase {
             .on(
                 REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
                 {
-                    event: event,
+                    event,
                     schema: 'public',
                     table: channel,
                 },
@@ -75,8 +75,12 @@ export namespace Supabase {
     ): void {
         const subscription = activeSubscriptions.get(channel);
         if (subscription) {
-            subscription.unsubscribe();
-            activeSubscriptions.delete(channel);
+            subscription.unsubscribe().then(() => {
+                activeSubscriptions.delete(channel);
+            })
+                .catch((error) => {
+                    log(`Failed to unsubscribe from table ${channel}: ${error}`, 'error');
+                });
         }
     }
 
