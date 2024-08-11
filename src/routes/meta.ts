@@ -10,7 +10,6 @@ export enum E_PacketType {
 }
 
 export enum E_HTTPRoutes {
-    REALTIME = '/realtime',
     API = '/api',
     GRAPHQL = '/graphql',
     STORAGE = '/storage',
@@ -24,7 +23,7 @@ export enum E_RequestType {
 }
 
 export interface I_REQUEST_ConfigAndStatusResponse {
-    REALTIME_API_URL: string | null;
+    API_URL: string | null;
     S3_STORAGE_URL: string | null;
 }
 

@@ -24,7 +24,6 @@ export class Supabase {
     private routes: {
         [key in E_HTTPRoutes]: string | null;
     } = {
-        [E_HTTPRoutes.REALTIME]: null,
         [E_HTTPRoutes.API]: null,
         [E_HTTPRoutes.GRAPHQL]: null,
         [E_HTTPRoutes.STORAGE]: null,
@@ -77,7 +76,6 @@ export class Supabase {
         setupProxy(E_HTTPRoutes.STUDIO, statusUrls.studioUrl);
         setupProxy(E_HTTPRoutes.INBUCKET, statusUrls.inbucketUrl);
         setupProxy(E_HTTPRoutes.DB, statusUrls.dbUrl);
-        setupProxy(E_HTTPRoutes.REALTIME, statusUrls.realtimeUrl);
     }
 
     private log(
@@ -310,7 +308,6 @@ export class Supabase {
         dbUrl: string | null;
         studioUrl: string | null;
         inbucketUrl: string | null;
-        realtimeUrl: string | null; // Add this line
         jwtSecret: string | null;
         anonKey: string | null;
         serviceRoleKey: string | null;
@@ -342,19 +339,13 @@ export class Supabase {
             return match ? match[1].trim() : null;
         };
 
-        const apiUrl = parseValue(API_URL);
-        const realtimeUrl = apiUrl
-            ? `${apiUrl}/realtime/v1`.replace('http', 'ws')
-            : null;
-
         return {
-            apiUrl,
+            apiUrl: parseValue(API_URL),
             graphqlUrl: parseValue(GRAPHQL_URL),
             s3StorageUrl: parseValue(S3_STORAGE_URL),
             dbUrl: parseValue(DB_URL),
             studioUrl: parseValue(STUDIO_URL),
             inbucketUrl: parseValue(INBUCKET_URL),
-            realtimeUrl, // Add this line
             jwtSecret: parseValue(JWT_SECRET),
             anonKey: parseValue(ANON_KEY),
             serviceRoleKey: parseValue(SERVICE_ROLE_KEY),

@@ -93,11 +93,8 @@ export namespace Client {
             port = data.port;
 
             // Link up with the world transport layer.
-            if (
-                serverConfigAndStatus &&
-                serverConfigAndStatus.REALTIME_API_URL
-            ) {
-                const url = serverConfigAndStatus.REALTIME_API_URL;
+            if (serverConfigAndStatus && serverConfigAndStatus.API_URL) {
+                const url = serverConfigAndStatus.API_URL;
                 const key =
                     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
                 Supabase.initializeSupabaseClient(url, key);
