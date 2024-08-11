@@ -75,7 +75,7 @@ export namespace Supabase {
 
     export function subscribeToAllTables(
         callback: (payload: any) => void,
-        event: 'INSERT' | 'UPDATE' | 'DELETE' | '*' = '*',
+        event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT = REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
     ): void {
         Object.values(E_WorldTransportChannels).forEach((channel) =>
             subscribeToTable(channel, callback, event),

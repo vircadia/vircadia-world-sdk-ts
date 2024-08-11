@@ -1,17 +1,14 @@
 import express from 'express';
 import { createServer } from 'http';
-import { Server } from 'socket.io';
 
 import { Supabase } from './modules/supabase/supabase.js';
 
-import { WorldTransport } from '../routes/worldTransportRouter.js';
 import { HTTPTransport } from '../routes/httpRouter.js';
 
 const TEMP_PORT = 3000;
 const TEMP_ALLOWED_ORIGINS = '*';
 const TEMP_ALLOWED_METHODS_REQ = 'GET, POST, PUT, DELETE, OPTIONS';
 const TEMP_ALLOWED_HEADERS_REQ = 'Content-Type, Authorization';
-const TEMP_ALLOWED_METHODS_WT = 'GET, POST';
 
 async function init() {
     const expressApp = express();
@@ -59,15 +56,6 @@ async function init() {
 
     // Create HTTP server
     const expressServer = createServer(expressApp);
-
-    // Webtransport via Socket.io
-    const socketIO = new Server(expressServer, {
-        cors: {
-            origin: TEMP_ALLOWED_ORIGINS,
-            methods: TEMP_ALLOWED_METHODS_WT,
-        },
-    });
-    WorldTransport.Router(socketIO);
 
     // Launch
     expressServer.listen(TEMP_PORT, () => {

@@ -4,8 +4,6 @@ export enum E_PacketType {
     AGENT_Offer = 'agent-agent-offer-packet',
     AGENT_Answer = 'agent-agent-answer-packet',
     AGENT_ICE_Candidate = 'agent-agent-ice-candidate-packet',
-    AGENT_Heartbeat = 'world-agent-heartbeat-packet',
-    WORLD_AgentList = 'world-agent-list-packet',
     AUDIO_Metadata = 'agent-agent-audio-metadata-packet',
 }
 
@@ -39,6 +37,11 @@ export enum E_WorldTransportChannels {
     SPRITE_MANAGERS = 'sprite_managers',
 }
 
+export enum E_AgentChannels {
+    AGENT_METADATA = 'agent_metadata',
+    SIGNALING_CHANNEL = 'signaling_channel',
+}
+
 export enum E_HTTPRoutes {
     API = '/api',
     GRAPHQL = '/graphql',
@@ -61,26 +64,6 @@ interface I_BASE_Packet {
     type: E_PacketType;
     senderId: string | null;
     receiverId?: string | null;
-}
-
-export class C_AGENT_WorldHeartbeat_Packet implements I_BASE_Packet {
-    type: E_PacketType.AGENT_Heartbeat = E_PacketType.AGENT_Heartbeat;
-    senderId: string | null;
-
-    constructor(data: { senderId: string | null }) {
-        this.senderId = data.senderId;
-    }
-}
-
-export class C_WORLD_AgentList_Packet implements I_BASE_Packet {
-    type: E_PacketType.WORLD_AgentList = E_PacketType.WORLD_AgentList;
-    senderId: string | null;
-    agentList: string[];
-
-    constructor(data: { senderId: string | null; agentList: string[] }) {
-        this.senderId = data.senderId;
-        this.agentList = data.agentList;
-    }
 }
 
 export class C_AUDIO_Metadata_Packet implements I_BASE_Packet {

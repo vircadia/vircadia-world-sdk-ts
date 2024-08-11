@@ -1,15 +1,8 @@
-// Agent <-> Server
-import { io, Socket } from 'socket.io-client';
 import axios from 'axios';
 import { Supabase } from './modules/supabase/supabase.js';
-// Agent <-> Agent
-
 import {
-    E_PacketType,
     E_RequestType,
-    E_WorldTransportChannels,
-    C_AGENT_WorldHeartbeat_Packet,
-    C_WORLD_AgentList_Packet,
+    E_AgentChannels,
     C_AUDIO_Metadata_Packet,
     I_REQUEST_ConfigAndStatusResponse,
 } from '../routes/meta.js';
@@ -29,9 +22,7 @@ export namespace Client {
     let host: string | null = null;
     let port: number | null = null;
 
-    let socket: Socket | null = null;
     let TEMP_agentId: string | null = null;
-    // FIXME: This is temp, avatars shouldn't exist, all avatars should simply be entities.
     let TEMP_position: {
         x: number;
         y: number;
@@ -50,13 +41,14 @@ export namespace Client {
         TEMP_position = metadata.position;
         TEMP_orientation = metadata.orientation;
 
-        Agent.sendHeartbeatToAgents();
+        Agent.updatePresence();
     };
 
-    export const worldConnected = () => socket?.connected ?? false;
+    export const worldConnected = () => Supabase.getSupabaseClient() !== null;
 
     export namespace Setup {
-        let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+        let presenceUpdateInterval: ReturnType<typeof setInterval> | null =
+            null;
 
         export const InitializeWorldModule = async (data: {
             host: string;
@@ -77,46 +69,52 @@ export namespace Client {
 
             TEMP_agentId = data.agentId;
 
-            if (socket && socket.connected) {
-                console.log('Already connected to the server.');
+            if (Supabase.getSupabaseClient()) {
+                console.log('Already connected to Supabase.');
                 return;
             }
 
-            if (socket) {
-                socket.removeAllListeners();
-                socket.close();
-                console.log('Closed existing socket.');
-            }
-
-            socket = io(`${data.host}:${data.port}`, {});
             host = data.host;
             port = data.port;
 
-            // Link up with the world transport layer.
+            // Initialize Supabase client
             if (serverConfigAndStatus && serverConfigAndStatus.API_URL) {
                 const url = serverConfigAndStatus.API_URL;
-                const key =
-                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
-                const supabaseClient = Supabase.initializeSupabaseClient(
-                    url,
-                    key,
-                );
+                const key = 'your-supabase-anon-key'; // Replace with your actual key
+                Supabase.initializeSupabaseClient(url, key);
 
                 try {
                     await Supabase.connectRealtime();
                     console.log('Successfully connected to Supabase Realtime');
 
-                    // Example subscription
-                    Supabase.subscribeToTable(
-                        E_WorldTransportChannels.WORLD_METADATA,
-                        (payload) => {
-                            console.log(
-                                'Received update from Supabase:',
-                                payload,
-                            );
-                            // Handle the received data
-                        },
-                    );
+                    // Set up presence channel
+                    const presenceChannel =
+                        Supabase.getSupabaseClient()?.channel(
+                            E_AgentChannels.AGENT_METADATA,
+                        );
+                    presenceChannel?.subscribe(async (status) => {
+                        if (status === 'SUBSCRIBED') {
+                            await presenceChannel.track({
+                                agent_id: TEMP_agentId,
+                                online_at: new Date().toISOString(),
+                            });
+                        }
+                    });
+
+                    // Set up broadcast channel for WebRTC signaling
+                    Supabase.getSupabaseClient()
+                        ?.channel(E_AgentChannels.SIGNALING_CHANNEL)
+                        .on(
+                            'broadcast',
+                            { event: 'webrtc-signal' },
+                            ({ payload }) => {
+                                Agent.handleWebRTCSignal(payload);
+                            },
+                        )
+                        .subscribe();
+
+                    // Subscribe to agent metadata updates
+                    subscribeToAgentMetadata();
 
                     console.info(
                         'Active subscriptions:',
@@ -132,36 +130,24 @@ export namespace Client {
 
             Agent.InitializeAgentModule();
 
-            // Listening to events
-            socket.on('connect', () => {
-                console.log(`Connected to server at ${data.host}:${data.port}`);
-
-                heartbeatInterval = setInterval(() => {
-                    sendHeartbeatPacketToWorld();
-                }, TEMP_AUDIO_METADATA_INTERVAL); // TODO: Use a constant or configuration variable for the interval duration
-            });
-
-            socket.on('disconnect', () => {
-                socket?.removeAllListeners();
-                clearInterval(
-                    heartbeatInterval as ReturnType<typeof setInterval>,
-                );
-                console.log('Disconnected from server');
-            });
-
-            socket.on('connect_error', (error) => {
-                console.error('Connection error:', error);
-                // Handle the connection error, e.g., retry connection or notify the user
-            });
+            // Start presence update interval
+            presenceUpdateInterval = setInterval(() => {
+                Agent.updatePresence();
+            }, TEMP_AUDIO_METADATA_INTERVAL);
         };
 
-        const sendHeartbeatPacketToWorld = () => {
-            socket?.emit(
-                E_PacketType.AGENT_Heartbeat,
-                new C_AGENT_WorldHeartbeat_Packet({
-                    senderId: TEMP_agentId,
-                }),
-            );
+        const subscribeToAgentMetadata = () => {
+            Supabase.getSupabaseClient()
+                ?.channel(E_AgentChannels.AGENT_METADATA)
+                .on('presence', { event: 'sync' }, () => {
+                    const presenceChannel =
+                        Supabase.getSupabaseClient()?.channel(
+                            E_AgentChannels.AGENT_METADATA,
+                        );
+                    const state = presenceChannel?.presenceState() ?? {};
+                    Agent.handleAgentListUpdate(Object.keys(state));
+                })
+                .subscribe();
         };
     }
 
@@ -197,40 +183,28 @@ export namespace Client {
                 return;
             }
 
-            socket?.on(E_PacketType.AGENT_Offer, handleOffer);
-            socket?.on(E_PacketType.AGENT_Answer, handleAnswer);
-            socket?.on(E_PacketType.AGENT_ICE_Candidate, handleIceCandidate);
-            socket?.on(E_PacketType.WORLD_AgentList, handleAgentListUpdate);
+            // Set up broadcast listener for WebRTC signaling
+            Supabase.getSupabaseClient()
+                ?.channel(E_AgentChannels.SIGNALING_CHANNEL)
+                .on('broadcast', { event: 'webrtc-signal' }, ({ payload }) => {
+                    handleWebRTCSignal(payload);
+                })
+                .subscribe();
         };
 
-        const removeDataConnection = (agentId: string) => {
-            const agentConnection = agentConnections[agentId];
-            if (agentConnection?.data.channel) {
-                agentConnection.data.channel.close();
-                agentConnection.data.channel = null;
-            }
-        };
-
-        const removeMediaConnection = (agentId: string) => {
-            console.info(
-                `${AGENT_LOG_PREFIX} Removing media connection with agent ${agentId}`,
+        export const updatePresence = () => {
+            const presenceChannel = Supabase.getSupabaseClient()?.channel(
+                E_AgentChannels.AGENT_METADATA,
             );
-            const agentConnection = agentConnections[agentId];
-            if (agentConnection?.rtcConnection) {
-                agentConnection.rtcConnection.close();
-                agentConnection.rtcConnection = null;
-            }
-            if (agentConnection?.media.stream) {
-                agentConnection.media.stream
-                    .getTracks()
-                    .forEach((track) => track.stop());
-                agentConnection.media.stream = null;
-            }
+            presenceChannel?.track({
+                agent_id: TEMP_agentId,
+                position: TEMP_position,
+                orientation: TEMP_orientation,
+                online_at: new Date().toISOString(),
+            });
         };
 
-        const handleAgentListUpdate = (message: C_WORLD_AgentList_Packet) => {
-            const { agentList } = message;
-
+        export const handleAgentListUpdate = (agentList: string[]) => {
             // Remove connections for agents no longer present
             Object.keys(agentConnections).forEach((agentId) => {
                 if (!agentList.includes(agentId)) {
@@ -282,6 +256,31 @@ export namespace Client {
             }
         };
 
+        const removeDataConnection = (agentId: string) => {
+            const agentConnection = agentConnections[agentId];
+            if (agentConnection?.data.channel) {
+                agentConnection.data.channel.close();
+                agentConnection.data.channel = null;
+            }
+        };
+
+        const removeMediaConnection = (agentId: string) => {
+            console.info(
+                `${AGENT_LOG_PREFIX} Removing media connection with agent ${agentId}`,
+            );
+            const agentConnection = agentConnections[agentId];
+            if (agentConnection?.rtcConnection) {
+                agentConnection.rtcConnection.close();
+                agentConnection.rtcConnection = null;
+            }
+            if (agentConnection?.media.stream) {
+                agentConnection.media.stream
+                    .getTracks()
+                    .forEach((track) => track.stop());
+                agentConnection.media.stream = null;
+            }
+        };
+
         const createRTCConnection = async (agentId: string) => {
             const agentConnection = agentConnections[agentId];
 
@@ -293,7 +292,8 @@ export namespace Client {
 
                 rtcConnection.onicecandidate = (event) => {
                     if (event.candidate) {
-                        socket?.emit('ice-candidate', {
+                        sendWebRTCSignal({
+                            type: 'ice-candidate',
                             candidate: event.candidate,
                             targetAgentId: agentId,
                         });
@@ -316,7 +316,11 @@ export namespace Client {
                 // Create and send offer
                 const offer = await rtcConnection.createOffer();
                 await rtcConnection.setLocalDescription(offer);
-                socket?.emit('offer', { offer, targetAgentId: agentId });
+                sendWebRTCSignal({
+                    type: 'offer',
+                    offer,
+                    targetAgentId: agentId,
+                });
 
                 console.info(
                     `${AGENT_LOG_PREFIX} Created RTC connection for agent ${agentId}`,
@@ -334,63 +338,40 @@ export namespace Client {
                 );
             };
 
-            // dataChannel.onmessage = (event) => {
-            //     const dataReceived = JSON.parse(event.data as string);
-            //     console.info(
-            //         `Received data from agent ${agentId}:`,
-            //         dataReceived,
-            //         'is audio packet:',
-            //         'audioPosition' in dataReceived &&
-            //         'audioOrientation' in dataReceived,
-            //     );
-            //     if (
-            //         'audioPosition' in dataReceived &&
-            //         'audioOrientation' in dataReceived
-            //     ) {
-            //         agentConnections[agentId].media.metadata =
-            //             dataReceived as C_AUDIO_Metadata_Packet;
-            //     }
-            // };
-
             dataChannel.onclose = () => {
                 console.log(`Data channel closed with agent ${agentId}`);
                 agentConnections[agentId].data.channel = null;
             };
         };
 
-        export const sendHeartbeatToAgents = () => {
-            Object.entries(agentConnections).forEach(
-                ([agentId, connection]) => {
-                    if (
-                        connection.data.channel &&
-                        connection.data.channel.readyState === 'open' &&
-                        TEMP_position &&
-                        TEMP_orientation
-                    ) {
-                        const packet = new C_AUDIO_Metadata_Packet({
-                            senderId: TEMP_agentId,
-                            audioPosition: TEMP_position,
-                            audioOrientation: TEMP_orientation,
-                        });
-                        connection.data.channel.send(JSON.stringify(packet));
-                        console.log(
-                            `${AGENT_LOG_PREFIX} Sent metadata to agent ${agentId}`,
-                        );
-                    } else {
-                        console.warn(
-                            `${AGENT_LOG_PREFIX} Unable to send metadata to agent ${agentId}. Connection status:`,
-                            connection,
-                            'Position:',
-                            TEMP_position,
-                            'Orientation:',
-                            TEMP_orientation,
-                        );
-                    }
-                },
-            );
+        const sendWebRTCSignal = (signal: any) => {
+            Supabase.getSupabaseClient()
+                ?.channel(E_AgentChannels.SIGNALING_CHANNEL)
+                .send({
+                    type: 'broadcast',
+                    event: 'webrtc-signal',
+                    payload: signal,
+                });
         };
 
-        // Add these new functions to handle offer, answer, and ICE candidates
+        export const handleWebRTCSignal = async (signal: any) => {
+            const { type, targetAgentId } = signal;
+
+            if (targetAgentId !== TEMP_agentId) return;
+
+            switch (type) {
+                case 'offer':
+                    await handleOffer(signal);
+                    break;
+                case 'answer':
+                    await handleAnswer(signal);
+                    break;
+                case 'ice-candidate':
+                    await handleIceCandidate(signal);
+                    break;
+            }
+        };
+
         const handleOffer = async (data: {
             offer: RTCSessionDescriptionInit;
             fromAgentId: string;
@@ -406,7 +387,8 @@ export namespace Client {
 
             rtcConnection.onicecandidate = (event) => {
                 if (event.candidate) {
-                    socket?.emit('ice-candidate', {
+                    sendWebRTCSignal({
+                        type: 'ice-candidate',
                         candidate: event.candidate,
                         targetAgentId: fromAgentId,
                     });
@@ -432,7 +414,11 @@ export namespace Client {
             );
             const answer = await rtcConnection.createAnswer();
             await rtcConnection.setLocalDescription(answer);
-            socket?.emit('answer', { answer, targetAgentId: fromAgentId });
+            sendWebRTCSignal({
+                type: 'answer',
+                answer,
+                targetAgentId: fromAgentId,
+            });
         };
 
         const handleAnswer = async (data: {
@@ -465,7 +451,6 @@ export namespace Client {
             const MEDIA_LOG_PREFIX = '[MEDIA]';
 
             let audioContext: AudioContext | null = null;
-            // eslint-disable-next-line prefer-const
             let localAudioStream: MediaStream | null = null;
             const localVideoStream: MediaStream | null = null;
 
@@ -473,86 +458,12 @@ export namespace Client {
                 audioContext = new AudioContext();
             };
 
-            // export const testAudioConnection = (
-            //     agentId: string,
-            // ): Promise<void> => {
-            //     return new Promise((resolve, reject) => {
-            //         const connection =
-            //             agentConnections[agentId]?.media.connection;
-            //         const connectionStatus = connection?.open;
-            //         const audioContextStatus = audioContext?.state;
-            //         if (
-            //             connectionStatus &&
-            //             audioContext &&
-            //             audioContextStatus === 'running'
-            //         ) {
-            //             const oscillator = audioContext.createOscillator();
-            //             oscillator.type = 'sine';
-            //             oscillator.frequency.setValueAtTime(
-            //                 440,
-            //                 audioContext.currentTime,
-            //             );
-            //             const destination =
-            //                 audioContext.createMediaStreamDestination();
-            //             oscillator.connect(destination);
-            //             oscillator.start();
-            //             const testStream = destination.stream;
-            //             const senders = connection.peerConnection.getSenders();
-            //             if (senders.length === 0) {
-            //                 console.error(
-            //                     `${MEDIA_LOG_PREFIX} No senders available in peer connection.`,
-            //                 );
-            //                 reject('No senders available in peer connection.');
-            //                 return;
-            //             }
-            //             Promise.all(
-            //                 senders.map((sender) => {
-            //                     if (
-            //                         sender.track &&
-            //                         sender.track.kind === 'audio'
-            //                     ) {
-            //                         return sender.replaceTrack(
-            //                             testStream.getAudioTracks()[0],
-            //                         );
-            //                     }
-            //                     return Promise.resolve();
-            //                 }),
-            //             )
-            //                 .then(() => {
-            //                     setTimeout(() => {
-            //                         oscillator.stop();
-            //                         oscillator.disconnect();
-            //                         console.log(
-            //                             `${MEDIA_LOG_PREFIX} Sent test audio to agent ${agentId}`,
-            //                         );
-            //                         resolve();
-            //                     }, 1000);
-            //                 })
-            //                 .catch((error) => {
-            //                     console.error(
-            //                         `${MEDIA_LOG_PREFIX} Error replacing track:`,
-            //                         error,
-            //                     );
-            //                     reject(error);
-            //                 });
-            //         } else {
-            //             console.warn(
-            //                 `${MEDIA_LOG_PREFIX} Failed to send test audio packet ${agentId}`,
-            //                 connection,
-            //                 audioContext,
-            //             );
-            //             reject('Connection or audio context not ready.');
-            //         }
-            //     });
-            // };
-
             export const updateLocalStream = async (data: {
                 newStream: MediaStream;
                 kind: 'video' | 'audio';
             }) => {
                 localAudioStream = data.newStream;
 
-                // Connect the local stream to the audio context destination for echo
                 if (audioContext && data.kind === 'audio') {
                     if (audioContext.state === 'suspended') {
                         await audioContext.resume();
@@ -560,14 +471,6 @@ export namespace Client {
                             `${MEDIA_LOG_PREFIX} Resumed OUTGOING audio context.`,
                         );
                     }
-
-                    // const audioSource = audioContext.createMediaStreamSource(
-                    //     data.newStream,
-                    // );
-                    // audioSource.connect(audioContext.destination);
-                    // console.log(
-                    //     `${MEDIA_LOG_PREFIX} Connected local audio stream to audio context destination.`,
-                    // );
 
                     const audioTracks = data.newStream.getAudioTracks();
                     if (audioTracks.length === 0) {
@@ -664,12 +567,10 @@ export namespace Client {
                     return;
                 }
 
-                // START hack: Create an Audio element as a HACK because Chrome has a bug
                 const audioElement = new Audio();
                 audioElement.srcObject = data.stream;
                 audioElement.pause();
                 audioElement.autoplay = false;
-                // END hack
 
                 audioTracks.forEach((track) => {
                     track.enabled = true;
@@ -683,7 +584,6 @@ export namespace Client {
                     data.stream,
                 );
 
-                // Create and configure the spatial panner
                 const panner = audioContext.createPanner();
                 panner.panningModel = 'HRTF';
                 panner.distanceModel = 'inverse';
@@ -694,7 +594,6 @@ export namespace Client {
                 panner.coneOuterAngle = 0;
                 panner.coneOuterGain = 0;
 
-                // Connect the audio source to both the panner and the destination
                 audioSource.connect(panner);
                 panner.connect(audioContext.destination);
 
@@ -702,29 +601,43 @@ export namespace Client {
                     `${MEDIA_LOG_PREFIX} Connected incoming audio stream from agent ${data.agentId}`,
                 );
 
-                // Set an interval to update the panner position
                 const intervalId = setInterval(() => {
                     if (
                         audioContext &&
                         audioContext.state === 'running' &&
                         panner
                     ) {
-                        const agentMetadata =
-                            agentConnections[data.agentId].media.metadata;
-                        const ourMetadata = {
-                            position: TEMP_position,
-                            orientation: TEMP_orientation,
-                        };
+                        const presenceChannel =
+                            Supabase.getSupabaseClient()?.channel(
+                                E_AgentChannels.AGENT_METADATA,
+                            );
+                        const state = presenceChannel?.presenceState() ?? {};
+                        const agentPresence = state[data.agentId]?.[0];
+                        const ourPresence = state[TEMP_agentId ?? '']?.[0];
 
-                        if (agentMetadata) {
-                            const { audioPosition, audioOrientation } =
-                                agentMetadata;
+                        if (agentPresence && ourPresence) {
+                            const audioPosition = (agentPresence as any)
+                                .position;
+                            const audioOrientation = (agentPresence as any)
+                                .orientation;
+                            const ourPosition = (ourPresence as any).position;
+                            const ourOrientation = (ourPresence as any)
+                                .orientation;
 
-                            if (audioPosition && ourMetadata.position) {
+                            if (
+                                audioPosition &&
+                                ourPosition &&
+                                typeof audioPosition.x === 'number' &&
+                                typeof audioPosition.y === 'number' &&
+                                typeof audioPosition.z === 'number' &&
+                                typeof ourPosition.x === 'number' &&
+                                typeof ourPosition.y === 'number' &&
+                                typeof ourPosition.z === 'number'
+                            ) {
                                 const relativePosition = {
-                                    x: audioPosition.x - ourMetadata.position.x,
-                                    y: audioPosition.y - ourMetadata.position.y,
-                                    z: audioPosition.z - ourMetadata.position.z,
+                                    x: audioPosition.x - ourPosition.x,
+                                    y: audioPosition.y - ourPosition.y,
+                                    z: audioPosition.z - ourPosition.z,
                                 };
 
                                 panner.positionX.setValueAtTime(
@@ -741,17 +654,20 @@ export namespace Client {
                                 );
                             }
 
-                            if (audioOrientation && ourMetadata.orientation) {
+                            if (
+                                audioOrientation &&
+                                ourOrientation &&
+                                typeof audioOrientation.x === 'number' &&
+                                typeof audioOrientation.y === 'number' &&
+                                typeof audioOrientation.z === 'number' &&
+                                typeof ourOrientation.x === 'number' &&
+                                typeof ourOrientation.y === 'number' &&
+                                typeof ourOrientation.z === 'number'
+                            ) {
                                 const relativeOrientation = {
-                                    x:
-                                        audioOrientation.x -
-                                        ourMetadata.orientation.x,
-                                    y:
-                                        audioOrientation.y -
-                                        ourMetadata.orientation.y,
-                                    z:
-                                        audioOrientation.z -
-                                        ourMetadata.orientation.z,
+                                    x: audioOrientation.x - ourOrientation.x,
+                                    y: audioOrientation.y - ourOrientation.y,
+                                    z: audioOrientation.z - ourOrientation.z,
                                 };
 
                                 panner.orientationX.setValueAtTime(
@@ -769,9 +685,7 @@ export namespace Client {
                             }
                         } else {
                             console.warn(
-                                `${MEDIA_LOG_PREFIX} No metadata available for agent ${data.agentId}`,
-                                agentConnection.media.metadata,
-                                agentConnection.data.channel,
+                                `${MEDIA_LOG_PREFIX} No presence data available for agent ${data.agentId} or current agent`,
                             );
                         }
                     } else {
@@ -795,58 +709,8 @@ export namespace Client {
                             `${MEDIA_LOG_PREFIX} Cleared interval for agent ${data.agentId} as the media stream connection no longer exists.`,
                         );
                     }
-                }, TEMP_AUDIO_METADATA_INTERVAL); // Update every 1000 ms
+                }, TEMP_AUDIO_METADATA_INTERVAL);
             };
-
-            // export const handleIncomingStream = (data: {
-            //     stream: MediaStream;
-            //     agentId: string;
-            // }) => {
-            //     const audioElement = new Audio();
-            //     audioElement.srcObject = data.stream;
-            //     audioElement.autoplay = true; // Ensure the audio plays automatically
-            //     audioElement.controls = true; // Optionally add controls for testing
-            //     document.body.appendChild(audioElement); // Append to the body to make it visible for debugging
-
-            //     console.log(
-            //         `${MEDIA_LOG_PREFIX} Playing incoming stream via HTML audio element for agent ${data.agentId}`,
-            //     );
-            // };
-
-            // export const handleIncomingStream = (data: {
-            //     stream: MediaStream;
-            //     agentId: string;
-            // }) => {
-            //     if (
-            //         !audioContext ||
-            //         !audioContext.destination ||
-            //         audioContext.state !== 'running'
-            //     ) {
-            //         console.error(
-            //             `${MEDIA_LOG_PREFIX} No audio context available.`,
-            //         );
-            //         return;
-            //     }
-
-            //     // Create an Audio element for direct playback
-            //     const audioElement = new Audio();
-            //     audioElement.srcObject = data.stream;
-            //     audioElement.pause();
-            //     audioElement.autoplay = false; // Ensure the audio plays automatically
-
-            //     // Optionally, you can append the audio element to the body to make it visible for debugging
-            //     // document.body.appendChild(audioElement);
-
-            //     // Use AudioContext for additional audio processing
-            //     const audioSource = audioContext.createMediaStreamSource(
-            //         data.stream,
-            //     );
-            //     audioSource.connect(audioContext.destination);
-
-            //     console.info(
-            //         `${MEDIA_LOG_PREFIX} Connected incoming audio stream from agent ${data.agentId} to both Audio element and AudioContext.`,
-            //     );
-            // };
         }
     }
 }
