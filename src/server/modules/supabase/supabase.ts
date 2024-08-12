@@ -4,7 +4,7 @@ import * as execa from 'execa';
 import express from 'express';
 import { log } from '../../../modules/log.js';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { E_HTTPRoutes } from '../../../routes/meta.js';
+import { E_HTTPRoute } from '../../../routes/meta.js';
 
 const CONFIG_TOML_FILE = 'config.toml';
 
@@ -22,14 +22,14 @@ export class Supabase {
     private configDir: string;
     private debug: boolean;
     private routes: {
-        [key in E_HTTPRoutes]: string | null;
+        [key in E_HTTPRoute]: string | null;
     } = {
-            [E_HTTPRoutes.API]: null,
-            [E_HTTPRoutes.GRAPHQL]: null,
-            [E_HTTPRoutes.STORAGE]: null,
-            [E_HTTPRoutes.DB]: null,
-            [E_HTTPRoutes.STUDIO]: null,
-            [E_HTTPRoutes.INBUCKET]: null,
+            [E_HTTPRoute.API]: null,
+            [E_HTTPRoute.GRAPHQL]: null,
+            [E_HTTPRoute.STORAGE]: null,
+            [E_HTTPRoute.DB]: null,
+            [E_HTTPRoute.STUDIO]: null,
+            [E_HTTPRoute.INBUCKET]: null,
         };
 
     constructor(debug: boolean = false) {
@@ -52,7 +52,7 @@ export class Supabase {
     async setupReverseProxies(app: express.Application): Promise<void> {
         const statusUrls = await this.getStatus();
 
-        const setupProxy = (path: E_HTTPRoutes, target: string | null) => {
+        const setupProxy = (path: E_HTTPRoute, target: string | null) => {
             if (target) {
                 app.use(
                     path,
@@ -62,17 +62,17 @@ export class Supabase {
                         pathRewrite: { [`^${path}`]: '' },
                     }),
                 );
-                this.routes[path as E_HTTPRoutes] = target;
+                this.routes[path as E_HTTPRoute] = target;
                 log(`Reverse proxy set up for ${path} -> ${target}`, 'success');
             }
         };
 
-        setupProxy(E_HTTPRoutes.API, statusUrls.apiUrl);
-        setupProxy(E_HTTPRoutes.GRAPHQL, statusUrls.graphqlUrl);
-        setupProxy(E_HTTPRoutes.STORAGE, statusUrls.s3StorageUrl);
-        setupProxy(E_HTTPRoutes.STUDIO, statusUrls.studioUrl);
-        setupProxy(E_HTTPRoutes.INBUCKET, statusUrls.inbucketUrl);
-        setupProxy(E_HTTPRoutes.DB, statusUrls.dbUrl);
+        setupProxy(E_HTTPRoute.API, statusUrls.apiUrl);
+        setupProxy(E_HTTPRoute.GRAPHQL, statusUrls.graphqlUrl);
+        setupProxy(E_HTTPRoute.STORAGE, statusUrls.s3StorageUrl);
+        setupProxy(E_HTTPRoute.STUDIO, statusUrls.studioUrl);
+        setupProxy(E_HTTPRoute.INBUCKET, statusUrls.inbucketUrl);
+        setupProxy(E_HTTPRoute.DB, statusUrls.dbUrl);
     }
 
     async initializeAndStart(data: { forceRestart: boolean }): Promise<void> {

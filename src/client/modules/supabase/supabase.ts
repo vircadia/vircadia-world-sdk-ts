@@ -6,12 +6,12 @@ import {
     REALTIME_LISTEN_TYPES,
     REALTIME_POSTGRES_CHANGES_LISTEN_EVENT,
 } from '@supabase/supabase-js';
-import { E_WorldTransportChannels } from '../../../routes/meta.js';
+import { E_WorldTransportChannel } from '../../../routes/meta.js';
 import { log } from '../../../modules/log.js';
 
 export namespace Supabase {
     let supabaseClient: SupabaseClient | null = null;
-    const activeSubscriptions: Map<E_WorldTransportChannels, RealtimeChannel> =
+    const activeSubscriptions: Map<E_WorldTransportChannel, RealtimeChannel> =
         new Map();
 
     let supabaseUrl: string | null = null;
@@ -47,7 +47,7 @@ export namespace Supabase {
     }
 
     export function subscribeToTable(
-        channel: E_WorldTransportChannels,
+        channel: E_WorldTransportChannel,
         callback: (payload: RealtimePostgresChangesPayload<any>) => void,
         event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT = REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
     ): void {
@@ -71,7 +71,7 @@ export namespace Supabase {
     }
 
     export function unsubscribeFromTable(
-        channel: E_WorldTransportChannels,
+        channel: E_WorldTransportChannel,
     ): void {
         const subscription = activeSubscriptions.get(channel);
         if (subscription) {
@@ -88,13 +88,13 @@ export namespace Supabase {
         callback: (payload: any) => void,
         event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT = REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
     ): void {
-        Object.values(E_WorldTransportChannels).forEach((channel) =>
+        Object.values(E_WorldTransportChannel).forEach((channel) =>
             subscribeToTable(channel, callback, event),
         );
     }
 
     export function unsubscribeFromAllTables(): void {
-        Object.values(E_WorldTransportChannels).forEach(unsubscribeFromTable);
+        Object.values(E_WorldTransportChannel).forEach(unsubscribeFromTable);
     }
 
     export function disconnectRealtime(): void {
@@ -105,7 +105,7 @@ export namespace Supabase {
     }
 
     export function getActiveSubscriptions(): Map<
-        E_WorldTransportChannels,
+        E_WorldTransportChannel,
         RealtimeChannel
     > {
         return activeSubscriptions;

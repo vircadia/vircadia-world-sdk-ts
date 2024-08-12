@@ -1,13 +1,54 @@
 /* eslint-disable no-unused-vars */
-export enum E_PacketType {
-    AGENT_Join = 'agent-agent-join-packet',
+export enum E_AgentEvent {
     AGENT_Offer = 'agent-agent-offer-packet',
     AGENT_Answer = 'agent-agent-answer-packet',
     AGENT_ICE_Candidate = 'agent-agent-ice-candidate-packet',
-    AUDIO_Metadata = 'agent-agent-audio-metadata-packet',
+    AGENT_JOINED = 'agent-joined',
+    AGENT_LEFT = 'agent-left',
+    AGENT_METADATA_UPDATED = 'agent-metadata-updated',
 }
 
-export enum E_WorldTransportChannels {
+export enum E_AgentChannel {
+    AGENT_METADATA = 'agent_metadata',
+    SIGNALING_CHANNEL = 'signaling_channel',
+}
+
+export class AgentMetadata {
+    constructor(
+        public agentId: string,
+        public position: Vector3,
+        public orientation: Vector3,
+        public onlineAt: string
+    ) { }
+
+    static fromObject(obj: any): AgentMetadata {
+        if (typeof obj.agentId === 'string' && obj.position && obj.orientation && typeof obj.onlineAt === 'string') {
+            return new AgentMetadata(
+                obj.agentId,
+                Object.Vector3.fromObject(obj.position),
+                Object.Vector3.fromObject(obj.orientation),
+                obj.onlineAt
+            );
+        }
+        throw new Error('Invalid AgentMetadata data');
+    }
+}
+
+export namespace Object {
+    export class Vector3 {
+        constructor(public x: number = 0, public y: number = 0, public z: number = 0) { }
+
+        static fromObject(obj: any): Vector3 {
+            if (typeof obj.x === 'number' && typeof obj.y === 'number' && typeof obj.z === 'number') {
+                return new Vector3(obj.x, obj.y, obj.z);
+            }
+            throw new Error('Invalid Vector3 data');
+        }
+    }
+
+}
+
+export enum E_WorldTransportChannel {
     WORLD_METADATA = 'world_metadata',
     SCENES = 'scenes',
     CAMERAS = 'cameras',
@@ -37,12 +78,7 @@ export enum E_WorldTransportChannels {
     SPRITE_MANAGERS = 'sprite_managers',
 }
 
-export enum E_AgentChannels {
-    AGENT_METADATA = 'agent_metadata',
-    SIGNALING_CHANNEL = 'signaling_channel',
-}
-
-export enum E_HTTPRoutes {
+export enum E_HTTPRoute {
     API = '/api',
     GRAPHQL = '/graphql',
     STORAGE = '/storage',
@@ -51,7 +87,7 @@ export enum E_HTTPRoutes {
     DB = '/db',
 }
 
-export enum E_RequestType {
+export enum E_HTTPRequestPath {
     CONFIG_AND_STATUS = '/config-and-status',
 }
 
@@ -60,39 +96,3 @@ export interface I_REQUEST_ConfigAndStatusResponse {
     S3_STORAGE_URL: string | null;
 }
 
-interface I_BASE_Packet {
-    type: E_PacketType;
-    senderId: string | null;
-    receiverId?: string | null;
-}
-
-export class C_AUDIO_Metadata_Packet implements I_BASE_Packet {
-    type: E_PacketType.AUDIO_Metadata = E_PacketType.AUDIO_Metadata;
-    audioPosition: {
-        x: number;
-        y: number;
-        z: number;
-    } | null;
-
-    audioOrientation: {
-        x: number;
-        y: number;
-        z: number;
-    } | null;
-
-    senderId: string | null;
-
-    constructor(data: {
-        audioPosition: { x: number; y: number; z: number };
-        audioOrientation: {
-            x: number;
-            y: number;
-            z: number;
-        };
-        senderId: string | null;
-    }) {
-        this.audioPosition = data.audioPosition;
-        this.audioOrientation = data.audioOrientation;
-        this.senderId = data.senderId;
-    }
-}
