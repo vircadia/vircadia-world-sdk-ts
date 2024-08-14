@@ -10,5 +10,6 @@
         "module": "NodeNext"
     },
     "include": ["src/**/*", ".eslintrc.cjs"],
-    "exclude": ["node_modules"]
+    "exclude": ["node_modules"],
+    "types": ["babylonjs"]
 }

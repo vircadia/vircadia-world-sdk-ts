@@ -17,6 +17,7 @@
     "build": "run-s build:server build:client"
   },
   "dependencies": {
+    "babylonjs": "^7.20.1",
     "zod": "^3.23.8"
   },
   "alias": {

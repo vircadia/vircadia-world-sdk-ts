@@ -11,7 +11,7 @@ export namespace Media {
     let localAudioStream: MediaStream | null = null;
     let localVideoStream: MediaStream | null = null;
 
-    const activePanners: { [agentId: string]: { panner: PannerNode, intervalId: number } } = {};
+    const activePanners: { [agentId: string]: { panner: PannerNode, intervalId: NodeJS.Timeout } } = {};
 
     export const InitializeMediaModule = () => {
         audioContext = new AudioContext();
