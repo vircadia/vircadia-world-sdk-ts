@@ -1,6 +1,6 @@
 import { log } from '../modules/log.js';
 import { Agent } from './modules/agent/agent.js';
-import { Media } from './modules/agent/media.js';
+import { WebRTC_Media } from './modules/agent/agent_webRTC_media.js';
 
 export namespace Client {
     export const worldConnected = () => Agent.isConnectedToAnyWorld();
@@ -13,7 +13,7 @@ export namespace Client {
             // Initialize Agent and Media modules
             Agent.initialize(data.agentId);
             log('Initialized Agent module', 'info');
-            Media.InitializeMediaModule();
+            WebRTC_Media.InitializeMediaModule();
             log('Initialized Media module', 'info');
             log('Vircadia World initialized', 'success');
         };

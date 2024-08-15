@@ -1,11 +1,16 @@
+import { z } from 'zod';
+
 /* eslint-disable no-unused-vars */
 export enum E_AgentEvent {
-    AGENT_Offer = 'agent-agent-offer-packet',
-    AGENT_Answer = 'agent-agent-answer-packet',
-    AGENT_ICE_Candidate = 'agent-agent-ice-candidate-packet',
     AGENT_JOINED = 'agent-joined',
     AGENT_LEFT = 'agent-left',
     AGENT_METADATA_UPDATED = 'agent-metadata-updated',
+}
+
+export enum E_AgentSignal {
+    AGENT_Offer = 'agent-agent-offer-packet',
+    AGENT_Answer = 'agent-agent-answer-packet',
+    AGENT_ICE_Candidate = 'agent-agent-ice-candidate-packet',
 }
 
 export enum E_AgentChannel {
@@ -13,36 +18,62 @@ export enum E_AgentChannel {
     SIGNALING_CHANNEL = 'signaling_channel',
 }
 
-export class AgentMetadata {
-    constructor(
-        public agentId: string,
-        public position: Vector3,
-        public orientation: Vector3,
-        public onlineAt: string
-    ) { }
+const AgentMetadataSchema = z.object({
+    agentId: z.string(),
+    position: Primitive.Vector3Schema,
+    orientation: Primitive.Vector3Schema,
+    onlineAt: z.string(),
+});
 
-    static fromObject(obj: any): AgentMetadata {
-        if (typeof obj.agentId === 'string' && obj.position && obj.orientation && typeof obj.onlineAt === 'string') {
-            return new AgentMetadata(
-                obj.agentId,
-                Object.Vector3.fromObject(obj.position),
-                Object.Vector3.fromObject(obj.orientation),
-                obj.onlineAt
-            );
-        }
-        throw new Error('Invalid AgentMetadata data');
+export class AgentMetadata {
+    agentId: string;
+    position: Primitive.Vector3;
+    orientation: Primitive.Vector3;
+    onlineAt: string;
+
+    constructor(data: z.infer<typeof AgentMetadataSchema>) {
+        this.agentId = data.agentId;
+        this.position = new Primitive.Vector3(data.position.x, data.position.y, data.position.z);
+        this.orientation = new Primitive.Vector3(data.orientation.x, data.orientation.y, data.orientation.z);
+        this.onlineAt = data.onlineAt;
+    }
+
+    static parse(obj: {
+        agentId: string | any
+        position: { x: number; y: number; z: number } | any
+        orientation: { x: number; y: number; z: number } | any
+        onlineAt: string | any
+    }): AgentMetadata {
+        const parsedData = AgentMetadataSchema.parse(obj);
+        return new AgentMetadata(parsedData);
     }
 }
 
-export namespace Object {
-    export class Vector3 {
-        constructor(public x: number = 0, public y: number = 0, public z: number = 0) { }
+export namespace Primitive {
+    export const Vector3Schema = z.object({
+        x: z.number(),
+        y: z.number(),
+        z: z.number(),
+    });
 
-        static fromObject(obj: any): Vector3 {
-            if (typeof obj.x === 'number' && typeof obj.y === 'number' && typeof obj.z === 'number') {
-                return new Vector3(obj.x, obj.y, obj.z);
-            }
-            throw new Error('Invalid Vector3 data');
+    export class Vector3 {
+        public x: number;
+        public y: number;
+        public z: number;
+
+        constructor(public _x: number = 0, public _y: number = 0, public _z: number = 0) {
+            this.x = _x;
+            this.y = _y;
+            this.z = _z;
+        }
+
+        static parse(obj: {
+            x: number | any
+            y: number | any
+            z: number | any
+        }): Vector3 {
+            const parsedData = Vector3Schema.parse(obj);
+            return new Vector3(parsedData.x, parsedData.y, parsedData.z);
         }
     }
 
@@ -50,32 +81,7 @@ export namespace Object {
 
 export enum E_WorldTransportChannel {
     WORLD_METADATA = 'world_metadata',
-    SCENES = 'scenes',
-    CAMERAS = 'cameras',
-    LIGHTS = 'lights',
-    GEOMETRIES = 'geometries',
-    MATERIALS = 'materials',
-    MULTI_MATERIALS = 'multi_materials',
-    PARTICLE_SYSTEMS = 'particle_systems',
-    LENS_FLARE_SYSTEMS = 'lens_flare_systems',
-    SHADOW_GENERATORS = 'shadow_generators',
-    SKELETONS = 'skeletons',
-    MORPH_TARGET_MANAGERS = 'morph_target_managers',
-    MESHES = 'meshes',
-    TRANSFORM_NODES = 'transform_nodes',
-    SOUNDS = 'sounds',
-    ATTACHED_SOUNDS = 'attached_sounds',
-    ACTION_MANAGERS = 'action_managers',
-    LAYERS = 'layers',
-    TEXTURES = 'textures',
-    REFLECTION_PROBES = 'reflection_probes',
-    ANIMATIONS = 'animations',
-    ANIMATION_GROUPS = 'animation_groups',
-    ENVIRONMENT_TEXTURES = 'environment_textures',
-    EFFECT_LAYERS = 'effect_layers',
-    PROCEDURAL_TEXTURES = 'procedural_textures',
-    SPRITES = 'sprites',
-    SPRITE_MANAGERS = 'sprite_managers',
+    SCENE_DATA = 'scene_data',
 }
 
 export enum E_HTTPRoute {

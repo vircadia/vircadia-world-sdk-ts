@@ -1,244 +1,216 @@
-/* eslint-disable no-unused-vars */
+/* eslint-disable @typescript-eslint/no-throw-literal */
 import { log } from "../../../modules/log.js";
-import { Agent } from './agent.js';
 import { Supabase } from '../supabase/supabase.js';
-import { E_WorldTransportChannel } from "../../../routes/meta.js";
-
 import { Scene } from '@babylonjs/core/scene.js';
-import { Camera } from '@babylonjs/core/Cameras/camera.js';
-import { Light } from '@babylonjs/core/Lights/light.js';
-import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight.js';
-import { SpotLight } from '@babylonjs/core/Lights/spotLight.js';
-import { PointLight } from '@babylonjs/core/Lights/pointLight.js';
-import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight.js';
-import { ShadowLight } from '@babylonjs/core/Lights/shadowLight.js';
-import { Material } from '@babylonjs/core/Materials/material.js';
-import { MultiMaterial } from '@babylonjs/core/Materials/multiMaterial.js';
-import { ParticleSystem } from '@babylonjs/core/Particles/particleSystem.js';
-import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator.js';
-import { Skeleton } from '@babylonjs/core/Bones/skeleton.js';
-import { Mesh } from '@babylonjs/core/Meshes/mesh.js';
-import { TransformNode } from '@babylonjs/core/Meshes/transformNode.js';
-import { Sound } from '@babylonjs/core/Audio/sound.js';
-import { Texture } from '@babylonjs/core/Materials/Textures/texture.js';
-import { CubeTexture } from '@babylonjs/core/Materials/Textures/cubeTexture.js';
-import { ReflectionProbe } from '@babylonjs/core/Probes/reflectionProbe.js';
-import { Animation } from '@babylonjs/core/Animations/animation.js';
-import { AnimationGroup } from '@babylonjs/core/Animations/animationGroup.js';
-import { Node } from '@babylonjs/core/node.js';
+import { SceneSerializer } from '@babylonjs/core/Misc/sceneSerializer.js';
+import { E_WorldTransportChannel } from "../../../routes/meta.js";
 
 export namespace World_Babylon {
     const BABYLON_LOG_PREFIX = '[BABYLON]';
 
-    interface ObjectData {
+    interface WorldMetadata {
         id: string;
-        objectType: string;
-        data: any;
+        name: string;
+        description?: string;
+        version?: string;
+        author?: string;
+        created?: string;
+        updated?: string;
+        autoClear?: boolean;
+        clearColor?: { r: number; g: number; b: number };
+        ambientColor?: { r: number; g: number; b: number };
+        gravity?: { x: number; y: number; z: number };
+        activeCamera_?: string;
+        collisionsEnabled?: boolean;
+        physicsEnabled?: boolean;
+        physicsGravity?: { x: number; y: number; z: number };
+        physicsEngine?: 'oimo' | 'cannon';
+        autoAnimate?: boolean;
+        autoAnimateFrom?: number;
+        autoAnimateTo?: number;
+        autoAnimateLoop?: boolean;
+        autoAnimateSpeed?: number;
     }
 
-    interface ObjectHandler<T extends Node> {
-        serialize: (obj: T) => any;
-        deserialize: (data: any, scene: Scene) => T;
-        update: (existing: T, updated: T) => void;
-        channel: E_WorldTransportChannel;
+    interface WorldData {
+        id: string;
+        name: string;
+        description: string;
+        metadata: WorldMetadata;
+        scene_data: any;
+        version: string;
+        created_by: string;
+        created_at: number;
+        updated_by: string;
+        updated_at: number;
     }
 
-    const handlers: { [key: string]: ObjectHandler<any> } = {
-        camera: {
-            serialize: (cam: Camera) => cam.serialize(),
-            deserialize: (data: any, scene: Scene) => Camera.Parse(data, scene),
-            update: (existing: Camera, updated: Camera) => updated,
-            channel: E_WorldTransportChannel.CAMERAS
-        },
-        light: {
-            serialize: (l: Light) => l.serialize(),
-            deserialize: (data: any, scene: Scene) => Light.Parse(data, scene),
-            update: (existing: Light, updated: Light) => updated,
-            channel: E_WorldTransportChannel.LIGHTS
-        },
-        mesh: {
-            serialize: (m: Mesh) => m.serialize(),
-            deserialize: (data: any, scene: Scene) => Mesh.Parse(data, scene, ""),
-            update: (existing: Mesh, updated: Mesh) => updated,
-            channel: E_WorldTransportChannel.MESHES
-        },
-        transformnode: {
-            serialize: (node: TransformNode) => node.serialize(),
-            deserialize: (data: any, scene: Scene) => TransformNode.Parse(data, scene, ""),
-            update: (existing: TransformNode, updated: TransformNode) => updated,
-            channel: E_WorldTransportChannel.TRANSFORM_NODES
-        },
-        material: {
-            serialize: (mat: Material) => mat.serialize(),
-            deserialize: (data: any, scene: Scene) => Material.Parse(data, scene, ""),
-            update: (existing: Material, updated: Material) => updated,
-            channel: E_WorldTransportChannel.MATERIALS
-        },
-        multimaterial: {
-            serialize: (mmat: MultiMaterial) => mmat.serialize(),
-            deserialize: (data: any, scene: Scene) => MultiMaterial.ParseMultiMaterial(data, scene),
-            update: (existing: MultiMaterial, updated: MultiMaterial) => updated,
-            channel: E_WorldTransportChannel.MULTI_MATERIALS
-        },
-        texture: {
-            serialize: (tex: Texture | CubeTexture) => (tex as Texture).serialize(),
-            deserialize: (data: any, scene: Scene) => Texture.Parse(data, scene, ""),
-            update: (existing: Texture, updated: Texture) => updated,
-            channel: E_WorldTransportChannel.TEXTURES
-        },
-        particlesystem: {
-            serialize: (system: ParticleSystem) => system.serialize(),
-            deserialize: (data: any, scene: Scene) => ParticleSystem.Parse(data, scene, ""),
-            update: (existing: ParticleSystem, updated: ParticleSystem) => updated,
-            channel: E_WorldTransportChannel.PARTICLE_SYSTEMS
-        },
-        shadowgenerator: {
-            serialize: (gen: ShadowGenerator) => gen.serialize(),
-            deserialize: (data: any, scene: Scene) => ShadowGenerator.Parse(data, scene),
-            update: (existing: ShadowGenerator, updated: ShadowGenerator) => updated,
-            channel: E_WorldTransportChannel.SHADOW_GENERATORS
-        },
-        skeleton: {
-            serialize: (skel: Skeleton) => skel.serialize(),
-            deserialize: (data: any, scene: Scene) => Skeleton.Parse(data, scene),
-            update: (existing: Skeleton, updated: Skeleton) => updated,
-            channel: E_WorldTransportChannel.SKELETONS
-        },
-        animation: {
-            serialize: (anim: Animation) => anim.serialize(),
-            deserialize: (data: any) => Animation.Parse(data),
-            update: (existing: Animation, updated: Animation) => updated,
-            channel: E_WorldTransportChannel.ANIMATIONS
-        },
-        animationgroup: {
-            serialize: (group: AnimationGroup) => group.serialize(),
-            deserialize: (data: any, scene: Scene) => AnimationGroup.Parse(data, scene),
-            update: (existing: AnimationGroup, updated: AnimationGroup) => updated,
-            channel: E_WorldTransportChannel.ANIMATION_GROUPS
-        },
-        sound: {
-            serialize: (snd: Sound) => snd.serialize(),
-            deserialize: (data: any, scene: Scene) => Sound.Parse(data, scene, ""),
-            update: (existing: Sound, updated: Sound) => updated,
-            channel: E_WorldTransportChannel.SOUNDS
-        },
-        reflectionprobe: {
-            serialize: (probe: ReflectionProbe) => probe.serialize(),
-            deserialize: (data: any, scene: Scene) => ReflectionProbe.Parse(data, scene, ""),
-            update: (existing: ReflectionProbe, updated: ReflectionProbe) => updated,
-            channel: E_WorldTransportChannel.REFLECTION_PROBES
-        },
-    };
+    interface WorldCallbacks {
+        onWorldCreated?: (worldId: string, metadata: WorldMetadata) => void;
+        onWorldDeleted?: (worldId: string) => void;
+        onWorldMetadataUpdated?: (worldId: string, oldMetadata: WorldMetadata, newMetadata: WorldMetadata) => void;
+        onWorldSceneDataUpdated?: (worldId: string, sceneData: any) => void;
+    }
 
-    export const sendObjectUpdate = async (worldId: string, object: Node) => {
-        const world = Agent.worldConnections[worldId];
-        if (!world) {
-            log(`${BABYLON_LOG_PREFIX} World ${worldId} not connected`, 'error');
-            return;
-        }
-
-        const handler = handlers[object.getClassName().toLowerCase()];
-        if (!handler) {
-            log(`${BABYLON_LOG_PREFIX} Unsupported object type: ${object.getClassName()}`, 'error');
-            return;
-        }
-
-        const serializedData = handler.serialize(object);
-
+    export const createWorld = async (metadata: Omit<WorldMetadata, 'id'>, scene: Scene): Promise<string> => {
         try {
             const supabaseClient = Supabase.getSupabaseClient();
             if (!supabaseClient) {
                 throw new Error('Supabase client not initialized');
             }
 
-            await supabaseClient
-                .from(handler.channel)
-                .upsert({ id: object.id, data: serializedData }, { onConflict: 'id' });
+            const sceneData = SceneSerializer.Serialize(scene);
+            const { data, error } = await supabaseClient
+                .from('worlds')
+                .insert({
+                    ...metadata,
+                    scene_data: sceneData
+                })
+                .select('id')
+                .single();
 
-            log(`${BABYLON_LOG_PREFIX} Sent update for object ${object.id} in world ${worldId}`, 'info');
+            if (error) {
+                throw error;
+            }
+
+            log(`${BABYLON_LOG_PREFIX} Created new world with ID: ${data.id}`, 'info');
+            return data.id;
         } catch (error) {
-            log(`${BABYLON_LOG_PREFIX} Failed to send update for object ${object.id} in world ${worldId}: ${error}`, 'error');
+            log(`${BABYLON_LOG_PREFIX} Failed to create world: ${error}`, 'error');
+            throw error;
         }
     };
 
-    interface ObjectSyncCallbacks {
-        onAdd?: (object: Node) => void;
-        onUpdate?: (existingObjectId: string, updatedObject: Node) => void;
-        onRemove?: (objectId: string) => void;
-    }
+    export const deleteWorld = async (worldId: string): Promise<void> => {
+        try {
+            const supabaseClient = Supabase.getSupabaseClient();
+            if (!supabaseClient) {
+                throw new Error('Supabase client not initialized');
+            }
 
-    export const setupObjectSync = (worldId: string, scene: Scene, callbacks: ObjectSyncCallbacks = {}) => {
-        const world = Agent.worldConnections[worldId];
-        if (!world) {
-            log(`${BABYLON_LOG_PREFIX} World ${worldId} not connected`, 'error');
+            const { error } = await supabaseClient
+                .from('worlds')
+                .delete()
+                .eq('id', worldId);
+
+            if (error) {
+                throw error;
+            }
+
+            log(`${BABYLON_LOG_PREFIX} Deleted world with ID: ${worldId}`, 'info');
+        } catch (error) {
+            log(`${BABYLON_LOG_PREFIX} Failed to delete world: ${error}`, 'error');
+            throw error;
+        }
+    };
+
+    export const updateWorldMetadata = async (worldId: string, metadata: Partial<WorldMetadata>): Promise<void> => {
+        try {
+            const supabaseClient = Supabase.getSupabaseClient();
+            if (!supabaseClient) {
+                throw new Error('Supabase client not initialized');
+            }
+
+            const { error } = await supabaseClient
+                .from('worlds')
+                .update(metadata)
+                .eq('id', worldId);
+
+            if (error) {
+                throw error;
+            }
+
+            log(`${BABYLON_LOG_PREFIX} Updated metadata for world with ID: ${worldId}`, 'info');
+        } catch (error) {
+            log(`${BABYLON_LOG_PREFIX} Failed to update world metadata: ${error}`, 'error');
+            throw error;
+        }
+    };
+
+    export const updateWorldSceneData = async (worldId: string, scene: Scene): Promise<void> => {
+        try {
+            const supabaseClient = Supabase.getSupabaseClient();
+            if (!supabaseClient) {
+                throw new Error('Supabase client not initialized');
+            }
+
+            const sceneData = SceneSerializer.Serialize(scene);
+            const { error } = await supabaseClient
+                .from('worlds')
+                .update({ scene_data: sceneData })
+                .eq('id', worldId);
+
+            if (error) {
+                throw error;
+            }
+
+            log(`${BABYLON_LOG_PREFIX} Updated scene data for world with ID: ${worldId}`, 'info');
+        } catch (error) {
+            log(`${BABYLON_LOG_PREFIX} Failed to update world scene data: ${error}`, 'error');
+            throw error;
+        }
+    };
+
+    export const setupWorldSync = (callbacks: WorldCallbacks = {}) => {
+        const supabaseClient = Supabase.getSupabaseClient();
+        if (!supabaseClient) {
+            log(`${BABYLON_LOG_PREFIX} Supabase client not initialized`, 'error');
             return;
         }
 
-        Object.values(handlers).forEach((handler) => {
-            Supabase.subscribeToTable(
-                handler.channel,
-                (payload) => handleObjectSync(worldId, scene, payload, handler, callbacks)
-            );
-        });
+        // Local cache to store world metadata
+        const worldMetadataCache: { [worldId: string]: WorldMetadata } = {};
 
-        log(`${BABYLON_LOG_PREFIX} Set up object sync for world ${worldId}`, 'info');
-    };
+        supabaseClient
+            .channel(E_WorldTransportChannel.WORLD_METADATA)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'worlds' }, (payload) => {
+                switch (payload.eventType) {
+                    case 'INSERT': {
+                        const newWorld = payload.new as WorldMetadata;
+                        worldMetadataCache[newWorld.id] = newWorld;
+                        if (callbacks.onWorldCreated) {
+                            callbacks.onWorldCreated(newWorld.id, newWorld);
+                        }
+                        break;
+                    }
+                    case 'DELETE': {
+                        const deletedWorldId = payload.old.id;
+                        if (callbacks.onWorldDeleted) {
+                            callbacks.onWorldDeleted(deletedWorldId);
+                        }
+                        delete worldMetadataCache[deletedWorldId];
+                        break;
+                    }
+                    case 'UPDATE': {
+                        const oldData = payload.old as WorldData;
+                        const newData = payload.new as WorldData;
+                        const worldId = newData.id;
 
-    const handleObjectSync = (
-        worldId: string,
-        scene: Scene,
-        payload: any,
-        handler: ObjectHandler<any>,
-        callbacks: ObjectSyncCallbacks
-    ) => {
-        const { eventType } = payload;
-        const objectData = payload.new || payload.old;
+                        const oldMetadata = worldMetadataCache[worldId] || {};
+                        const newMetadata = newData.metadata as WorldMetadata;
 
-        switch (eventType) {
-            case "INSERT":
-            case "UPDATE":
-                handleObjectAddOrUpdate(worldId, scene, objectData, handler, callbacks);
-                break;
-            case "DELETE":
-                handleObjectRemove(worldId, objectData.id, callbacks);
-                break;
-            default:
-                log(`${BABYLON_LOG_PREFIX} Unknown event type: ${eventType}`, 'warn');
-        }
-    };
+                        // Check if metadata actually changed
+                        const metadataChanged = Object.keys(newMetadata).some((key) =>
+                            oldMetadata[key as keyof WorldMetadata] !== newMetadata[key as keyof WorldMetadata]
+                        );
 
-    const handleObjectAddOrUpdate = (
-        worldId: string,
-        scene: Scene,
-        objectData: ObjectData,
-        handler: ObjectHandler<any>,
-        callbacks: ObjectSyncCallbacks
-    ) => {
-        const updatedObject = handler.deserialize(objectData.data, scene);
+                        if (metadataChanged && callbacks.onWorldMetadataUpdated) {
+                            callbacks.onWorldMetadataUpdated(worldId, oldMetadata, newMetadata);
+                        }
 
-        if (scene.getNodeByID(objectData.id)) {
-            // Update existing object
-            if (callbacks.onUpdate) {
-                callbacks.onUpdate(objectData.id, updatedObject);
-            }
-            log(`${BABYLON_LOG_PREFIX} Updated object ${objectData.id} in world ${worldId}`, 'info');
-        } else {
-            // Add new object
-            if (callbacks.onAdd) {
-                callbacks.onAdd(updatedObject);
-            }
-            log(`${BABYLON_LOG_PREFIX} Added new object ${objectData.id} to world ${worldId}`, 'info');
-        }
-    };
+                        // ... rest of the update case ...
 
-    const handleObjectRemove = (
-        worldId: string,
-        objectId: string,
-        callbacks: ObjectSyncCallbacks
-    ) => {
-        if (callbacks.onRemove) {
-            callbacks.onRemove(objectId);
-        }
-        log(`${BABYLON_LOG_PREFIX} Removed object ${objectId} from world ${worldId}`, 'info');
+                        // Update the cache
+                        worldMetadataCache[worldId] = newMetadata;
+                        break;
+                    }
+                    default:
+                        log(`${BABYLON_LOG_PREFIX} Unhandled event type: ${payload.eventType}`, 'warn');
+                        break;
+                }
+            })
+            .subscribe();
+
+        log(`${BABYLON_LOG_PREFIX} Set up world sync`, 'info');
     };
 }
