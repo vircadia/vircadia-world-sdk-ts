@@ -1,6 +1,6 @@
 import { Supabase } from '../supabase/supabase.js';
 import { SupabaseClient, REALTIME_PRESENCE_LISTEN_EVENTS, REALTIME_CHANNEL_STATES, REALTIME_LISTEN_TYPES, REALTIME_SUBSCRIBE_STATES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
-import { E_AgentChannel, E_AgentEvent, AgentMetadata, Primitive, E_HTTPRequestPath, I_REQUEST_ConfigAndStatusResponse, E_AgentSignal } from '../../../routes/meta.js';
+import { Agent as AgentMeta, Primitive, E_HTTPRequestPath, I_REQUEST_ConfigAndStatusResponse } from '../../../routes/meta.js';
 import { log } from '../../../modules/log.js';
 import { WebRTC } from './agent_webRTC.js';
 import { WebRTC_Media } from './agent_webRTC_media.js';
@@ -15,7 +15,7 @@ export namespace Agent {
         rtcConnection: RTCPeerConnection | null;
         dataChannel: RTCDataChannel | null;
         mediaStream: MediaStream | null;
-        metadata: AgentMetadata | null;
+        metadata: Agent.Metadata | null;
         panner: PannerNode | null;
         audioUpdateInterval: ReturnType<typeof setInterval> | null;
     }
@@ -73,7 +73,7 @@ export namespace Agent {
             }
 
             try {
-                const presenceChannel = world.supabaseClient?.channel(E_AgentChannel.AGENT_METADATA);
+                const presenceChannel = world.supabaseClient?.channel(AgentMeta.E_ChannelType.AGENT_METADATA);
                 if (presenceChannel?.state === 'joined') {
                     try {
                         const presenceData: AgentPresenceState = {
@@ -174,17 +174,17 @@ export namespace Agent {
         }
 
         try {
-            world.supabaseClient?.channel(E_AgentChannel.AGENT_METADATA)
+            world.supabaseClient?.channel(AgentMeta.E_ChannelType.AGENT_METADATA)
                 .on('presence', { event: 'sync' }, () => {
-                    const presenceChannel = world.supabaseClient?.channel(E_AgentChannel.AGENT_METADATA);
+                    const presenceChannel = world.supabaseClient?.channel(AgentMeta.E_ChannelType.AGENT_METADATA);
                     const state = presenceChannel?.presenceState() ?? {};
                     handleAgentMetadataSync(worldId, state as unknown as Record<string, AgentPresenceState[]>);
                 })
                 .subscribe();
-            world.supabaseClient?.channel(E_AgentChannel.SIGNALING_CHANNEL)
-                .on(REALTIME_LISTEN_TYPES.BROADCAST, { event: E_AgentSignal.AGENT_Offer }, (payload) => handleWebRTCOffer(worldId, payload.payload))
-                .on(REALTIME_LISTEN_TYPES.BROADCAST, { event: E_AgentSignal.AGENT_Answer }, (payload) => handleWebRTCAnswer(worldId, payload.payload))
-                .on(REALTIME_LISTEN_TYPES.BROADCAST, { event: E_AgentSignal.AGENT_ICE_Candidate }, (payload) => handleWebRTCIceCandidate(worldId, payload.payload))
+            world.supabaseClient?.channel(AgentMeta.E_ChannelType.SIGNALING_CHANNEL)
+                .on(REALTIME_LISTEN_TYPES.BROADCAST, { event: AgentMeta.E_SignalType.AGENT_Offer }, (payload) => handleWebRTCOffer(worldId, payload.payload))
+                .on(REALTIME_LISTEN_TYPES.BROADCAST, { event: AgentMeta.E_SignalType.AGENT_Answer }, (payload) => handleWebRTCAnswer(worldId, payload.payload))
+                .on(REALTIME_LISTEN_TYPES.BROADCAST, { event: AgentMeta.E_SignalType.AGENT_ICE_Candidate }, (payload) => handleWebRTCIceCandidate(worldId, payload.payload))
                 .subscribe();
             log(`${AGENT_LOG_PREFIX} Successfully connected to Supabase Realtime for world ${worldId}`, 'info');
 
@@ -197,7 +197,7 @@ export namespace Agent {
         }
     };
 
-    export const createAgent = async (worldId: string, agentId: string, metadata: AgentMetadata) => {
+    export const createAgent = async (worldId: string, agentId: string, metadata: AgentMeta.Metadata) => {
         const world = worldConnections[worldId];
         if (!world) {
             return;
@@ -218,7 +218,7 @@ export namespace Agent {
         WebRTC.setupRTCEventListeners(
             rtcConnection,
             (candidate) => sendWebRTCSignal(worldId, {
-                type: E_AgentSignal.AGENT_ICE_Candidate,
+                type: AgentMeta.E_SignalType.AGENT_ICE_Candidate,
                 payload: candidate,
                 targetAgentId: agentId,
             }),
@@ -287,7 +287,7 @@ export namespace Agent {
             if (agentId !== Self.id) {
                 try {
                     const agentData = state[agentId][0];
-                    const metadata: AgentMetadata = {
+                    const metadata: AgentMeta.Metadata = {
                         agentId: agentData.agent_id,
                         position: agentData.position,
                         orientation: agentData.orientation,
@@ -308,7 +308,7 @@ export namespace Agent {
         log(`${AGENT_LOG_PREFIX} Updated agent list for world ${worldId}: ${currentAgents}`, 'info');
     };
 
-    const updateAgentMetadata = (worldId: string, agentId: string, metadata: AgentMetadata) => {
+    const updateAgentMetadata = (worldId: string, agentId: string, metadata: AgentMeta.Metadata) => {
         const world = worldConnections[worldId];
         if (!world) {
             return;
@@ -348,7 +348,7 @@ export namespace Agent {
             try {
                 const offer = await WebRTC.createOffer(connection.rtcConnection);
                 await sendWebRTCSignal(worldId, {
-                    type: E_AgentSignal.AGENT_Offer,
+                    type: AgentMeta.E_SignalType.AGENT_Offer,
                     payload: offer,
                     targetAgentId: agentId,
                 });
@@ -370,7 +370,7 @@ export namespace Agent {
             try {
                 const answer = await WebRTC.handleOffer(connection.rtcConnection, offer);
                 await sendWebRTCSignal(worldId, {
-                    type: E_AgentSignal.AGENT_Answer,
+                    type: AgentMeta.E_SignalType.AGENT_Answer,
                     payload: answer,
                     targetAgentId: fromAgentId,
                 });
@@ -415,7 +415,7 @@ export namespace Agent {
     };
 
     const sendWebRTCSignal = async (worldId: string, signal: {
-        type: E_AgentSignal;
+        type: AgentMeta.E_SignalType;
         payload: RTCSessionDescriptionInit | RTCIceCandidateInit | RTCIceCandidate;
         targetAgentId: string;
     }) => {
@@ -425,7 +425,7 @@ export namespace Agent {
         }
 
         try {
-            await world.supabaseClient?.channel(E_AgentChannel.SIGNALING_CHANNEL)
+            await world.supabaseClient?.channel(AgentMeta.E_ChannelType.SIGNALING_CHANNEL)
                 .send({
                     type: REALTIME_LISTEN_TYPES.BROADCAST,
                     event: signal.type,
