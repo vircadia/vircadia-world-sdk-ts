@@ -1,17 +1,16 @@
 {
-  "name": "vircadia-world-client",
-  "private": false,
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.45.1",
-    "axios": "^1.7.2",
-    "socket.io-client": "^4.7.5"
-  },
-  "publishConfig": {
-    "access": "restricted"
-  }
+    "name": "vircadia-world-client",
+    "private": false,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "^2.45.1",
+        "axios": "^1.7.2"
+    },
+    "publishConfig": {
+        "access": "restricted"
+    }
 }

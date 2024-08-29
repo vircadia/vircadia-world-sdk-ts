@@ -126,6 +126,26 @@ export class Supabase {
         }
     }
 
+    private async resetDatabase(): Promise<void> {
+        const migrationFile = path.join(this.appDir, 'migrations', 'world_glTF.sql');
+
+        if (!fs.existsSync(migrationFile)) {
+            throw new SupabaseError(`Migration file not found: ${migrationFile}`);
+        }
+
+        log('Applying migration...', 'info');
+        try {
+            await this.runSupabaseCommand({
+                command: `db reset`,
+                appendWorkdir: true,
+            });
+            log('Migration applied successfully.', 'success');
+        } catch (error) {
+            log(`Failed to apply migration: ${error.message}`, 'error');
+            throw new SupabaseError('Failed to apply migration');
+        }
+    }
+
     private async startSupabase(forceRestart: boolean): Promise<void> {
         if (forceRestart) {
             log('Stopping Supabase services for a forced restart...', 'info');
