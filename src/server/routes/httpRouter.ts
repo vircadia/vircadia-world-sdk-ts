@@ -3,8 +3,7 @@ import {
     E_HTTPRequestPath,
     I_REQUEST_ConfigAndStatusResponse,
     E_HTTPRoute,
-} from './meta.js';
-import { Supabase } from '../server/modules/supabase/supabase.js';
+} from '../../meta.js';
 
 // Create a router instance
 const router = ExpressRouter();

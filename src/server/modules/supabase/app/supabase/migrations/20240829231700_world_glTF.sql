@@ -8,8 +8,10 @@ CREATE TABLE worlds_gltf (
     version TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    asset JSONB NOT NULL,
-    scene UUID,
+    -- metadata is the glTF metadata
+    metadata JSONB NOT NULL,
+    -- default_scene is the "scene" that is loaded when the world is loaded
+    default_scene UUID,
     extensions JSONB,
     extras JSONB
 );

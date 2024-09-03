@@ -6,7 +6,7 @@ import {
     REALTIME_LISTEN_TYPES,
     REALTIME_POSTGRES_CHANGES_LISTEN_EVENT,
 } from '@supabase/supabase-js';
-import { E_WorldTransportChannel } from '../../../routes/meta.js';
+import { E_WorldTransportChannel } from '../../../meta.js';
 import { log } from '../../../modules/log.js';
 
 export namespace Supabase {

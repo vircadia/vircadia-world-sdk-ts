@@ -32,6 +32,42 @@ export namespace Primitive {
 
 }
 
+export namespace World {
+    export interface Metadata {
+        id: string;
+        name: string;
+        description?: string;
+        version?: string;
+        author?: string;
+        autoClear?: boolean;
+        clearColor?: { r: number; g: number; b: number };
+        ambientColor?: { r: number; g: number; b: number };
+        gravity?: { x: number; y: number; z: number };
+        activeCamera_?: string;
+        collisionsEnabled?: boolean;
+        physicsEnabled?: boolean;
+        physicsGravity?: { x: number; y: number; z: number };
+        physicsEngine?: 'oimo' | 'cannon';
+        autoAnimate?: boolean;
+        autoAnimateFrom?: number;
+        autoAnimateTo?: number;
+        autoAnimateLoop?: boolean;
+        autoAnimateSpeed?: number;
+    }
+
+    export interface Data {
+        id: string;
+        name: string;
+        version: string;
+        created_at: string;
+        updated_at: string;
+        metadata: Metadata;
+        default_scene: string | null;
+        extensions?: any;
+        extras?: any;
+    }
+}
+
 export namespace Agent {
     export enum E_ChannelEvent {
         AGENT_JOINED = 'agent-joined',

@@ -3,68 +3,33 @@ import { log } from "../../../modules/log.js";
 import { Supabase } from '../supabase/supabase.js';
 import { Scene } from '@babylonjs/core/scene.js';
 import { SceneSerializer } from '@babylonjs/core/Misc/sceneSerializer.js';
-import { E_WorldTransportChannel } from "../../../routes/meta.js";
+import { E_WorldTransportChannel, World } from "../../../meta.js";
 
 export namespace World_Babylon {
     const BABYLON_LOG_PREFIX = '[BABYLON]';
 
-    interface WorldMetadata {
-        id: string;
-        name: string;
-        description?: string;
-        version?: string;
-        author?: string;
-        created?: string;
-        updated?: string;
-        autoClear?: boolean;
-        clearColor?: { r: number; g: number; b: number };
-        ambientColor?: { r: number; g: number; b: number };
-        gravity?: { x: number; y: number; z: number };
-        activeCamera_?: string;
-        collisionsEnabled?: boolean;
-        physicsEnabled?: boolean;
-        physicsGravity?: { x: number; y: number; z: number };
-        physicsEngine?: 'oimo' | 'cannon';
-        autoAnimate?: boolean;
-        autoAnimateFrom?: number;
-        autoAnimateTo?: number;
-        autoAnimateLoop?: boolean;
-        autoAnimateSpeed?: number;
-    }
-
-    interface WorldData {
-        id: string;
-        name: string;
-        description: string;
-        metadata: WorldMetadata;
-        scene_data: any;
-        version: string;
-        created_by: string;
-        created_at: number;
-        updated_by: string;
-        updated_at: number;
-    }
-
     interface WorldCallbacks {
-        onWorldCreated?: (worldId: string, metadata: WorldMetadata) => void;
+        onWorldCreated?: (worldId: string, metadata: World.Metadata) => void;
         onWorldDeleted?: (worldId: string) => void;
-        onWorldMetadataUpdated?: (worldId: string, oldMetadata: WorldMetadata, newMetadata: WorldMetadata) => void;
-        onWorldSceneDataUpdated?: (worldId: string, sceneData: any) => void;
+        onWorldMetadataUpdated?: (worldId: string, oldMetadata: World.Metadata, newMetadata: World.Metadata) => void;
     }
 
-    export const createWorld = async (metadata: Omit<WorldMetadata, 'id'>, scene: Scene): Promise<string> => {
+    export const createWorld = async (metadata: Omit<World.Metadata, 'id'>, scene: Scene): Promise<string> => {
         try {
             const supabaseClient = Supabase.getSupabaseClient();
             if (!supabaseClient) {
                 throw new Error('Supabase client not initialized');
             }
 
-            const sceneData = SceneSerializer.Serialize(scene);
             const { data, error } = await supabaseClient
-                .from('worlds')
+                .from('worlds_gltf')
                 .insert({
-                    ...metadata,
-                    scene_data: sceneData
+                    name: metadata.name,
+                    version: metadata.version || '1.0',
+                    asset: {}, // You might want to define this based on your needs
+                    extras: {
+                        metadata
+                    }
                 })
                 .select('id')
                 .single();
@@ -72,6 +37,9 @@ export namespace World_Babylon {
             if (error) {
                 throw error;
             }
+
+            // Now create related entities (scenes, nodes, etc.) based on the Babylon.js scene
+            await createSceneEntities(data.id, scene);
 
             log(`${BABYLON_LOG_PREFIX} Created new world with ID: ${data.id}`, 'info');
             return data.id;
@@ -89,7 +57,7 @@ export namespace World_Babylon {
             }
 
             const { error } = await supabaseClient
-                .from('worlds')
+                .from('worlds_gltf')
                 .delete()
                 .eq('id', worldId);
 
@@ -104,7 +72,7 @@ export namespace World_Babylon {
         }
     };
 
-    export const updateWorldMetadata = async (worldId: string, metadata: Partial<WorldMetadata>): Promise<void> => {
+    export const updateWorldMetadata = async (worldId: string, metadata: Partial<World.Metadata>): Promise<void> => {
         try {
             const supabaseClient = Supabase.getSupabaseClient();
             if (!supabaseClient) {
@@ -112,8 +80,12 @@ export namespace World_Babylon {
             }
 
             const { error } = await supabaseClient
-                .from('worlds')
-                .update(metadata)
+                .from('worlds_gltf')
+                .update({
+                    extras: {
+                        metadata
+                    }
+                })
                 .eq('id', worldId);
 
             if (error) {
@@ -127,28 +99,68 @@ export namespace World_Babylon {
         }
     };
 
-    export const updateWorldSceneData = async (worldId: string, scene: Scene): Promise<void> => {
+    // New functions to handle individual entity updates
+
+    export const updateSceneEntity = async (worldId: string, sceneData: any): Promise<void> => {
         try {
             const supabaseClient = Supabase.getSupabaseClient();
             if (!supabaseClient) {
                 throw new Error('Supabase client not initialized');
             }
 
-            const sceneData = SceneSerializer.Serialize(scene);
             const { error } = await supabaseClient
-                .from('worlds')
-                .update({ scene_data: sceneData })
-                .eq('id', worldId);
+                .from('scenes')
+                .upsert({
+                    gltf_asset_id: worldId,
+                    ...sceneData
+                })
+                .eq('gltf_asset_id', worldId);
 
             if (error) {
                 throw error;
             }
 
-            log(`${BABYLON_LOG_PREFIX} Updated scene data for world with ID: ${worldId}`, 'info');
+            log(`${BABYLON_LOG_PREFIX} Updated scene for world with ID: ${worldId}`, 'info');
         } catch (error) {
-            log(`${BABYLON_LOG_PREFIX} Failed to update world scene data: ${error}`, 'error');
+            log(`${BABYLON_LOG_PREFIX} Failed to update scene: ${error}`, 'error');
             throw error;
         }
+    };
+
+    // Similar functions for other entities (nodes, meshes, materials, etc.)
+    // Example for nodes:
+    export const updateNodeEntity = async (worldId: string, nodeId: string, nodeData: any): Promise<void> => {
+        try {
+            const supabaseClient = Supabase.getSupabaseClient();
+            if (!supabaseClient) {
+                throw new Error('Supabase client not initialized');
+            }
+
+            const { error } = await supabaseClient
+                .from('nodes')
+                .upsert({
+                    id: nodeId,
+                    gltf_asset_id: worldId,
+                    ...nodeData
+                });
+
+            if (error) {
+                throw error;
+            }
+
+            log(`${BABYLON_LOG_PREFIX} Updated node for world with ID: ${worldId}`, 'info');
+        } catch (error) {
+            log(`${BABYLON_LOG_PREFIX} Failed to update node: ${error}`, 'error');
+            throw error;
+        }
+    };
+
+    // ... implement similar functions for other entities ...
+
+    // Helper function to create all related entities for a new world
+    const createSceneEntities = async (worldId: string, scene: Scene): Promise<void> => {
+        // Implement the logic to create scenes, nodes, meshes, etc. based on the Babylon.js scene
+        // This will involve multiple inserts into different tables
     };
 
     export const setupWorldSync = (callbacks: WorldCallbacks = {}) => {
@@ -159,7 +171,7 @@ export namespace World_Babylon {
         }
 
         // Local cache to store world metadata
-        const worldMetadataCache: { [worldId: string]: WorldMetadata } = {};
+        const worldMetadataCache: { [worldId: string]: World.Metadata } = {};
 
         supabaseClient
             .channel(E_WorldTransportChannel.WORLD_METADATA)
@@ -191,7 +203,7 @@ export namespace World_Babylon {
 
                         // Check if metadata actually changed
                         const metadataChanged = Object.keys(newMetadata).some((key) =>
-                            oldMetadata[key as keyof WorldMetadata] !== newMetadata[key as keyof WorldMetadata]
+                            oldMetadata[key as keyof World.Metadata] !== newMetadata[key as keyof World.Metadata]
                         );
 
                         if (metadataChanged && callbacks.onWorldMetadataUpdated) {
@@ -213,4 +225,42 @@ export namespace World_Babylon {
 
         log(`${BABYLON_LOG_PREFIX} Set up world sync`, 'info');
     };
+
+    export namespace Script {
+        export interface Script {
+            data: string;
+        }
+
+        export const currentScripts: {
+            [worldId: string]: {
+                [scriptId: string]: Script
+            }
+        } = {};
+
+        export const get = (worldId: string, scriptId: string): Script | null => {
+            return currentScripts[worldId]?.[scriptId] || null;
+        };
+
+        export const set = (worldId: string, scriptId: string, script: Script): void => {
+            currentScripts[worldId] = currentScripts[worldId] || {};
+            currentScripts[worldId][scriptId] = script;
+        };
+
+        export const delete = (worldId: string, scriptId: string): void => {
+            delete currentScripts[worldId]?.[scriptId];
+        };
+
+        export const list = (worldId: string): Script[] => {
+            return Object.values(currentScripts[worldId] || {});
+        };
+
+        export const clear = (worldId: string): void => {
+            currentScripts[worldId] = {};
+        };
+
+        export const update = (worldId: string, scriptId: string, script: Script): void => {
+            currentScripts[worldId] = currentScripts[worldId] || {};
+            currentScripts[worldId][scriptId] = script;
+        };
+    }
 }

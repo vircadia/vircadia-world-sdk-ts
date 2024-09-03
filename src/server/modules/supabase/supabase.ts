@@ -4,7 +4,7 @@ import * as execa from 'execa';
 import express from 'express';
 import { log } from '../../../modules/log.js';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { E_HTTPRoute } from '../../../routes/meta.js';
+import { E_HTTPRoute } from '../../../meta.js';
 
 const CONFIG_TOML_FILE = 'config.toml';
 
