@@ -6,12 +6,12 @@ import {
     REALTIME_LISTEN_TYPES,
     REALTIME_POSTGRES_CHANGES_LISTEN_EVENT,
 } from '@supabase/supabase-js';
-import { E_WorldTransportChannel } from '../../../meta.js';
+import { Agent } from '../../../../meta.js';
 import { log } from '../../../modules/log.js';
 
 export namespace Supabase {
     let supabaseClient: SupabaseClient | null = null;
-    const activeSubscriptions: Map<E_WorldTransportChannel, RealtimeChannel> =
+    const activeSubscriptions: Map<Agent.E_WorldTransportChannel, RealtimeChannel[]> =
         new Map();
 
     let supabaseUrl: string | null = null;
@@ -47,7 +47,7 @@ export namespace Supabase {
     }
 
     export function subscribeToTable(
-        channel: E_WorldTransportChannel,
+        channel: Agent.E_WorldTransportChannel,
         callback: (payload: RealtimePostgresChangesPayload<any>) => void,
         event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT = REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
     ): void {
@@ -58,7 +58,7 @@ export namespace Supabase {
         const subscription = supabaseClient
             .channel(`${channel}`)
             .on(
-                REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+                `${REALTIME_LISTEN_TYPES.POSTGRES_CHANGES}`,
                 {
                     event,
                     schema: 'public',
@@ -67,34 +67,38 @@ export namespace Supabase {
                 callback,
             )
             .subscribe();
-        activeSubscriptions.set(channel, subscription);
+
+        if (!activeSubscriptions.has(channel)) {
+            activeSubscriptions.set(channel, []);
+        }
+        activeSubscriptions.get(channel)!.push(subscription);
     }
 
     export function unsubscribeFromTable(
-        channel: E_WorldTransportChannel,
+        channel: Agent.E_WorldTransportChannel,
     ): void {
-        const subscription = activeSubscriptions.get(channel);
-        if (subscription) {
-            subscription.unsubscribe().then(() => {
-                activeSubscriptions.delete(channel);
-            })
-                .catch((error) => {
+        const subscriptions = activeSubscriptions.get(channel);
+        if (subscriptions) {
+            subscriptions.forEach((subscription) => {
+                subscription.unsubscribe().catch((error) => {
                     log(`Failed to unsubscribe from table ${channel}: ${error}`, 'error');
                 });
+            });
+            activeSubscriptions.delete(channel);
         }
     }
 
     export function subscribeToAllTables(
-        callback: (payload: any) => void,
+        callback: () => void,
         event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT = REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
     ): void {
-        Object.values(E_WorldTransportChannel).forEach((channel) =>
+        Object.values(Agent.E_WorldTransportChannel).forEach((channel) =>
             subscribeToTable(channel, callback, event),
         );
     }
 
     export function unsubscribeFromAllTables(): void {
-        Object.values(E_WorldTransportChannel).forEach(unsubscribeFromTable);
+        Object.values(Agent.E_WorldTransportChannel).forEach(unsubscribeFromTable);
     }
 
     export function disconnectRealtime(): void {
@@ -105,8 +109,8 @@ export namespace Supabase {
     }
 
     export function getActiveSubscriptions(): Map<
-        E_WorldTransportChannel,
-        RealtimeChannel
+        Agent.E_WorldTransportChannel,
+        RealtimeChannel[]
     > {
         return activeSubscriptions;
     }

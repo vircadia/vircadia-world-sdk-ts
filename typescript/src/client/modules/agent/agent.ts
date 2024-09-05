@@ -1,6 +1,6 @@
 import { Supabase } from '../supabase/supabase.js';
 import { SupabaseClient, REALTIME_PRESENCE_LISTEN_EVENTS, REALTIME_CHANNEL_STATES, REALTIME_LISTEN_TYPES, REALTIME_SUBSCRIBE_STATES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
-import { Agent as AgentMeta, Primitive, E_HTTPRequestPath, I_REQUEST_ConfigAndStatusResponse } from '../../../meta.js';
+import { Agent as AgentMeta, Primitive, E_HTTPRequestPath, I_REQUEST_ConfigAndStatusResponse } from '../../../../meta.js';
 import { log } from '../../../modules/log.js';
 import { WebRTC } from './agent_webRTC.js';
 import { WebRTC_Media } from './agent_webRTC_media.js';
@@ -26,15 +26,15 @@ export namespace Agent {
         supabaseClient: SupabaseClient | null;
         agentConnections: { [key: string]: AgentConnection };
         presenceUpdateInterval: ReturnType<typeof setInterval> | null;
-        position: Primitive.Vector3;
-        orientation: Primitive.Vector3;
+        position: Primitive.C_Vector3;
+        orientation: Primitive.C_Vector3;
         audioContext: AudioContext | null;
     }
 
     interface AgentPresenceState {
         agent_id: string;
-        position: Primitive.Vector3;
-        orientation: Primitive.Vector3;
+        position: Primitive.C_Vector3;
+        orientation: Primitive.C_Vector3;
         online_at: string;
     }
 
@@ -50,7 +50,7 @@ export namespace Agent {
             id = newId;
         };
 
-        export const updatePosition = (worldId: string, newPosition: Primitive.Vector3) => {
+        export const updatePosition = (worldId: string, newPosition: Primitive.C_Vector3) => {
             const world = worldConnections[worldId];
             if (world) {
                 world.position = newPosition;
@@ -58,7 +58,7 @@ export namespace Agent {
             }
         };
 
-        export const updateOrientation = (worldId: string, newOrientation: Primitive.Vector3) => {
+        export const updateOrientation = (worldId: string, newOrientation: Primitive.C_Vector3) => {
             const world = worldConnections[worldId];
             if (world) {
                 world.orientation = newOrientation;
@@ -130,8 +130,8 @@ export namespace Agent {
                     supabaseClient,
                     agentConnections: {},
                     presenceUpdateInterval: null,
-                    position: new Primitive.Vector3(),
-                    orientation: new Primitive.Vector3(),
+                    position: new Primitive.C_Vector3(),
+                    orientation: new Primitive.C_Vector3(),
                     audioContext: WebRTC_Media.createAudioContext(),
                 };
 
@@ -197,7 +197,7 @@ export namespace Agent {
         }
     };
 
-    export const createAgent = async (worldId: string, agentId: string, metadata: AgentMeta.Metadata) => {
+    export const createAgent = async (worldId: string, agentId: string, metadata: AgentMeta.C_Metadata) => {
         const world = worldConnections[worldId];
         if (!world) {
             return;
@@ -287,7 +287,7 @@ export namespace Agent {
             if (agentId !== Self.id) {
                 try {
                     const agentData = state[agentId][0];
-                    const metadata: AgentMeta.Metadata = {
+                    const metadata: AgentMeta.C_Metadata = {
                         agentId: agentData.agent_id,
                         position: agentData.position,
                         orientation: agentData.orientation,
@@ -308,7 +308,7 @@ export namespace Agent {
         log(`${AGENT_LOG_PREFIX} Updated agent list for world ${worldId}: ${currentAgents}`, 'info');
     };
 
-    const updateAgentMetadata = (worldId: string, agentId: string, metadata: AgentMeta.Metadata) => {
+    const updateAgentMetadata = (worldId: string, agentId: string, metadata: AgentMeta.C_Metadata) => {
         const world = worldConnections[worldId];
         if (!world) {
             return;

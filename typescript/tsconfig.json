@@ -9,7 +9,7 @@
         "skipLibCheck": true,
         "module": "NodeNext"
     },
-    "include": ["src/**/*", ".eslintrc.cjs"],
+    "include": ["src/**/*", ".eslintrc.cjs", "meta.ts"],
     "exclude": ["node_modules"],
     "types": ["babylonjs"]
 }

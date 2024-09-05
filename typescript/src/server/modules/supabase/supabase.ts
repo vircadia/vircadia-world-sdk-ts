@@ -4,7 +4,7 @@ import * as execa from 'execa';
 import express from 'express';
 import { log } from '../../../modules/log.js';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { E_HTTPRoute } from '../../../meta.js';
+import { Agent } from '../../../../meta.js';
 
 const CONFIG_TOML_FILE = 'config.toml';
 
@@ -22,14 +22,14 @@ export class Supabase {
     private configDir: string;
     private debug: boolean;
     private routes: {
-        [key in E_HTTPRoute]: string | null;
+        [key in Agent.E_HTTPRoute]: string | null;
     } = {
-            [E_HTTPRoute.API]: null,
-            [E_HTTPRoute.GRAPHQL]: null,
-            [E_HTTPRoute.STORAGE]: null,
-            [E_HTTPRoute.DB]: null,
-            [E_HTTPRoute.STUDIO]: null,
-            [E_HTTPRoute.INBUCKET]: null,
+            [Agent.E_HTTPRoute.API]: null,
+            [Agent.E_HTTPRoute.GRAPHQL]: null,
+            [Agent.E_HTTPRoute.STORAGE]: null,
+            [Agent.E_HTTPRoute.DB]: null,
+            [Agent.E_HTTPRoute.STUDIO]: null,
+            [Agent.E_HTTPRoute.INBUCKET]: null,
         };
 
     constructor(debug: boolean = false) {
@@ -52,27 +52,27 @@ export class Supabase {
     async setupReverseProxies(app: express.Application): Promise<void> {
         const statusUrls = await this.getStatus();
 
-        const setupProxy = (path: E_HTTPRoute, target: string | null) => {
+        const setupProxy = (route: Agent.E_HTTPRoute, target: string | null) => {
             if (target) {
                 app.use(
-                    path,
+                    route,
                     createProxyMiddleware({
                         target,
                         changeOrigin: true,
                         pathRewrite: { [`^${path}`]: '' },
                     }),
                 );
-                this.routes[path as E_HTTPRoute] = target;
+                this.routes[route as Agent.E_HTTPRoute] = target;
                 log(`Reverse proxy set up for ${path} -> ${target}`, 'success');
             }
         };
 
-        setupProxy(E_HTTPRoute.API, statusUrls.apiUrl);
-        setupProxy(E_HTTPRoute.GRAPHQL, statusUrls.graphqlUrl);
-        setupProxy(E_HTTPRoute.STORAGE, statusUrls.s3StorageUrl);
-        setupProxy(E_HTTPRoute.STUDIO, statusUrls.studioUrl);
-        setupProxy(E_HTTPRoute.INBUCKET, statusUrls.inbucketUrl);
-        setupProxy(E_HTTPRoute.DB, statusUrls.dbUrl);
+        setupProxy(Agent.E_HTTPRoute.API, statusUrls.apiUrl);
+        setupProxy(Agent.E_HTTPRoute.GRAPHQL, statusUrls.graphqlUrl);
+        setupProxy(Agent.E_HTTPRoute.STORAGE, statusUrls.s3StorageUrl);
+        setupProxy(Agent.E_HTTPRoute.STUDIO, statusUrls.studioUrl);
+        setupProxy(Agent.E_HTTPRoute.INBUCKET, statusUrls.inbucketUrl);
+        setupProxy(Agent.E_HTTPRoute.DB, statusUrls.dbUrl);
     }
 
     async initializeAndStart(data: { forceRestart: boolean }): Promise<void> {
@@ -228,13 +228,21 @@ export class Supabase {
 
     private async waitForStartup(timeout: number = 30000): Promise<void> {
         const startTime = Date.now();
-        while (Date.now() - startTime < timeout) {
+
+        const checkRunning = async (): Promise<void> => {
             if (await this.isRunning()) {
                 return;
             }
-            await new Promise((resolve) => setTimeout(resolve, 5000));
-        }
-        throw new Error('Timeout waiting for Supabase to start');
+            if (Date.now() - startTime >= timeout) {
+                throw new Error('Timeout waiting for Supabase to start');
+            }
+            await new Promise((resolve) => {
+                setTimeout(resolve, 5000);
+            });
+            await checkRunning();
+        };
+
+        await checkRunning();
     }
 
     private async runSupabaseCommand(data: {

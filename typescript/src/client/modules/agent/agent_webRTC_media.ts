@@ -58,4 +58,34 @@ export namespace WebRTC_Media {
     export const cleanupAudio = (panner: PannerNode): void => {
         panner.disconnect();
     };
+
+    // New function to create MediaStream from AudioBuffer
+    export const createStreamFromFloat32AudioBuffer = (audioContext: AudioContext, audioBuffer: AudioBuffer): MediaStream => {
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+
+        const destination = audioContext.createMediaStreamDestination();
+        source.connect(destination);
+        source.start();
+
+        return destination.stream;
+    };
+
+    // New function to fetch and decode audio file
+    export const fetchAndDecodeAudio = async (audioContext: AudioContext, url: string): Promise<AudioBuffer> => {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        return audioContext.decodeAudioData(arrayBuffer);
+    };
+
+    // New function to create AudioBuffer from float array
+    export const createAudioBufferFromFloat32Array = (
+        audioContext: AudioContext,
+        floatArray: Float32Array,
+        sampleRate: number
+    ): AudioBuffer => {
+        const audioBuffer = audioContext.createBuffer(1, floatArray.length, sampleRate);
+        audioBuffer.copyToChannel(floatArray, 0);
+        return audioBuffer;
+    };
 }
