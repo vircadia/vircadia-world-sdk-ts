@@ -4,7 +4,7 @@ import * as execa from 'execa';
 import express from 'express';
 import { log } from '../../../modules/log.js';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { Agent } from '../../../../meta.js';
+import { Server } from '../../../../meta.js';
 
 const CONFIG_TOML_FILE = 'config.toml';
 
@@ -22,14 +22,14 @@ export class Supabase {
     private configDir: string;
     private debug: boolean;
     private routes: {
-        [key in Agent.E_HTTPRoute]: string | null;
+        [key in Server.E_HTTPRoute]: string | null;
     } = {
-            [Agent.E_HTTPRoute.API]: null,
-            [Agent.E_HTTPRoute.GRAPHQL]: null,
-            [Agent.E_HTTPRoute.STORAGE]: null,
-            [Agent.E_HTTPRoute.DB]: null,
-            [Agent.E_HTTPRoute.STUDIO]: null,
-            [Agent.E_HTTPRoute.INBUCKET]: null,
+            [Server.E_HTTPRoute.API]: null,
+            [Server.E_HTTPRoute.GRAPHQL]: null,
+            [Server.E_HTTPRoute.STORAGE]: null,
+            [Server.E_HTTPRoute.DB]: null,
+            [Server.E_HTTPRoute.STUDIO]: null,
+            [Server.E_HTTPRoute.INBUCKET]: null,
         };
 
     constructor(debug: boolean = false) {
@@ -52,34 +52,47 @@ export class Supabase {
     async setupReverseProxies(app: express.Application): Promise<void> {
         const statusUrls = await this.getStatus();
 
-        const setupProxy = (route: Agent.E_HTTPRoute, target: string | null) => {
+        const setupProxy = (route: Server.E_HTTPRoute, target: string | null) => {
             if (target) {
                 app.use(
                     route,
                     createProxyMiddleware({
                         target,
                         changeOrigin: true,
-                        pathRewrite: { [`^${path}`]: '' },
+                        pathRewrite: { [`^${route}`]: '' },
                     }),
                 );
-                this.routes[route as Agent.E_HTTPRoute] = target;
-                log(`Reverse proxy set up for ${path} -> ${target}`, 'success');
+                this.routes[route as Server.E_HTTPRoute] = target;
+                log(`Reverse proxy set up for ${route} -> ${target}`, 'success');
             }
         };
 
-        setupProxy(Agent.E_HTTPRoute.API, statusUrls.apiUrl);
-        setupProxy(Agent.E_HTTPRoute.GRAPHQL, statusUrls.graphqlUrl);
-        setupProxy(Agent.E_HTTPRoute.STORAGE, statusUrls.s3StorageUrl);
-        setupProxy(Agent.E_HTTPRoute.STUDIO, statusUrls.studioUrl);
-        setupProxy(Agent.E_HTTPRoute.INBUCKET, statusUrls.inbucketUrl);
-        setupProxy(Agent.E_HTTPRoute.DB, statusUrls.dbUrl);
+        setupProxy(Server.E_HTTPRoute.API, statusUrls.apiUrl);
+        setupProxy(Server.E_HTTPRoute.GRAPHQL, statusUrls.graphqlUrl);
+        setupProxy(Server.E_HTTPRoute.STORAGE, statusUrls.s3StorageUrl);
+        setupProxy(Server.E_HTTPRoute.STUDIO, statusUrls.studioUrl);
+        setupProxy(Server.E_HTTPRoute.INBUCKET, statusUrls.inbucketUrl);
+        setupProxy(Server.E_HTTPRoute.DB, statusUrls.dbUrl);
     }
 
     async initializeAndStart(data: { forceRestart: boolean }): Promise<void> {
         log('Initializing and starting Supabase...', 'info');
 
         try {
-            await this.checkSupabaseCLI();
+            // Check if Supabase CLI is installed.
+            try {
+                const { stdout } = await execa.execaCommand(
+                    'npx supabase --version',
+                    {
+                        cwd: this.appDir,
+                    },
+                );
+                log(`Supabase CLI version: ${stdout.trim()}`, 'success');
+            } catch (error) {
+                throw new SupabaseError(
+                    'Supabase CLI is not installed. Please install it first.',
+                );
+            }
             await this.initializeProjectIfNeeded();
             await this.startSupabase(data.forceRestart);
         } catch (error) {
@@ -91,22 +104,6 @@ export class Supabase {
         }
 
         log('Supabase initialization and startup complete.', 'success');
-    }
-
-    private async checkSupabaseCLI(): Promise<void> {
-        try {
-            const { stdout } = await execa.execaCommand(
-                'npx supabase --version',
-                {
-                    cwd: this.appDir,
-                },
-            );
-            log(`Supabase CLI version: ${stdout.trim()}`, 'success');
-        } catch (error) {
-            throw new SupabaseError(
-                'Supabase CLI is not installed. Please install it first.',
-            );
-        }
     }
 
     private async initializeProjectIfNeeded(): Promise<void> {
@@ -123,26 +120,6 @@ export class Supabase {
             log('Supabase project initialized.', 'success');
         } else {
             log('Supabase project already initialized.', 'success');
-        }
-    }
-
-    private async resetDatabase(): Promise<void> {
-        const migrationFile = path.join(this.appDir, 'migrations', 'world_glTF.sql');
-
-        if (!fs.existsSync(migrationFile)) {
-            throw new SupabaseError(`Migration file not found: ${migrationFile}`);
-        }
-
-        log('Applying migration...', 'info');
-        try {
-            await this.runSupabaseCommand({
-                command: `db reset`,
-                appendWorkdir: true,
-            });
-            log('Migration applied successfully.', 'success');
-        } catch (error) {
-            log(`Failed to apply migration: ${error.message}`, 'error');
-            throw new SupabaseError('Failed to apply migration');
         }
     }
 
@@ -198,6 +175,7 @@ export class Supabase {
             const output = await this.runSupabaseCommand({
                 command: 'status',
                 appendWorkdir: true,
+                suppressError: true, // Suppress error logging
             });
             return (
                 !output.includes(NOT_RUNNING) &&
@@ -248,6 +226,7 @@ export class Supabase {
     private async runSupabaseCommand(data: {
         command: string;
         appendWorkdir: boolean;
+        suppressError?: boolean; // Optional parameter to suppress error logging
     }): Promise<string> {
         const fullCommand = `npx supabase ${data.command}${data.appendWorkdir ? ` --workdir ${this.appDir}` : ''
             }`;
@@ -260,12 +239,14 @@ export class Supabase {
             });
             return stdout.trim();
         } catch (error) {
-            log(`Error executing command: ${fullCommand}`, 'error');
-            if (this.debug) {
-                log(
-                    `Full error details: ${JSON.stringify(error, null, 2)}`,
-                    'error',
-                );
+            if (!data.suppressError) {
+                log(`Error executing command: ${fullCommand}`, 'error');
+                if (this.debug) {
+                    log(
+                        `Full error details: ${JSON.stringify(error, null, 2)}`,
+                        'error',
+                    );
+                }
             }
             throw new SupabaseError(`Command failed: ${fullCommand}`);
         }

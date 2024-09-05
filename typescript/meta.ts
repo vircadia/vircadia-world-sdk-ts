@@ -171,7 +171,9 @@ export namespace Agent {
         WORLD_METADATA = 'world_metadata',
         SCENE_DATA = 'scene_data',
     }
+}
 
+export namespace Server {
     export enum E_HTTPRoute {
         API = '/api',
         GRAPHQL = '/graphql',
@@ -190,4 +192,3 @@ export namespace Agent {
         S3_STORAGE_URL: string | null;
     }
 }
-
