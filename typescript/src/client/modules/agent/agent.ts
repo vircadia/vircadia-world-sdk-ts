@@ -1,6 +1,6 @@
 import { Supabase } from '../supabase/supabase.js';
 import { SupabaseClient, REALTIME_PRESENCE_LISTEN_EVENTS, REALTIME_CHANNEL_STATES, REALTIME_LISTEN_TYPES, REALTIME_SUBSCRIBE_STATES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
-import { Agent as AgentMeta, Primitive, E_HTTPRequestPath, I_REQUEST_ConfigAndStatusResponse } from '../../../../meta.js';
+import { Agent as AgentMeta, Primitive, Server } from '../../../../meta.js';
 import { log } from '../../../modules/log.js';
 import { WebRTC } from './agent_webRTC.js';
 import { WebRTC_Media } from './agent_webRTC_media.js';
@@ -15,7 +15,7 @@ export namespace Agent {
         rtcConnection: RTCPeerConnection | null;
         dataChannel: RTCDataChannel | null;
         mediaStream: MediaStream | null;
-        metadata: Agent.Metadata | null;
+        metadata: AgentMeta.C_Metadata | null;
         panner: PannerNode | null;
         audioUpdateInterval: ReturnType<typeof setInterval> | null;
     }
@@ -112,8 +112,8 @@ export namespace Agent {
         }
 
         try {
-            const response = await axios.get<I_REQUEST_ConfigAndStatusResponse>(
-                `${host}:${port}${E_HTTPRequestPath.CONFIG_AND_STATUS}`,
+            const response = await axios.get<Server.I_REQUEST_ConfigAndStatusResponse>(
+                `${host}:${port}${Server.E_HTTPRequestPath.CONFIG_AND_STATUS}`,
             );
             const serverConfigAndStatus = response.data;
             log(`Server status for world ${worldId}: ${JSON.stringify(serverConfigAndStatus)}`, 'info');

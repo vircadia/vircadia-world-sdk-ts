@@ -12,8 +12,9 @@ CREATE TABLE worlds_gltf (
     metadata JSONB NOT NULL,
     -- defaultScene is the "scene" that is loaded when the world is loaded
     defaultScene UUID,
-    extensions JSONB,
-    extras JSONB
+    extensions JSONB,h
+    extras JSONB,
+    asset JSONB NOT NULL -- Add the "asset" property
 );
 
 -- Create the scenes table

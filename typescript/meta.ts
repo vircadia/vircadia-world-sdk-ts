@@ -17,10 +17,10 @@ export namespace Primitive {
         public y: number;
         public z: number;
 
-        constructor(_x: number, _y: number, _z: number) {
-            this.x = _x;
-            this.y = _y;
-            this.z = _z;
+        constructor(_x?: number, _y?: number, _z?: number) {
+            this.x = _x ?? 0;
+            this.y = _y ?? 0;
+            this.z = _z ?? 0;
         }
 
         static parse(obj: {
@@ -46,10 +46,10 @@ export namespace Primitive {
         public g: number;
         public b: number;
 
-        constructor(_r: number, _g: number, _b: number) {
-            this.r = _r;
-            this.g = _g;
-            this.b = _b;
+        constructor(_r?: number, _g?: number, _b?: number) {
+            this.r = _r ?? 0;
+            this.g = _g ?? 0;
+            this.b = _b ?? 0;
         }
 
         static parse(obj: {
