@@ -116,6 +116,10 @@ export namespace World {
             script: string;
         }
     }
+
+    export namespace Mutation {
+        
+    }
 }
 
 export namespace Agent {

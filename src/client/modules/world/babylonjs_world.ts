@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-throw-literal */
-import { log } from "../../../modules/log.js";
-import { Supabase } from '../supabase/supabase.js';
+import { log } from "../../../server/modules/general/log.js";
+import { Supabase } from '../providers/supabase/supabase.js';
 import { Scene } from '@babylonjs/core/scene.js';
-import { Agent, World } from "../../../../meta.js";
+import { Agent, World } from "../../../../meta/meta.js";
 
 export namespace World_Babylon {
     const WORLD_BABYLON_LOG_PREFIX = '[WORLD: BABYLON]';

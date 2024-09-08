@@ -2,9 +2,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as execa from 'execa';
 import express from 'express';
-import { log } from '../../../modules/log.js';
+import { log } from '../general/log.js';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { Server } from '../../../../meta.js';
+import { Server } from '../../../../meta/meta.js';
 
 const CONFIG_TOML_FILE = 'config.toml';
 

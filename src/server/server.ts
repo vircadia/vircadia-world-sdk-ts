@@ -4,7 +4,7 @@ import { createServer } from 'http';
 import { Supabase } from './modules/supabase/supabase.js';
 
 import { HTTPTransport } from './routes/httpRouter.js';
-import { log } from '../modules/log.js';
+import { log } from './modules/general/log.js';
 
 const TEMP_PORT = 3000;
 const TEMP_ALLOWED_ORIGINS = '*';

@@ -1,4 +1,4 @@
-import { log } from '../modules/log.js';
+import { log } from '../server/modules/general/log.js';
 import { Agent } from './modules/agent/agent.js';
 import { WebRTC_Media } from './modules/agent/agent_webRTC_media.js';
 

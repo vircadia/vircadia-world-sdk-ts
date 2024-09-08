@@ -17,7 +17,7 @@
         "build": "run-s build:server build:client"
     },
     "dependencies": {
-        "babylonjs": "^7.23.0",
+        "babylonjs": "^7.24.0",
         "zod": "^3.23.8"
     },
     "alias": {
@@ -38,7 +38,7 @@
         "tsx": "^4.0.0",
         "typescript": "^5.4.5",
         "vite": "^5.2.12",
-        "babylonjs-gltf2interface": "^7.23.0"
+        "babylonjs-gltf2interface": "^7.24.0"
     },
     "publishConfig": {
         "access": "restricted"

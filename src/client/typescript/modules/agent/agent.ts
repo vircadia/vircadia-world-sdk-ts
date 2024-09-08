@@ -1,7 +1,7 @@
-import { Supabase } from '../supabase/supabase.js';
+import { Supabase } from '../providers/supabase/supabase.js';
 import { SupabaseClient, REALTIME_PRESENCE_LISTEN_EVENTS, REALTIME_CHANNEL_STATES, REALTIME_LISTEN_TYPES, REALTIME_SUBSCRIBE_STATES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
-import { Agent as AgentMeta, Primitive, Server } from '../../../../meta.js';
-import { log } from '../../../modules/log.js';
+import { Agent as AgentMeta, Primitive, Server } from '../../../../../meta/meta.js';
+import { log } from '../../../../server/modules/general/log.js';
 import { WebRTC } from './agent_webRTC.js';
 import { WebRTC_Media } from './agent_webRTC_media.js';
 import axios from 'axios';

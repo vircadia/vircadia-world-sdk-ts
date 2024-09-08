@@ -22,12 +22,18 @@ To run all apps and packages in development mode, run the following command:
 ```sh
 npm run dev
 ```
+## Configure
 
-## Arch
+### Core Supabase Project
+
+Configurations for the core Supabase project are found in `/src/server/modules/supabase/app/supabase/config.toml`.
+
+### Client-Server Mutations
+
+Configurations for client-server mutations are found in 
 
 
-
-## glTF High Level
+## TODO: REMOVE: glTF High Level
 
 - glTF
   - extensionsUsed
