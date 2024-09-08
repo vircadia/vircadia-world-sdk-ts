@@ -1,3 +1,0 @@
-[submodule "src/server/modules/supabase/supabase-core"]
-	path = src/server/modules/supabase/supabase-core
-	url = https://github.com/supabase/supabase.git
