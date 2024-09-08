@@ -7,7 +7,7 @@
     ],
     "scripts": {
         "dev:server": "npm run dev --prefix src/server",
-        "dev:client": "npm run dev --prefix src/client",
+        "dev:client-typescript": "npm run dev --prefix src/typescript/client",
         "dev": "run-p dev:* --print-label",
         "lint": "eslint --cache --ext \".js,.ts,.tsx\" src",
         "format": "prettier --write 'src/**/*.{js,ts,tsx,json,css,md}'",
@@ -17,7 +17,7 @@
         "build": "run-s build:server build:client"
     },
     "dependencies": {
-        "babylonjs": "^7.24.0",
+        "@babylonjs/core": "^7.24.0",
         "zod": "^3.23.8"
     },
     "alias": {

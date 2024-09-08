@@ -2,18 +2,18 @@ import { defineConfig } from 'vite';
 import path from 'path';
 
 export default defineConfig({
-    root: path.resolve(__dirname, 'src/client'), // Set the root to the dashboard directory
+    root: path.resolve(__dirname, 'src/browser/client'),
     plugins: [],
     build: {
-        outDir: path.resolve(__dirname, 'dist/client'),
+        outDir: path.resolve(__dirname, 'dist/browser/client'),
         lib: {
-            entry: path.resolve(__dirname, 'src/client/client.ts'),
+            entry: path.resolve(__dirname, 'src/browser/client/client.ts'),
             name: 'Client',
             fileName: (format) => `client.${format}.js`,
         },
     },
     optimizeDeps: {
-        include: ['src/client/client.ts'], // Replace with your actual entry point file
+        include: ['src/client/browser/client.ts'],
     },
     server: {
         open: '/dashboard/index.html', // Open the dashboard/index.html on server start
