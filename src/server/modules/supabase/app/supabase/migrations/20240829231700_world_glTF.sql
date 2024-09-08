@@ -1,13 +1,13 @@
 -- This migration conforms to the glTF 2.0 specification and uses custom features within extras.
 -- If for some reason it falls out alignment with the ability to serialize without much conversion to glTF 2.0, then please update the migration to conform again.
--- The fields "uuid" and "world_uuid" do not conform, but are necessary, and should be dropped when serializing to glTF 2.0.
+-- Any fields prefixed with "vircadia_" are custom and not compliant with glTF 2.0, and may need to be removed when serializing to glTF 2.0 for unsuppoerted editors.
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create the worlds_gltf table
 CREATE TABLE worlds_gltf (
-    uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     version TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -19,34 +19,24 @@ CREATE TABLE worlds_gltf (
     extensions JSONB,
     extras JSONB,
     asset JSONB NOT NULL,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras ? 'vircadia' AND 
-            jsonb_typeof(extras->'vircadia') = 'object'
-        )
-    )
+    vircadia_babylonjs_behaviors TEXT[],
+    vircadia_babylonjs_actions TEXT[]
 );
 
 -- Create the scenes table
 CREATE TABLE scenes (
-    uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    world_uuid UUID NOT NULL REFERENCES worlds_gltf(id),
+    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
     name TEXT,
     nodes JSONB,
     extensions JSONB,
-    extras JSONB,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras ? 'vircadia' AND 
-            jsonb_typeof(extras->'vircadia') = 'object'
-        )
-    )
+    extras JSONB
 );
 
 -- Create the nodes table
 CREATE TABLE nodes (
-    uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    world_uuid UUID NOT NULL REFERENCES worlds_gltf(id),
+    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
     name TEXT,
     camera TEXT,
     children JSONB,
@@ -59,35 +49,27 @@ CREATE TABLE nodes (
     weights JSONB,
     extensions JSONB,
     extras JSONB,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras ? 'vircadia' AND 
-            jsonb_typeof(extras->'vircadia') = 'object'
-        )
-    )
+    vircadia_babylonjs_behaviors TEXT[],
+    vircadia_babylonjs_actions TEXT[],
 );
 
 -- Create the meshes table
 CREATE TABLE meshes (
-    uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    world_uuid UUID NOT NULL REFERENCES worlds_gltf(id),
+    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
     name TEXT,
     primitives JSONB NOT NULL,
     weights JSONB,
     extensions JSONB,
     extras JSONB,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras ? 'vircadia' AND 
-            jsonb_typeof(extras->'vircadia') = 'object'
-        )
-    )
+    vircadia_babylonjs_behaviors TEXT[],
+    vircadia_babylonjs_actions TEXT[]
 );
 
 -- Create the materials table
 CREATE TABLE materials (
-    uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    world_uuid UUID NOT NULL REFERENCES worlds_gltf(id),
+    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
     name TEXT,
     pbrMetallicRoughness JSONB,
     normalTexture JSONB,
@@ -99,12 +81,6 @@ CREATE TABLE materials (
     doubleSided BOOLEAN DEFAULT false,
     extensions JSONB,
     extras JSONB,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras ? 'vircadia' AND 
-            jsonb_typeof(extras->'vircadia') = 'object'
-        )
-    ),
     CONSTRAINT check_alphamode CHECK (alphaMode IN ('OPAQUE', 'MASK', 'BLEND')),
     CONSTRAINT check_pbr_metallic_roughness_structure CHECK (
         pbrMetallicRoughness IS NULL OR (
@@ -120,43 +96,31 @@ CREATE TABLE materials (
 
 -- Create the textures table
 CREATE TABLE textures (
-    uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    world_uuid UUID NOT NULL REFERENCES worlds_gltf(id),
+    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
     name TEXT,
     sampler TEXT,
     source TEXT,
     extensions JSONB,
     extras JSONB,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras ? 'vircadia' AND 
-            jsonb_typeof(extras->'vircadia') = 'object'
-        )
-    )
 );
 
 -- Create the images table
 CREATE TABLE images (
-    uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    world_uuid UUID NOT NULL REFERENCES worlds_gltf(id),
+    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
     name TEXT,
     uri TEXT,
     mimeType TEXT,
     bufferView TEXT,
     extensions JSONB,
     extras JSONB,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras ? 'vircadia' AND 
-            jsonb_typeof(extras->'vircadia') = 'object'
-        )
-    )
 );
 
 -- Create the samplers table
 CREATE TABLE samplers (
-    uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    world_uuid UUID NOT NULL REFERENCES worlds_gltf(id),
+    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
     name TEXT,
     magFilter INTEGER,
     minFilter INTEGER,
@@ -164,12 +128,6 @@ CREATE TABLE samplers (
     wrapT INTEGER DEFAULT 10497,
     extensions JSONB,
     extras JSONB,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras ? 'vircadia' AND 
-            jsonb_typeof(extras->'vircadia') = 'object'
-        )
-    ),
     CONSTRAINT check_mag_filter CHECK (magFilter IN (9728, 9729)),
     CONSTRAINT check_min_filter CHECK (minFilter IN (9728, 9729, 9984, 9985, 9986, 9987)),
     CONSTRAINT check_wrap_s CHECK (wrapS IN (33071, 33648, 10497)),
@@ -178,80 +136,58 @@ CREATE TABLE samplers (
 
 -- Create the animations table
 CREATE TABLE animations (
-    uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    world_uuid UUID NOT NULL REFERENCES worlds_gltf(id),
+    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
     name TEXT,
     channels JSONB NOT NULL,
     samplers JSONB NOT NULL,
     extensions JSONB,
-    extras JSONB,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras ? 'vircadia' AND 
-            jsonb_typeof(extras->'vircadia') = 'object'
-        )
-    )
+    extras JSONB
 );
 
 -- Create the skins table
 CREATE TABLE skins (
-    uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    world_uuid UUID NOT NULL REFERENCES worlds_gltf(id),
+    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
     name TEXT,
     inverseBindMatrices TEXT,
     skeleton TEXT,
     joints JSONB NOT NULL,
     extensions JSONB,
-    extras JSONB,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras ? 'vircadia' AND 
-            jsonb_typeof(extras->'vircadia') = 'object'
-        )
-    )
+    extras JSONB
 );
 
 -- Create the cameras table
 CREATE TABLE cameras (
-    uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    world_uuid UUID NOT NULL REFERENCES worlds_gltf(id),
+    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
     name TEXT,
     type TEXT NOT NULL,
     orthographic JSONB,
     perspective JSONB,
     extensions JSONB,
     extras JSONB,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras ? 'vircadia' AND 
-            jsonb_typeof(extras->'vircadia') = 'object'
-        )
-    ),
+    vircadia_babylonjs_behaviors TEXT[],
+    vircadia_babylonjs_actions TEXT[],
     CONSTRAINT check_camera_type CHECK (type IN ('perspective', 'orthographic'))
 );
 
 -- Create the buffers table
 CREATE TABLE buffers (
-    uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    world_uuid UUID NOT NULL REFERENCES worlds_gltf(id),
+    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
     name TEXT,
     uri TEXT,
     byteLength INTEGER NOT NULL,
     data BYTEA,
     extensions JSONB,
-    extras JSONB,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras ? 'vircadia' AND 
-            jsonb_typeof(extras->'vircadia') = 'object'
-        )
-    )
+    extras JSONB
 );
 
 -- Create the buffer_views table
 CREATE TABLE buffer_views (
-    uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    world_uuid UUID NOT NULL REFERENCES worlds_gltf(id),
+    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
     name TEXT,
     buffer TEXT NOT NULL,
     byteOffset INTEGER DEFAULT 0,
@@ -260,19 +196,13 @@ CREATE TABLE buffer_views (
     target INTEGER,
     extensions JSONB,
     extras JSONB,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras ? 'vircadia' AND 
-            jsonb_typeof(extras->'vircadia') = 'object'
-        )
-    ),
     CONSTRAINT check_target CHECK (target IN (34962, 34963))
 );
 
 -- Create the accessors table
 CREATE TABLE accessors (
-    uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    world_uuid UUID NOT NULL REFERENCES worlds_gltf(id),
+    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
     name TEXT,
     bufferView TEXT,
     byteOffset INTEGER DEFAULT 0,
@@ -285,12 +215,6 @@ CREATE TABLE accessors (
     sparse JSONB,
     extensions JSONB,
     extras JSONB,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras ? 'vircadia' AND 
-            jsonb_typeof(extras->'vircadia') = 'object'
-        )
-    ),
     CONSTRAINT check_component_type CHECK (componentType IN (5120, 5121, 5122, 5123, 5125, 5126)),
     CONSTRAINT check_type CHECK (type IN ('SCALAR', 'VEC2', 'VEC3', 'VEC4', 'MAT2', 'MAT3', 'MAT4')),
     CONSTRAINT check_sparse_structure CHECK (
