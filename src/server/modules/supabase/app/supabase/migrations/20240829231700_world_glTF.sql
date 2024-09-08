@@ -19,8 +19,12 @@ CREATE TABLE worlds_gltf (
     extensions JSONB,
     extras JSONB,
     asset JSONB NOT NULL,
-    vircadia_babylonjs_behaviors TEXT[],
-    vircadia_babylonjs_actions TEXT[]
+    CONSTRAINT check_extras_structure CHECK (
+        extras IS NULL OR (
+            extras->'vircadia'->'babylonjs'->>'behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'behaviors') = 'array',
+            extras->'vircadia'->'babylonjs'->>'actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'actions') = 'array'
+        )
+    )
 );
 
 -- Create the scenes table
@@ -49,8 +53,12 @@ CREATE TABLE nodes (
     weights JSONB,
     extensions JSONB,
     extras JSONB,
-    vircadia_babylonjs_behaviors TEXT[],
-    vircadia_babylonjs_actions TEXT[],
+    CONSTRAINT check_extras_structure CHECK (
+        extras IS NULL OR (
+            extras->'vircadia'->'babylonjs'->>'behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'behaviors') = 'array',
+            extras->'vircadia'->'babylonjs'->>'actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'actions') = 'array'
+        )
+    )
 );
 
 -- Create the meshes table
@@ -62,8 +70,12 @@ CREATE TABLE meshes (
     weights JSONB,
     extensions JSONB,
     extras JSONB,
-    vircadia_babylonjs_behaviors TEXT[],
-    vircadia_babylonjs_actions TEXT[]
+    CONSTRAINT check_extras_structure CHECK (
+        extras IS NULL OR (
+            extras->'vircadia'->'babylonjs'->>'behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'behaviors') = 'array',
+            extras->'vircadia'->'babylonjs'->>'actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'actions') = 'array'
+        )
+    )
 );
 
 -- Create the materials table
@@ -167,9 +179,13 @@ CREATE TABLE cameras (
     perspective JSONB,
     extensions JSONB,
     extras JSONB,
-    vircadia_babylonjs_behaviors TEXT[],
-    vircadia_babylonjs_actions TEXT[],
-    CONSTRAINT check_camera_type CHECK (type IN ('perspective', 'orthographic'))
+    CONSTRAINT check_camera_type CHECK (type IN ('perspective', 'orthographic')),
+    CONSTRAINT check_extras_structure CHECK (
+        extras IS NULL OR (
+            extras->'vircadia'->'babylonjs'->>'behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'behaviors') = 'array',
+            extras->'vircadia'->'babylonjs'->>'actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'actions') = 'array'
+        )
+    )
 );
 
 -- Create the buffers table
