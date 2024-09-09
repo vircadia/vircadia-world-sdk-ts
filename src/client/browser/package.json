@@ -8,10 +8,14 @@
     },
     "dependencies": {
         "@supabase/supabase-js": "^2.45.3",
+        "@ts-morph/bootstrap": "^0.24.0",
         "axios": "^1.7.2",
-        "@ts-morph/bootstrap": "^0.24.0"
+        "uuid": "^10.0.0"
     },
     "publishConfig": {
         "access": "restricted"
+    },
+    "devDependencies": {
+        "@types/uuid": "^10.0.0"
     }
 }

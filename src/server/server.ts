@@ -1,7 +1,7 @@
 import express from 'express';
 import { createServer } from 'http';
 
-import { Supabase } from './modules/supabase/supabase.js';
+import { Supabase } from './modules/supabase/supabase_manager.js';
 
 import { HTTPTransport } from './routes/httpRouter.js';
 import { log } from './modules/general/log.js';
