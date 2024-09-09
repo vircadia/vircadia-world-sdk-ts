@@ -5,8 +5,8 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create the worlds_gltf table
-CREATE TABLE worlds_gltf (
+-- Create the world_gltf table
+CREATE TABLE world_gltf (
     vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     version TEXT NOT NULL,
@@ -19,28 +19,30 @@ CREATE TABLE worlds_gltf (
     extensions JSONB,
     extras JSONB,
     asset JSONB NOT NULL,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras->'vircadia'->'babylonjs'->>'behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'behaviors') = 'array',
-            extras->'vircadia'->'babylonjs'->>'actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'actions') = 'array'
-        )
-    )
 );
 
 -- Create the scenes table
 CREATE TABLE scenes (
     vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
+    vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     nodes JSONB,
     extensions JSONB,
     extras JSONB
+    CONSTRAINT check_extras_structure CHECK (
+        extras IS NULL OR (
+            extras->'vircadia'->'babylonjs'->>'client_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_behaviors') = 'array',
+            extras->'vircadia'->'babylonjs'->>'client_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_actions') = 'array',
+            extras->'vircadia'->'babylonjs'->>'server_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_behaviors') = 'array',
+            extras->'vircadia'->'babylonjs'->>'server_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_actions') = 'array'
+        )
+    )
 );
 
 -- Create the nodes table
 CREATE TABLE nodes (
     vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
+    vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     camera TEXT,
     children JSONB,
@@ -55,8 +57,10 @@ CREATE TABLE nodes (
     extras JSONB,
     CONSTRAINT check_extras_structure CHECK (
         extras IS NULL OR (
-            extras->'vircadia'->'babylonjs'->>'behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'behaviors') = 'array',
-            extras->'vircadia'->'babylonjs'->>'actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'actions') = 'array'
+            extras->'vircadia'->'babylonjs'->>'client_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_behaviors') = 'array',
+            extras->'vircadia'->'babylonjs'->>'client_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_actions') = 'array',
+            extras->'vircadia'->'babylonjs'->>'server_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_behaviors') = 'array',
+            extras->'vircadia'->'babylonjs'->>'server_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_actions') = 'array'
         )
     )
 );
@@ -64,7 +68,7 @@ CREATE TABLE nodes (
 -- Create the meshes table
 CREATE TABLE meshes (
     vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
+    vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     primitives JSONB NOT NULL,
     weights JSONB,
@@ -72,8 +76,10 @@ CREATE TABLE meshes (
     extras JSONB,
     CONSTRAINT check_extras_structure CHECK (
         extras IS NULL OR (
-            extras->'vircadia'->'babylonjs'->>'behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'behaviors') = 'array',
-            extras->'vircadia'->'babylonjs'->>'actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'actions') = 'array'
+            extras->'vircadia'->'babylonjs'->>'client_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_behaviors') = 'array',
+            extras->'vircadia'->'babylonjs'->>'client_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_actions') = 'array',
+            extras->'vircadia'->'babylonjs'->>'server_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_behaviors') = 'array',
+            extras->'vircadia'->'babylonjs'->>'server_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_actions') = 'array'
         )
     )
 );
@@ -81,7 +87,7 @@ CREATE TABLE meshes (
 -- Create the materials table
 CREATE TABLE materials (
     vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
+    vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     pbrMetallicRoughness JSONB,
     normalTexture JSONB,
@@ -109,7 +115,7 @@ CREATE TABLE materials (
 -- Create the textures table
 CREATE TABLE textures (
     vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
+    vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     sampler TEXT,
     source TEXT,
@@ -120,7 +126,7 @@ CREATE TABLE textures (
 -- Create the images table
 CREATE TABLE images (
     vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
+    vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     uri TEXT,
     mimeType TEXT,
@@ -132,7 +138,7 @@ CREATE TABLE images (
 -- Create the samplers table
 CREATE TABLE samplers (
     vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
+    vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     magFilter INTEGER,
     minFilter INTEGER,
@@ -149,7 +155,7 @@ CREATE TABLE samplers (
 -- Create the animations table
 CREATE TABLE animations (
     vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
+    vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     channels JSONB NOT NULL,
     samplers JSONB NOT NULL,
@@ -160,7 +166,7 @@ CREATE TABLE animations (
 -- Create the skins table
 CREATE TABLE skins (
     vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
+    vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     inverseBindMatrices TEXT,
     skeleton TEXT,
@@ -172,7 +178,7 @@ CREATE TABLE skins (
 -- Create the cameras table
 CREATE TABLE cameras (
     vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
+    vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     type TEXT NOT NULL,
     orthographic JSONB,
@@ -182,8 +188,10 @@ CREATE TABLE cameras (
     CONSTRAINT check_camera_type CHECK (type IN ('perspective', 'orthographic')),
     CONSTRAINT check_extras_structure CHECK (
         extras IS NULL OR (
-            extras->'vircadia'->'babylonjs'->>'behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'behaviors') = 'array',
-            extras->'vircadia'->'babylonjs'->>'actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'actions') = 'array'
+            extras->'vircadia'->'babylonjs'->>'client_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_behaviors') = 'array',
+            extras->'vircadia'->'babylonjs'->>'client_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_actions') = 'array',
+            extras->'vircadia'->'babylonjs'->>'server_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_behaviors') = 'array',
+            extras->'vircadia'->'babylonjs'->>'server_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_actions') = 'array'
         )
     )
 );
@@ -191,7 +199,7 @@ CREATE TABLE cameras (
 -- Create the buffers table
 CREATE TABLE buffers (
     vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
+    vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     uri TEXT,
     byteLength INTEGER NOT NULL,
@@ -203,7 +211,7 @@ CREATE TABLE buffers (
 -- Create the buffer_views table
 CREATE TABLE buffer_views (
     vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
+    vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     buffer TEXT NOT NULL,
     byteOffset INTEGER DEFAULT 0,
@@ -218,7 +226,7 @@ CREATE TABLE buffer_views (
 -- Create the accessors table
 CREATE TABLE accessors (
     vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    vircadia_world_uuid UUID NOT NULL REFERENCES worlds_gltf(vircadia_uuid),
+    vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     bufferView TEXT,
     byteOffset INTEGER DEFAULT 0,
@@ -254,19 +262,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply the trigger to the worlds_gltf table
+-- Apply the trigger to the world_gltf table
 CREATE TRIGGER update_worlds_gltf_modtime
-BEFORE UPDATE ON worlds_gltf
+BEFORE UPDATE ON world_gltf
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- Enable Realtime for all tables
 ALTER PUBLICATION supabase_realtime
-ADD TABLE worlds_gltf, scenes, nodes, meshes, materials, textures,
+ADD TABLE world_gltf, scenes, nodes, meshes, materials, textures,
           images, samplers, animations, skins, cameras, buffers,
           buffer_views, accessors;
 
 -- Add indexes for better query performance
-CREATE INDEX idx_worlds_gltf_name ON worlds_gltf(name);
+CREATE INDEX idx_worlds_gltf_name ON world_gltf(name);
 CREATE INDEX idx_scenes_name ON scenes(name);
 CREATE INDEX idx_nodes_name ON nodes(name);
 CREATE INDEX idx_meshes_name ON meshes(name);
@@ -282,7 +290,7 @@ CREATE INDEX idx_buffer_views_name ON buffer_views(name);
 CREATE INDEX idx_accessors_name ON accessors(name);
 
 -- Add GIN indexes for JSONB columns to improve query performance on these fields
-CREATE INDEX idx_worlds_gltf_extensions ON worlds_gltf USING GIN (extensions);
+CREATE INDEX idx_worlds_gltf_extensions ON world_gltf USING GIN (extensions);
 CREATE INDEX idx_scenes_nodes ON scenes USING GIN (nodes);
 CREATE INDEX idx_meshes_primitives ON meshes USING GIN (primitives);
 CREATE INDEX idx_materials_pbr_metallic_roughness ON materials USING GIN (pbrMetallicRoughness);

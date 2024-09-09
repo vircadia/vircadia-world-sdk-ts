@@ -64,56 +64,248 @@ export namespace Primitive {
 }
 
 export namespace World {
-    export interface I_World {
-        defaultScene?: string;
-        extensions?: Record<string, unknown>;
-        extras: I_WorldMetadata;
-        scenes: GLTF2.IScene[];
-        nodes: GLTF2.INode[];
-        meshes: GLTF2.IMesh[];
-        materials: GLTF2.IMaterial[];
-        textures: GLTF2.ITexture[];
-        images: GLTF2.IImage[];
-        samplers: GLTF2.ISampler[];
-        animations: GLTF2.IAnimation[];
-        skins: GLTF2.ISkin[];
-        cameras: GLTF2.ICamera[];
-        buffers: GLTF2.IBuffer[];
-        bufferViews: GLTF2.IBufferView[];
-        accessors: GLTF2.IAccessor[];
+    export interface I_CommonEntityProperties {
+        vircadia: {
+            name: string;
+            version: string;
+            createdAt: Date;
+            updatedAt: Date;
+            babylonjs: {
+                [key: string]: unknown;
+            }
+        }
     }
 
-    export interface I_WorldMetadata {
-        id: string;
+    export interface I_BabylonEntityScriptProperties {
+
+        client_behaviors: string[];
+        client_actions: string[];
+        server_behaviors: string[];
+        server_actions: string[];
+    }
+
+    export interface I_WorldGLTF {
+        vircadia_uuid: string;
         name: string;
         version: string;
-        createdAt: Date;
-        updatedAt: Date;
-        autoClear?: boolean;
-        clearColor?: Primitive.I_Color3;
-        ambientColor?: Primitive.I_Color3;
-        gravity?: Primitive.I_Vector3;
-        activeCamera?: string;
-        collisionsEnabled?: boolean;
-        physicsEnabled?: boolean;
-        physicsGravity?: Primitive.I_Vector3;
-        physicsEngine?: string;
-        autoAnimate?: boolean;
-        autoAnimateFrom?: number;
-        autoAnimateTo?: number;
-        autoAnimateLoop?: boolean;
-        autoAnimateSpeed?: number;
+        created_at: Date;
+        updated_at: Date;
+        metadata: any; // Consider creating a more specific type for metadata
+        defaultScene?: string;
+        extensionsUsed?: string[];
+        extensionsRequired?: string[];
+        extensions?: Record<string, unknown>;
+        extras?: I_CommonEntityProperties & {
+            [key: string]: unknown;
+        }
+        asset: any; // Consider creating a more specific type for asset
     }
 
-    export namespace Script {
-        export interface I_Script {
-            engine: {
-                name: string;
-                min_version?: string;
-                max_version?: string;
-            }
-            language: string;
-            script: string;
+    export interface I_Scene {
+        vircadia_uuid: string;
+        vircadia_world_uuid: string;
+        name?: string;
+        nodes?: any[]; // Consider using a more specific type
+        extensions?: Record<string, unknown>;
+        extras?: I_CommonEntityProperties & I_BabylonEntityScriptProperties & {
+            autoClear?: boolean;
+            clearColor?: Primitive.I_Color3;
+            ambientColor?: Primitive.I_Color3;
+            gravity?: Primitive.I_Vector3;
+            activeCamera?: string;
+            collisionsEnabled?: boolean;
+            physicsEnabled?: boolean;
+            physicsGravity?: Primitive.I_Vector3;
+            physicsEngine?: string;
+            autoAnimate?: boolean;
+            autoAnimateFrom?: number;
+            autoAnimateTo?: number;
+            autoAnimateLoop?: boolean;
+            autoAnimateSpeed?: number;
+            [key: string]: unknown;
+        };
+        [key: string]: unknown;
+    }
+
+    export interface I_Node {
+        vircadia_uuid: string;
+        vircadia_world_uuid: string;
+        name?: string;
+        camera?: string;
+        children?: any[]; // Consider using a more specific type
+        skin?: string;
+        matrix?: number[];
+        mesh?: string;
+        rotation?: number[];
+        scale?: number[];
+        translation?: number[];
+        weights?: any[];
+        extensions?: Record<string, unknown>;
+        extras?: I_CommonEntityProperties & I_BabylonEntityScriptProperties & {
+            [key: string]: unknown;
+        };
+    }
+
+    export interface I_Mesh {
+        vircadia_uuid: string;
+        vircadia_world_uuid: string;
+        name?: string;
+        primitives: any[]; // Consider using a more specific type
+        weights?: any[];
+        extensions?: Record<string, unknown>;
+        extras?: I_CommonEntityProperties & {
+            [key: string]: unknown;
+        }
+    }
+
+    export interface I_Material {
+        vircadia_uuid: string;
+        vircadia_world_uuid: string;
+        name?: string;
+        pbrMetallicRoughness?: any; // Consider using a more specific type
+        normalTexture?: any;
+        occlusionTexture?: any;
+        emissiveTexture?: any;
+        emissiveFactor?: number[];
+        alphaMode?: 'OPAQUE' | 'MASK' | 'BLEND';
+        alphaCutoff?: number;
+        doubleSided?: boolean;
+        extensions?: Record<string, unknown>;
+        extras?: I_CommonEntityProperties & {
+            [key: string]: unknown;
+        };
+    }
+
+    export interface I_Texture {
+        vircadia_uuid: string;
+        vircadia_world_uuid: string;
+        name?: string;
+        sampler?: string;
+        source?: string;
+        extensions?: Record<string, unknown>;
+        extras?: I_CommonEntityProperties & {
+            [key: string]: unknown;
+        }
+    }
+
+    export interface I_Image {
+        vircadia_uuid: string;
+        vircadia_world_uuid: string;
+        name?: string;
+        uri?: string;
+        mimeType?: string;
+        bufferView?: string;
+        extensions?: Record<string, unknown>;
+        extras?: I_CommonEntityProperties & {
+            [key: string]: unknown;
+        }
+    }
+
+    export interface I_Sampler {
+        vircadia_uuid: string;
+        vircadia_world_uuid: string;
+        name?: string;
+        magFilter?: number;
+        minFilter?: number;
+        wrapS?: number;
+        wrapT?: number;
+        extensions?: Record<string, unknown>;
+        extras?: I_CommonEntityProperties & {
+            [key: string]: unknown;
+        }
+    }
+
+    export interface I_Animation {
+        vircadia_uuid: string;
+        vircadia_world_uuid: string;
+        name?: string;
+        channels: any[]; // Consider using a more specific type
+        samplers: any[]; // Consider using a more specific type
+        extensions?: Record<string, unknown>;
+        extras?: I_CommonEntityProperties & {
+            [key: string]: unknown;
+        }
+    }
+
+    export interface I_Skin {
+        vircadia_uuid: string;
+        vircadia_world_uuid: string;
+        name?: string;
+        inverseBindMatrices?: string;
+        skeleton?: string;
+        joints: any[]; // Consider using a more specific type
+        extensions?: Record<string, unknown>;
+        extras?: I_CommonEntityProperties & {
+            [key: string]: unknown;
+        }
+    }
+
+    export interface I_Camera {
+        vircadia_uuid: string;
+        vircadia_world_uuid: string;
+        name?: string;
+        type: 'perspective' | 'orthographic';
+        orthographic?: any; // Consider using a more specific type
+        perspective?: any; // Consider using a more specific type
+        extensions?: Record<string, unknown>;
+        extras?: I_CommonEntityProperties & I_BabylonEntityScriptProperties & {
+            [key: string]: unknown;
+        };
+    }
+
+    export interface I_Buffer {
+        vircadia_uuid: string;
+        vircadia_world_uuid: string;
+        name?: string;
+        uri?: string;
+        byteLength: number;
+        data?: Uint8Array; // Assuming BYTEA is represented as Uint8Array in TypeScript
+        extensions?: Record<string, unknown>;
+        extras?: I_CommonEntityProperties & {
+            [key: string]: unknown;
+        }
+    }
+
+    export interface I_BufferView {
+        vircadia_uuid: string;
+        vircadia_world_uuid: string;
+        name?: string;
+        buffer: string;
+        byteOffset?: number;
+        byteLength: number;
+        byteStride?: number;
+        target?: number;
+        extensions?: Record<string, unknown>;
+        extras?: I_CommonEntityProperties & {
+            [key: string]: unknown;
+        }
+    }
+
+    export interface I_Accessor {
+        vircadia_uuid: string;
+        vircadia_world_uuid: string;
+        name?: string;
+        bufferView?: string;
+        byteOffset?: number;
+        componentType: number;
+        normalized?: boolean;
+        count: number;
+        type: 'SCALAR' | 'VEC2' | 'VEC3' | 'VEC4' | 'MAT2' | 'MAT3' | 'MAT4';
+        max?: any[];
+        min?: any[];
+        sparse?: {
+            count: number;
+            indices: {
+                bufferView: string;
+                componentType: number;
+            };
+            values: {
+                bufferView: string;
+            };
+        };
+        extensions?: Record<string, unknown>;
+        extras?: I_CommonEntityProperties & {
+            [key: string]: unknown;
         }
     }
 
