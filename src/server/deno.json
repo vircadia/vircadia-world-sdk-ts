@@ -2,7 +2,7 @@
   "compilerOptions": {
     "allowJs": true,
     "lib": ["deno.window"],
-    "strict": true,
+    "strict": true
   },
   "lint": {
     "files": {
@@ -25,9 +25,9 @@
     }
   },
   "tasks": {
-    "dev": "deno run --allow-net --allow-read --allow-env --watch src/server/server.ts",
-    "start": "deno run --allow-net --allow-read --allow-env src/server/server.ts",
-    "build": "deno compile --allow-net --allow-read --allow-env src/server/server.ts"
+    "dev": "deno run --allow-net --allow-read --allow-env --allow-run --allow-sys --watch server.ts",
+    "start": "deno run --allow-net --allow-read --allow-env --allow-run --allow-sys server.ts",
+    "build": "deno compile --allow-net --allow-read --allow-env --allow-run --allow-sys server.ts"
   },
   "imports": {
     "oak": "https://deno.land/x/oak@v12.1.0/mod.ts",
