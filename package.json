@@ -26,7 +26,6 @@
     "devDependencies": {
         "@types/semver": "^7.5.8",
         "@typescript-eslint/eslint-plugin": "^6.21.0",
-        "babylonjs-gltf2interface": "^7.24.0",
         "eslint": "^8.57.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-config-standard-with-typescript": "^43.0.1",

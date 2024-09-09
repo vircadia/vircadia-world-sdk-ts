@@ -10,6 +10,6 @@
         "module": "NodeNext",
         "types": ["semver"]
     },
-    "include": ["src/**/*", ".eslintrc.cjs", "meta/meta.ts"],
+    "include": ["src/**/*", ".eslintrc.cjs", "src/meta.ts"],
     "exclude": ["node_modules"]
 }

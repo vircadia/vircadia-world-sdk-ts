@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-throw-literal */
 import { log } from "../../../../../server/modules/general/log.js";
-import { Supabase } from '../../../../../providers/typescript_supabase.js';
+import { Supabase } from '../../../../../providers/supabase.js';
 import { Scene } from '@babylonjs/core/scene.js';
 import { Observer } from '@babylonjs/core/Misc/observable.js';
 import { Node } from '@babylonjs/core/node.js';
-import { Agent, World } from "../../../../../../meta/meta.js";
+import { Agent, World } from "../../../../../meta.js";
 import { v7 as uuidv7 } from 'uuid';
 import * as ts from 'typescript';
 

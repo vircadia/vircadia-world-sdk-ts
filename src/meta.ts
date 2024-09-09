@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
 
 import { z } from 'zod';
-import * as GLTF2 from "babylonjs-gltf2interface";
 
 export namespace Primitive {
     export const S_Vector3 = z.object({

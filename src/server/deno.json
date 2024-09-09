@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window"],
+    "strict": true,
+  },
+  "lint": {
+    "files": {
+      "include": ["src/"]
+    },
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "fmt": {
+    "files": {
+      "include": ["src/"]
+    },
+    "options": {
+      "useTabs": false,
+      "lineWidth": 80,
+      "indentWidth": 2,
+      "singleQuote": true,
+      "proseWrap": "always"
+    }
+  },
+  "tasks": {
+    "dev": "deno run --allow-net --allow-read --allow-env --watch src/server/server.ts",
+    "start": "deno run --allow-net --allow-read --allow-env src/server/server.ts",
+    "build": "deno compile --allow-net --allow-read --allow-env src/server/server.ts"
+  },
+  "imports": {
+    "oak": "https://deno.land/x/oak@v12.1.0/mod.ts",
+    "express": "https://deno.land/x/express@4.18.2/mod.ts",
+    "chalk": "https://deno.land/x/chalk_deno@v4.1.1-deno/source/index.js",
+    "dotenv": "https://deno.land/x/dotenv@v3.2.2/mod.ts",
+    "execa": "https://deno.land/x/execa@v7.1.1/mod.ts",
+    "http-proxy-middleware": "https://deno.land/x/http_proxy_middleware@v2.1.0/mod.ts",
+    "toml": "https://deno.land/std@0.182.0/encoding/toml.ts",
+    "zod": "https://deno.land/x/zod@v3.23.8/mod.ts"
+  }
+}

@@ -6,7 +6,7 @@ import {
     REALTIME_LISTEN_TYPES,
     REALTIME_POSTGRES_CHANGES_LISTEN_EVENT,
 } from '@supabase/supabase-js';
-import { Agent } from '../../../../../../meta/meta.js';
+import { Agent } from '../../../meta.js';
 
 export namespace Supabase {
     let supabaseClient: SupabaseClient | null = null;
