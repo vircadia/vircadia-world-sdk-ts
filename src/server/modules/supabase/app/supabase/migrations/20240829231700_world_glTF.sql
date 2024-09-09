@@ -29,14 +29,6 @@ CREATE TABLE scenes (
     nodes JSONB,
     extensions JSONB,
     extras JSONB
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras->'vircadia'->'babylonjs'->>'client_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_behaviors') = 'array',
-            extras->'vircadia'->'babylonjs'->>'client_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_actions') = 'array',
-            extras->'vircadia'->'babylonjs'->>'server_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_behaviors') = 'array',
-            extras->'vircadia'->'babylonjs'->>'server_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_actions') = 'array'
-        )
-    )
 );
 
 -- Create the nodes table
@@ -55,14 +47,6 @@ CREATE TABLE nodes (
     weights JSONB,
     extensions JSONB,
     extras JSONB,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras->'vircadia'->'babylonjs'->>'client_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_behaviors') = 'array',
-            extras->'vircadia'->'babylonjs'->>'client_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_actions') = 'array',
-            extras->'vircadia'->'babylonjs'->>'server_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_behaviors') = 'array',
-            extras->'vircadia'->'babylonjs'->>'server_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_actions') = 'array'
-        )
-    )
 );
 
 -- Create the meshes table
@@ -74,14 +58,6 @@ CREATE TABLE meshes (
     weights JSONB,
     extensions JSONB,
     extras JSONB,
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras->'vircadia'->'babylonjs'->>'client_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_behaviors') = 'array',
-            extras->'vircadia'->'babylonjs'->>'client_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_actions') = 'array',
-            extras->'vircadia'->'babylonjs'->>'server_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_behaviors') = 'array',
-            extras->'vircadia'->'babylonjs'->>'server_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_actions') = 'array'
-        )
-    )
 );
 
 -- Create the materials table
@@ -186,14 +162,6 @@ CREATE TABLE cameras (
     extensions JSONB,
     extras JSONB,
     CONSTRAINT check_camera_type CHECK (type IN ('perspective', 'orthographic')),
-    CONSTRAINT check_extras_structure CHECK (
-        extras IS NULL OR (
-            extras->'vircadia'->'babylonjs'->>'client_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_behaviors') = 'array',
-            extras->'vircadia'->'babylonjs'->>'client_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'client_actions') = 'array',
-            extras->'vircadia'->'babylonjs'->>'server_behaviors' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_behaviors') = 'array',
-            extras->'vircadia'->'babylonjs'->>'server_actions' IS NULL OR jsonb_typeof(extras->'vircadia'->'babylonjs'->'server_actions') = 'array'
-        )
-    )
 );
 
 -- Create the buffers table
