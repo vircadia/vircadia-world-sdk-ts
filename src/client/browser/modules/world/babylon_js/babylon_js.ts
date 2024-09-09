@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-throw-literal */
 import { log } from "../../../../../server/modules/general/log.js";
-import { Supabase } from '../../providers/supabase/supabase.js';
+import { Supabase } from '../../../../../providers/typescript_supabase.js';
 import { Scene } from '@babylonjs/core/scene.js';
 import { Observer } from '@babylonjs/core/Misc/observable.js';
 import { Node } from '@babylonjs/core/node.js';

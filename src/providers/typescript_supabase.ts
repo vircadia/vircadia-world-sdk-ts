@@ -7,7 +7,6 @@ import {
     REALTIME_POSTGRES_CHANGES_LISTEN_EVENT,
 } from '@supabase/supabase-js';
 import { Agent } from '../../../../../../meta/meta.js';
-import { log } from '../../../../../server/modules/general/log.js';
 
 export namespace Supabase {
     let supabaseClient: SupabaseClient | null = null;
