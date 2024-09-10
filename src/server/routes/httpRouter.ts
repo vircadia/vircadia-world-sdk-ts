@@ -1,7 +1,7 @@
 import { Router as ExpressRouter } from 'express';
 import {
     Server
-} from '../../meta.js';
+} from '../../shared/meta.js';
 
 // Create a router instance
 const router = ExpressRouter();

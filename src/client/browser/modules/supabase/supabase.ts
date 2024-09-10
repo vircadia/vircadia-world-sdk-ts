@@ -5,8 +5,8 @@ import {
     RealtimePostgresChangesPayload,
     REALTIME_LISTEN_TYPES,
     REALTIME_POSTGRES_CHANGES_LISTEN_EVENT,
-} from '@supabase/supabase-js';
-import { Agent } from '../../../meta.js';
+} from 'https://esm.sh/@supabase/supabase-js@2';
+import { Agent } from '../../../shared/meta.js';
 
 export namespace Supabase {
     let supabaseClient: SupabaseClient | null = null;

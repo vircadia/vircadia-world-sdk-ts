@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { Application } from "oak";
 import { log } from "../general/log.ts";
 import { createProxyMiddleware } from "npm:http-proxy-middleware";
-import { Server } from "../../../meta.ts";
+import { Server } from "../../../shared/meta.ts";
 
 const CONFIG_TOML_FILE = "config.toml";
 

@@ -1,6 +1,6 @@
 import { Supabase } from '../providers/supabase/supabase.js';
-import { SupabaseClient, REALTIME_PRESENCE_LISTEN_EVENTS, REALTIME_CHANNEL_STATES, REALTIME_LISTEN_TYPES, REALTIME_SUBSCRIBE_STATES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
-import { Agent as AgentMeta, Primitive, Server } from '../../../meta.js';
+import { SupabaseClient, REALTIME_LISTEN_TYPES } from '@supabase/supabase-js';
+import { Agent as AgentMeta, Primitive, Server } from '../../../shared/meta.js';
 import { log } from '../../../server/modules/general/log.js';
 import { WebRTC } from './agent_webRTC.js';
 import { WebRTC_Media } from './agent_webRTC_media.js';
@@ -13,7 +13,7 @@ export namespace Agent {
 
     export interface AgentConnection {
         rtcConnection: RTCPeerConnection | null;
-        dataChannel: RTCDataChannel | null;
+        rtcDataChannel: RTCDataChannel | null;
         mediaStream: MediaStream | null;
         metadata: AgentMeta.C_Metadata | null;
         panner: PannerNode | null;
@@ -182,9 +182,24 @@ export namespace Agent {
                 })
                 .subscribe();
             world.supabaseClient?.channel(AgentMeta.E_ChannelType.SIGNALING_CHANNEL)
-                .on(REALTIME_LISTEN_TYPES.BROADCAST, { event: AgentMeta.E_SignalType.AGENT_Offer }, (payload) => handleWebRTCOffer(worldId, payload.payload))
-                .on(REALTIME_LISTEN_TYPES.BROADCAST, { event: AgentMeta.E_SignalType.AGENT_Answer }, (payload) => handleWebRTCAnswer(worldId, payload.payload))
-                .on(REALTIME_LISTEN_TYPES.BROADCAST, { event: AgentMeta.E_SignalType.AGENT_ICE_Candidate }, (payload) => handleWebRTCIceCandidate(worldId, payload.payload))
+                .on(REALTIME_LISTEN_TYPES.BROADCAST, { event: AgentMeta.E_SignalType.AGENT_Offer }, (payload) => {
+                    const connection = world.agentConnections[payload.payload.fromAgentId];
+                    if (connection) {
+                        WebRTC.handleWebRTCOffer(worldId, payload.payload, connection);
+                    }
+                })
+                .on(REALTIME_LISTEN_TYPES.BROADCAST, { event: AgentMeta.E_SignalType.AGENT_Answer }, (payload) => {
+                    const connection = world.agentConnections[payload.payload.fromAgentId];
+                    if (connection) {
+                        WebRTC.handleWebRTCAnswer(worldId, payload.payload, connection);
+                    }
+                })
+                .on(REALTIME_LISTEN_TYPES.BROADCAST, { event: AgentMeta.E_SignalType.AGENT_ICE_Candidate }, (payload) => {
+                    const connection = world.agentConnections[payload.payload.fromAgentId];
+                    if (connection) {
+                        WebRTC.handleWebRTCIceCandidate(worldId, payload.payload, connection);
+                    }
+                })
                 .subscribe();
             log(`${AGENT_LOG_PREFIX} Successfully connected to Supabase Realtime for world ${worldId}`, 'info');
 
@@ -203,40 +218,14 @@ export namespace Agent {
             return;
         }
 
-        const rtcConnection = WebRTC.createRTCConnection(agentId);
-        const dataChannel = WebRTC.createDataChannel(rtcConnection, 'data');
+        const connection = WebRTC.createAgentConnection(worldId, agentId, metadata);
+        world.agentConnections[agentId] = connection;
 
-        world.agentConnections[agentId] = {
-            rtcConnection,
-            dataChannel,
-            mediaStream: null,
-            metadata,
-            panner: null,
-            audioUpdateInterval: null,
-        };
-
-        WebRTC.setupRTCEventListeners(
-            rtcConnection,
-            (candidate) => sendWebRTCSignal(worldId, {
-                type: AgentMeta.E_SignalType.AGENT_ICE_Candidate,
-                payload: candidate,
-                targetAgentId: agentId,
-            }),
-            (event) => handleIncomingStream(worldId, agentId, event.streams[0]),
-            () => createAndSendOffer(worldId, agentId)
-        );
-
-        WebRTC.setupDataChannelListeners(
-            dataChannel,
-            () => log(`${AGENT_LOG_PREFIX} Data channel opened with agent ${agentId} in world ${worldId}`),
-            () => log(`${AGENT_LOG_PREFIX} Data channel closed with agent ${agentId} in world ${worldId}`),
-            (event) => handleDataChannelMessage(worldId, agentId, event)
-        );
-
-        addLocalStreamsToConnection(worldId, agentId);
+        WebRTC.setupRTCEventListeners(worldId, agentId, connection);
+        WebRTC.addLocalStreamsToConnection(worldId, agentId, connection);
 
         log(`${AGENT_LOG_PREFIX} Created agent ${agentId} in world ${worldId}`);
-        await createAndSendOffer(worldId, agentId);
+        await WebRTC.createAndSendOffer(worldId, agentId, connection);
     };
 
     export const removeAgent = (worldId: string, agentId: string) => {
@@ -247,21 +236,7 @@ export namespace Agent {
 
         const connection = world.agentConnections[agentId];
         if (connection) {
-            if (connection.rtcConnection) {
-                WebRTC.closeRTCConnection(connection.rtcConnection);
-            }
-            if (connection.dataChannel) {
-                connection.dataChannel.close();
-            }
-            if (connection.mediaStream) {
-                connection.mediaStream.getTracks().forEach((track) => track.stop());
-            }
-            if (connection.panner) {
-                WebRTC_Media.cleanupAudio(connection.panner);
-            }
-            if (connection.audioUpdateInterval) {
-                clearInterval(connection.audioUpdateInterval);
-            }
+            WebRTC.removeAgentConnection(worldId, agentId, connection);
             delete world.agentConnections[agentId];
             log(`${AGENT_LOG_PREFIX} Removed agent ${agentId} from world ${worldId}`);
         }
@@ -320,153 +295,7 @@ export namespace Agent {
         }
     };
 
-    const addLocalStreamsToConnection = (worldId: string, agentId: string) => {
-        const world = worldConnections[worldId];
-        if (!world) {
-            return;
-        }
-
-        const connection = world.agentConnections[agentId];
-        if (connection && connection.rtcConnection) {
-            if (Self.localAudioStream) {
-                WebRTC_Media.addStreamToConnection(connection.rtcConnection, Self.localAudioStream);
-            }
-            if (Self.localVideoStream) {
-                WebRTC_Media.addStreamToConnection(connection.rtcConnection, Self.localVideoStream);
-            }
-        }
-    };
-
-    const createAndSendOffer = async (worldId: string, agentId: string) => {
-        const world = worldConnections[worldId];
-        if (!world) {
-            return;
-        }
-
-        const connection = world.agentConnections[agentId];
-        if (connection && connection.rtcConnection) {
-            try {
-                const offer = await WebRTC.createOffer(connection.rtcConnection);
-                await sendWebRTCSignal(worldId, {
-                    type: AgentMeta.E_SignalType.AGENT_Offer,
-                    payload: offer,
-                    targetAgentId: agentId,
-                });
-            } catch (error) {
-                log(`${AGENT_LOG_PREFIX} Error creating and sending offer: ${error}`, 'error');
-            }
-        }
-    };
-
-    const handleWebRTCOffer = async (worldId: string, data: { offer: RTCSessionDescriptionInit; fromAgentId: string }) => {
-        const { offer, fromAgentId } = data;
-        const world = worldConnections[worldId];
-        if (!world) {
-            return;
-        }
-
-        const connection = world.agentConnections[fromAgentId];
-        if (connection && connection.rtcConnection) {
-            try {
-                const answer = await WebRTC.handleOffer(connection.rtcConnection, offer);
-                await sendWebRTCSignal(worldId, {
-                    type: AgentMeta.E_SignalType.AGENT_Answer,
-                    payload: answer,
-                    targetAgentId: fromAgentId,
-                });
-            } catch (error) {
-                log(`${AGENT_LOG_PREFIX} Error handling WebRTC offer: ${error}`, 'error');
-            }
-        }
-    };
-
-    const handleWebRTCAnswer = async (worldId: string, data: { answer: RTCSessionDescriptionInit; fromAgentId: string }) => {
-        const { answer, fromAgentId } = data;
-        const world = worldConnections[worldId];
-        if (!world) {
-            return;
-        }
-
-        const connection = world.agentConnections[fromAgentId];
-        if (connection && connection.rtcConnection) {
-            try {
-                await WebRTC.handleAnswer(connection.rtcConnection, answer);
-            } catch (error) {
-                log(`${AGENT_LOG_PREFIX} Error handling WebRTC answer: ${error}`, 'error');
-            }
-        }
-    };
-
-    const handleWebRTCIceCandidate = async (worldId: string, data: { candidate: RTCIceCandidateInit; fromAgentId: string }) => {
-        const { candidate, fromAgentId } = data;
-        const world = worldConnections[worldId];
-        if (!world) {
-            return;
-        }
-
-        const connection = world.agentConnections[fromAgentId];
-        if (connection && connection.rtcConnection) {
-            try {
-                await WebRTC.handleIceCandidate(connection.rtcConnection, candidate);
-            } catch (error) {
-                log(`${AGENT_LOG_PREFIX} Error handling ICE candidate: ${error}`, 'error');
-            }
-        }
-    };
-
-    const sendWebRTCSignal = async (worldId: string, signal: {
-        type: AgentMeta.E_SignalType;
-        payload: RTCSessionDescriptionInit | RTCIceCandidateInit | RTCIceCandidate;
-        targetAgentId: string;
-    }) => {
-        const world = worldConnections[worldId];
-        if (!world) {
-            return;
-        }
-
-        try {
-            await world.supabaseClient?.channel(AgentMeta.E_ChannelType.SIGNALING_CHANNEL)
-                .send({
-                    type: REALTIME_LISTEN_TYPES.BROADCAST,
-                    event: signal.type,
-                    payload: signal,
-                });
-        } catch (error) {
-            log(`${AGENT_LOG_PREFIX} Error sending WebRTC signal: ${error}`, 'error');
-        }
-    };
-
-    const handleIncomingStream = async (worldId: string, agentId: string, stream: MediaStream) => {
-        const world = worldConnections[worldId];
-        if (!world || !world.audioContext) {
-            return;
-        }
-
-        const connection = world.agentConnections[agentId];
-        if (!connection) {
-            return;
-        }
-
-        connection.mediaStream = stream;
-
-        try {
-            await WebRTC_Media.resumeAudioContext(world.audioContext);
-            const panner = WebRTC_Media.createPanner(world.audioContext);
-            connection.panner = panner;
-
-            WebRTC_Media.setupIncomingAudio(world.audioContext, stream, panner);
-
-            connection.audioUpdateInterval = setInterval(() => {
-                updateAgentAudioPosition(worldId, agentId);
-            }, AUDIO_METADATA_UPDATE_INTERVAL);
-
-            log(`${AGENT_LOG_PREFIX} Set up incoming audio for agent ${agentId} in world ${worldId}`);
-        } catch (error) {
-            log(`${AGENT_LOG_PREFIX} Error setting up incoming audio: ${error}`, 'error');
-        }
-    };
-
-    const updateAgentAudioPosition = (worldId: string, agentId: string) => {
+    export const updateAgentAudioPosition = (worldId: string, agentId: string) => {
         const world = worldConnections[worldId];
         if (!world || !world.audioContext) {
             return;
@@ -494,11 +323,5 @@ export namespace Agent {
                 z: agentOrientation.z - world.orientation.z,
             }
         );
-    };
-
-    const handleDataChannelMessage = (worldId: string, agentId: string, event: MessageEvent) => {
-        // Handle incoming data channel messages
-        log(`${AGENT_LOG_PREFIX} Received message from agent ${agentId} in world ${worldId}: ${event.data}`);
-        // Implement your logic for handling different types of messages here
     };
 }

@@ -2,7 +2,7 @@
 import { log } from "../../../server/modules/general/log.js";
 import { Supabase } from '../../client/modules/providers/supabase/supabase.js';
 import { Scene } from '@babylonjs/core/scene.js';
-import { Agent, World } from "../../../meta.js";
+import { Agent, World } from "../../../shared/meta.js";
 
 export namespace World_Babylon {
     const WORLD_BABYLON_LOG_PREFIX = '[WORLD: BABYLON]';
