@@ -1,0 +1,28 @@
+{
+    "compilerOptions": {
+      "lib": ["esnext", "dom"],
+      "target": "esnext",
+      "esModuleInterop": true,
+      "strict": true,
+      "moduleResolution": "NodeNext",
+      "noEmit": true,
+      "skipLibCheck": true,
+      "module": "NodeNext",
+      "types": ["semver"]
+    },
+    "tasks": {
+      "dev": "deno run --allow-net --allow-read --allow-write --allow-env --import-map=import_map.json dev.ts",
+      "build": "deno bundle client.ts dist/bundle.js",
+      "lint": "deno lint"
+    },
+    "importMap": "./import_map.json",
+    "lint": {
+      "files": {
+        "include": ["src/"]
+      },
+      "rules": {
+        "tags": ["recommended"],
+        "include": ["ban-untagged-todo"]
+      }
+    }
+  }

@@ -1,5 +1,5 @@
-import { defineConfig } from 'vite';
-import path from 'path';
+import { defineConfig } from 'npm:vite';
+import path from 'node:path';
 
 export default defineConfig({
     root: path.resolve(__dirname, 'src/browser/client'),
@@ -16,6 +16,6 @@ export default defineConfig({
         include: ['src/client/browser/client.ts'],
     },
     server: {
-        open: '/dashboard/index.html', // Open the dashboard/index.html on server start
+        open: '/dashboard/index.html',
     },
 });

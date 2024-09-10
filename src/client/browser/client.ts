@@ -1,8 +1,7 @@
-import { log } from '../server/modules/general/log.js';
-import { Agent } from './modules/agent/agent.js';
-import { WebRTC_Media } from './modules/agent/agent_webRTC_media.js';
+import { Agent } from '../modules/agent/agent.js';
+import { WebRTC_Media } from '../modules/agent/agent_webRTC_media.js';
 
-export namespace Client {
+export namespace Browser_Client {
     export const worldConnected = () => Agent.isConnectedToAnyWorld();
 
     export namespace Setup {

@@ -6,7 +6,7 @@
   },
   "lint": {
     "files": {
-      "include": ["src/"]
+      "include": ["./"]
     },
     "rules": {
       "tags": ["recommended"]
@@ -14,7 +14,7 @@
   },
   "fmt": {
     "files": {
-      "include": ["src/"]
+      "include": ["./"]
     },
     "options": {
       "useTabs": false,

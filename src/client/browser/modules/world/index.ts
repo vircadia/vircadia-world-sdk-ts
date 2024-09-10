@@ -1,1 +1,0 @@
-export * from './babylon_js/babylon_js.js';
