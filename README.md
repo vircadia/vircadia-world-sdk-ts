@@ -1,12 +1,5 @@
 # Vircadia World
 
-This project must be small (fewer lines of code, though no code golf). The scale MUST be balanced: more complexity = less lines of code to allow for that, OR if you want more lines of code, it must be less complex by an order of magnitude, but even then the lines of code must be minimal.
-
-Stack:
-
-1. Node.js (runtime) (req Node.js >= 22)
-1. tRPC with Express (router)
-
 ## Install
 
 To get started, clone the repository and install the dependencies:

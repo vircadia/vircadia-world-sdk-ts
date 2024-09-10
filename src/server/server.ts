@@ -1,6 +1,6 @@
 import { Application, Router } from "oak";
 import { Supabase } from "./modules/supabase/supabase_manager.ts";
-import { log } from "./modules/general/log.ts";
+import { log } from "../client/deno/modules/vircadia-world-meta/general/modules/log.ts";
 import { Server } from "./modules/vircadia-world-meta/meta.ts";
 
 const TEMP_PORT = 3000;
@@ -9,7 +9,12 @@ const TEMP_ALLOWED_METHODS_REQ = 'GET, POST, PUT, DELETE, OPTIONS';
 const TEMP_ALLOWED_HEADERS_REQ = 'Content-Type, Authorization';
 
 async function init() {
+    log({
+        message: 'Starting Vircadia World Server',
+        type: 'info',
+    });
     const app = new Application();
+    const router = new Router();
 
     // CORS middleware
     app.use(async (ctx, next) => {
@@ -21,6 +26,11 @@ async function init() {
             return;
         }
         await next();
+    });
+
+    log({
+        message: 'Starting Supabase',
+        type: 'info',
     });
 
     const forceRestartSupabase = Deno.args.includes('--force-restart-supabase');
@@ -37,21 +47,31 @@ async function init() {
         }
 
         if (!(await supabase.isRunning())) {
-            log(
-                'Supabase services are not running after initialization. Exiting.',
-                'error',
-            );
+            log({
+                message: 'Supabase services are not running after initialization. Exiting.',
+                type: 'error',
+            });
             Deno.exit(1);
         }
     }
 
+    log({
+        message: 'Setting up reverse proxies for Supabase services',
+        type: 'info',
+    });
+
     // Set up reverse proxies for Supabase services
-    await supabase.setupReverseProxies(app);
+    await supabase.setupReverseProxies(router);
 
-    log('Supabase services are running correctly.', 'info');
+    log({
+        message: 'Supabase services are running correctly.',
+        type: 'info',
+    });
 
-    // Create a router instance
-    const router = new Router();
+    log({
+        message: 'Setting up HTTP routes',
+        type: 'info',
+    });
 
     // Add the route from httpRouter.ts
     router.get(Server.E_HTTPRequestPath.CONFIG_AND_STATUS, (ctx) => {
@@ -63,12 +83,20 @@ async function init() {
         ctx.response.body = response;
     });
 
+    log({
+        message: 'HTTP routes are set up correctly.',
+        type: 'info',
+    });
+
     // Use the router
     app.use(router.routes());
     app.use(router.allowedMethods());
 
     // Launch
-    log(`Server is running on port ${TEMP_PORT}`, 'info');
+    log({
+        message: `Server is running on port ${TEMP_PORT}`,
+        type: 'success',
+    });
     await app.listen({ port: TEMP_PORT });
 }
 

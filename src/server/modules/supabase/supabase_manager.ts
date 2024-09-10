@@ -1,8 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { Application } from "oak";
-import { log } from "../general/log.ts";
-import { createProxyMiddleware } from "npm:http-proxy-middleware";
+import { Router, proxy } from "oak";
+import { log } from "../vircadia-world-meta/general/modules/log.ts";
 import { Server } from "../vircadia-world-meta/meta.ts";
 
 const CONFIG_TOML_FILE = "config.toml";
@@ -46,23 +45,28 @@ export class Supabase {
     return Supabase.instance;
   }
 
-  private loadConfig(): void {}
+  private loadConfig(): void {
+    // const configPath = path.join(this.configDir, CONFIG_TOML_FILE);
+    // const config = toml.parse(await fs.readFile(configPath, "utf8"));
+    // this.routes = config.routes;
+  }
 
-  async setupReverseProxies(app: Application): Promise<void> {
+  async setupReverseProxies(router: Router): Promise<void> {
     const statusUrls = await this.getStatus();
 
     const setupProxy = (route: Server.E_HTTPRoute, target: string | null) => {
       if (target) {
-        app.use(
-          route,
-          createProxyMiddleware({
-            target,
-            changeOrigin: true,
-            pathRewrite: { [`^${route}`]: "" },
-          })
-        );
+        const targetUrl = new URL(target);
+        router.all(`${route}(.*)`, async (ctx) => {
+          ctx.request.url.pathname = ctx.params[0] || '/';
+          await proxy(ctx, targetUrl.origin);
+        });
         this.routes[route as Server.E_HTTPRoute] = target;
-        log(`Reverse proxy set up for ${route} -> ${target}`, "success");
+        log({
+          message: `Reverse proxy set up for ${route} -> ${target}`,
+          type: "success",
+          debug: this.debug
+        });
       }
     };
 
@@ -75,20 +79,27 @@ export class Supabase {
   }
 
   async initializeAndStart(data: { forceRestart: boolean }): Promise<void> {
-    log("Initializing and starting Supabase...", "info");
+    log({
+      message: "Initializing and starting Supabase...",
+      type: "info",
+      debug: this.debug
+    });
 
     try {
       // Check if Supabase CLI is installed.
       try {
-        const process = Deno.run({
-          cmd: ["npx", "supabase", "--version"],
+        const command = new Deno.Command("npx", {
+          args: ["supabase", "--version"],
           cwd: this.appDir,
           stdout: "piped",
         });
-        const output = await process.output();
-        const stdout = new TextDecoder().decode(output).trim();
-        process.close();
-        log(`Supabase CLI version: ${stdout}`, "success");
+        const { stdout } = await command.output();
+        const output = new TextDecoder().decode(stdout).trim();
+        log({
+          message: `Supabase CLI version: ${output}`,
+          type: "success",
+          debug: this.debug
+        });
       } catch (error) {
         throw new SupabaseError(
           "Supabase CLI is not installed. Please install it first."
@@ -97,91 +108,142 @@ export class Supabase {
       await this.initializeProjectIfNeeded();
       await this.startSupabase(data.forceRestart);
     } catch (error) {
-      log(
-        `Failed to initialize and start Supabase: ${error.message}`,
-        "error"
-      );
+      log({
+        message: `Failed to initialize and start Supabase: ${error.message}`,
+        type: "error",
+        debug: this.debug
+      });
       throw error;
     }
 
-    log("Supabase initialization and startup complete.", "success");
+    log({
+      message: "Supabase initialization and startup complete.",
+      type: "success",
+      debug: this.debug
+    });
   }
 
   private async initializeProjectIfNeeded(): Promise<void> {
     const configPath = path.join(this.configDir, CONFIG_TOML_FILE);
     try {
       await fs.access(configPath);
-      log("Supabase project already initialized.", "success");
+      log({
+        message: "Supabase project already initialized.",
+        type: "success",
+        debug: this.debug
+      });
     } catch {
-      log("Supabase project not initialized. Initializing now...", "info");
+      log({
+        message: "Supabase project not initialized. Initializing now...",
+        type: "info",
+        debug: this.debug
+      });
       await this.runSupabaseCommand({
         command: "init",
         appendWorkdir: true,
       });
-      log("Supabase project initialized.", "success");
+      log({
+        message: "Supabase project initialized.",
+        type: "success",
+        debug: this.debug
+      });
     }
   }
 
   private async startSupabase(forceRestart: boolean): Promise<void> {
     if (forceRestart) {
-      log("Stopping Supabase services for a forced restart...", "info");
+      log({
+        message: "Stopping Supabase services for a forced restart...",
+        type: "info",
+        debug: this.debug
+      });
       await this.stopSupabase();
     } else if (await this.isStarting()) {
-      log(
-        "Supabase is already starting up. Waiting for it to complete...",
-        "info"
-      );
+      log({
+        message: "Supabase is already starting up. Waiting for it to complete...",
+        type: "info",
+        debug: this.debug
+      });
       await this.waitForStartup();
       return;
     } else if (!(await this.isRunning())) {
-      log("Supabase services are not running. Starting them...", "info");
+      log({
+        message: "Supabase services are not running. Starting them...",
+        type: "info",
+        debug: this.debug
+      });
       await this.stopSupabase();
     }
 
     try {
-      log("Starting Supabase services...", "info");
+      log({
+        message: "Starting Supabase services...",
+        type: "info",
+        debug: this.debug
+      });
       await this.runSupabaseCommand({
         command: "start",
         appendWorkdir: true,
       });
-      log("Supabase services started successfully.", "success");
+      log({
+        message: "Supabase services started successfully.",
+        type: "success",
+        debug: this.debug
+      });
     } catch (error) {
-      log(`Failed to start Supabase: ${error.message}`, "error");
+      log({
+        message: `Failed to start Supabase: ${error.message}`,
+        type: "error",
+        debug: this.debug
+      });
       throw error;
     }
   }
 
   private async stopSupabase(): Promise<void> {
-    log("Stopping Supabase services...", "info");
+    log({
+      message: "Stopping Supabase services...",
+      type: "info",
+      debug: this.debug
+    });
     try {
       await this.runSupabaseCommand({
         command: "stop",
         appendWorkdir: true,
       });
-      log("Supabase services stopped.", "success");
+      log({
+        message: "Supabase services stopped.",
+        type: "success",
+        debug: this.debug
+      });
     } catch (error) {
-      log(`Failed to stop Supabase: ${error.message}`, "warning");
+      log({
+        message: `Failed to stop Supabase: ${error.message}`,
+        type: "warning",
+        debug: this.debug
+      });
     }
   }
 
   async isRunning(): Promise<boolean> {
-    const NOT_RUNNING = "not running";
-    const EXITED = "exited";
-    const FAILED_TO_INSPECT = "failed to inspect container health";
-    const NO_SUCH_CONTAINER = "No such container: supabase_db_app";
-
+    const CONTAINS_IF_WORKING = 'API URL:';
+    log({
+      message: "Checking if Supabase is running...",
+      type: "debug",
+      debug: this.debug
+    });
     try {
       const output = await this.runSupabaseCommand({
         command: "status",
         appendWorkdir: true,
-        suppressError: true, // Suppress error logging
+        suppressError: true,
       });
-      return (
-        !output.includes(NOT_RUNNING) &&
-        !output.includes(EXITED) &&
-        !output.includes(FAILED_TO_INSPECT) &&
-        !output.includes(NO_SUCH_CONTAINER)
-      );
+      log({
+        message: `Supabase status: ${output}`,
+        type: "debug",
+        debug: this.debug
+      });
+      return output.includes(CONTAINS_IF_WORKING);
     } catch (error) {
       return false;
     }
@@ -189,16 +251,15 @@ export class Supabase {
 
   private async isStarting(): Promise<boolean> {
     try {
-      const process = Deno.run({
-        cmd: ["docker", "ps", "--format", "{{.Names}}"],
+      const command = new Deno.Command("docker", {
+        args: ["ps", "--format", "{{.Names}}"],
         cwd: this.appDir,
         stdout: "piped",
       });
-      const output = await process.output();
-      const stdout = new TextDecoder().decode(output);
-      process.close();
+      const { stdout } = await command.output();
+      const output = new TextDecoder().decode(stdout);
       return (
-        stdout.includes("supabase_db_app") && !(await this.isRunning())
+        output.includes("supabase_db_app") && !(await this.isRunning())
       );
     } catch (error) {
       return false;
@@ -234,76 +295,108 @@ export class Supabase {
     }`;
 
     try {
-      const process = Deno.run({
-        cmd: ["sh", "-c", fullCommand],
+      const command = new Deno.Command("npx", {
+        args: ["supabase", ...data.command.split(" "), ...(data.appendWorkdir ? ["--workdir", this.appDir] : [])],
         cwd: this.appDir,
         env: { ...Deno.env.toObject(), SUPABASE_DEBUG: this.debug ? "1" : "0" },
         stdout: "piped",
         stderr: "piped",
       });
-      const [stdout, stderr] = await Promise.all([
-        process.output(),
-        process.stderrOutput(),
-      ]);
-      const status = await process.status();
-      process.close();
 
-      if (!status.success) {
-        throw new Error(new TextDecoder().decode(stderr));
+      const { stdout, stderr } = await command.output();
+      const output = new TextDecoder().decode(stdout);
+      const errorOutput = new TextDecoder().decode(stderr);
+
+      if (errorOutput && !data.suppressError) {
+        log({
+          message: `Command stderr: ${errorOutput}`,
+          type: "warning",
+          debug: this.debug
+        });
       }
 
-      return new TextDecoder().decode(stdout).trim();
+      log({
+        message: `Command stdout: ${output}`,
+        type: "debug",
+        debug: this.debug
+      });
+
+      return output.trim();
     } catch (error) {
       if (!data.suppressError) {
-        log(`Error executing command: ${fullCommand}`, "error");
-        if (this.debug) {
-          log(
-            `Full error details: ${JSON.stringify(error, null, 2)}`,
-            "error"
-          );
-        }
+        log({
+          message: `Error executing command: ${fullCommand}`,
+          type: "error",
+          debug: this.debug
+        });
+        log({
+          message: `Full error details: ${JSON.stringify(error, null, 2)}`,
+          type: "error",
+          debug: this.debug
+        });
       }
       throw new SupabaseError(`Command failed: ${fullCommand}`);
     }
   }
 
   async debugStatus(): Promise<void> {
-    log("Running Supabase debug commands...", "info");
+    log({
+      message: "Running Supabase debug commands...",
+      type: "info",
+      debug: this.debug
+    });
     try {
       const status = await this.runSupabaseCommand({
         command: "status --debug",
         appendWorkdir: true,
       });
-      log(`Supabase Status (Debug): ${status}`, "info");
+      log({
+        message: `Supabase Status (Debug): ${status}`,
+        type: "info",
+        debug: this.debug
+      });
 
-      const dockerPs = await Deno.run({
-        cmd: ["docker", "ps", "-a"],
+      const dockerPs = new Deno.Command("docker", {
+        args: ["ps", "-a"],
         cwd: this.appDir,
         stdout: "piped",
       });
-      const dockerPsOutput = await dockerPs.output();
-      dockerPs.close();
-      log(`Docker Containers: ${new TextDecoder().decode(dockerPsOutput)}`, "info");
+      const { stdout: dockerPsOutput } = await dockerPs.output();
+      log({
+        message: `Docker Containers: ${new TextDecoder().decode(dockerPsOutput)}`,
+        type: "info",
+        debug: this.debug
+      });
 
-      const dockerLogs = await Deno.run({
-        cmd: ["docker", "logs", "supabase_db_app"],
+      const dockerLogs = new Deno.Command("docker", {
+        args: ["logs", "supabase_db_app"],
         cwd: this.appDir,
         stdout: "piped",
       });
-      const dockerLogsOutput = await dockerLogs.output();
-      dockerLogs.close();
-      log(`Supabase DB App Logs: ${new TextDecoder().decode(dockerLogsOutput)}`, "info");
+      const { stdout: dockerLogsOutput } = await dockerLogs.output();
+      log({
+        message: `Supabase DB App Logs: ${new TextDecoder().decode(dockerLogsOutput)}`,
+        type: "info",
+        debug: this.debug
+      });
 
-      const dockerInspect = await Deno.run({
-        cmd: ["docker", "inspect", "supabase_db_app"],
+      const dockerInspect = new Deno.Command("docker", {
+        args: ["inspect", "supabase_db_app"],
         cwd: this.appDir,
         stdout: "piped",
       });
-      const dockerInspectOutput = await dockerInspect.output();
-      dockerInspect.close();
-      log(`Supabase DB App Inspect: ${new TextDecoder().decode(dockerInspectOutput)}`, "info");
+      const { stdout: dockerInspectOutput } = await dockerInspect.output();
+      log({
+        message: `Supabase DB App Inspect: ${new TextDecoder().decode(dockerInspectOutput)}`,
+        type: "info",
+        debug: this.debug
+      });
     } catch (error) {
-      log(`Error running debug commands: ${error}`, "error");
+      log({
+        message: `Error running debug commands: ${error}`,
+        type: "error",
+        debug: this.debug
+      });
     }
   }
 
