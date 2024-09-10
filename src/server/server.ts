@@ -1,7 +1,7 @@
 import { Application, Router } from "oak";
 import { Supabase } from "./modules/supabase/supabase_manager.ts";
 import { log } from "./modules/general/log.ts";
-import { Server } from "../shared/meta.ts";
+import { Server } from "./modules/vircadia-world-meta/meta.ts";
 
 const TEMP_PORT = 3000;
 const TEMP_ALLOWED_ORIGINS = '*';
