@@ -6,10 +6,11 @@
   },
   "lint": {
     "files": {
-      "include": ["./"]
+      "include": ["/"]
     },
     "rules": {
-      "tags": ["recommended"]
+      "tags": ["recommended"],
+      "exclude": ["no-namespace"]
     }
   },
   "fmt": {

@@ -1,5 +1,4 @@
 import { Agent } from './modules/vircadia-world-meta/client/modules/agent/agent.ts';
-import { WebRTC_Media } from './modules/vircadia-world-meta/client/modules/agent/agent_webRTC_media.ts';
 
 export namespace Browser_Client {
     export const worldConnected = () => Agent.isConnectedToAnyWorld();
@@ -10,7 +9,7 @@ export namespace Browser_Client {
         }) => {
             log(`Initializing Vircadia World for agent ${data.agentId}`, 'info');
             // Initialize Agent and Media modules
-            Agent.initialize(data.agentId);
+            Agent.initialize({ capabilities: { webRTC: true } });
             log('Initialized Agent module', 'info');
             WebRTC_Media.InitializeMediaModule();
             log('Initialized Media module', 'info');

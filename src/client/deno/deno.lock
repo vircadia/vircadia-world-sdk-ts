@@ -16,6 +16,8 @@
       "npm:@supabase/storage-js@2.7.0": "npm:@supabase/storage-js@2.7.0",
       "npm:@types/node": "npm:@types/node@18.16.19",
       "npm:console-log-colors": "npm:console-log-colors@0.5.0",
+      "npm:mobx": "npm:mobx@6.13.2",
+      "npm:rxjs": "npm:rxjs@7.8.1",
       "npm:typescript": "npm:typescript@5.5.4",
       "npm:vite": "npm:vite@5.4.3_@types+node@18.16.19",
       "npm:zod": "npm:zod@3.23.8"
@@ -300,6 +302,10 @@
         "integrity": "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==",
         "dependencies": {}
       },
+      "mobx@6.13.2": {
+        "integrity": "sha512-GIubI2qf+P6lG6rSEG0T2pg3jV9/0+O0ncF09+0umRe75+Cbnh1KNLM1GvbTY9RSc7QuU+LcPNZfxDY8B+3XRg==",
+        "dependencies": {}
+      },
       "nanoid@3.3.7": {
         "integrity": "sha512-eSRppjcPIatRIMC1U6UngP8XFcz8MQWGQdt1MTBQ7NaAmvXDfvNxbvWV3x2y6CdEUciCSsDHDQZbhYaB8QEo2g==",
         "dependencies": {}
@@ -339,12 +345,22 @@
           "fsevents": "fsevents@2.3.3"
         }
       },
+      "rxjs@7.8.1": {
+        "integrity": "sha512-AA3TVj+0A2iuIoQkWEK/tqFjBq2j+6PO6Y0zJcvzLAFhEFIO3HL0vls9hWLncZbAAbK0mar7oZ4V079I/qPMxg==",
+        "dependencies": {
+          "tslib": "tslib@2.7.0"
+        }
+      },
       "source-map-js@1.2.1": {
         "integrity": "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==",
         "dependencies": {}
       },
       "tr46@0.0.3": {
         "integrity": "sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==",
+        "dependencies": {}
+      },
+      "tslib@2.7.0": {
+        "integrity": "sha512-gLXCKdN1/j47AiHiOkJN69hJmcbGTHI0ImLmbYLHykhgeN0jVGola9yVjFgzCUklsZQMW55o+dW7IXv3RCXDzA==",
         "dependencies": {}
       },
       "typescript@5.5.4": {

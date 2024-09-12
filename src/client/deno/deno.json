@@ -15,14 +15,15 @@
     "build": "deno bundle client.ts dist/bundle.js",
     "lint": "deno lint"
   },
-  "importMap": "./import_map.json",
   "lint": {
     "files": {
-      "include": ["src/"]
+      "include": ["**/*.ts", "**/*.js", "**/*.tsx", "**/*.jsx"],
+      "exclude": ["node_modules", "dist"]
     },
     "rules": {
       "tags": ["recommended"],
-      "include": ["ban-untagged-todo"]
+      "include": ["ban-untagged-todo"],
+      "exclude": ["no-namespace"]
     }
   },
   "imports": {
