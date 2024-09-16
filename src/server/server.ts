@@ -1,14 +1,21 @@
 import { Application, Router } from "oak";
 import { Supabase } from "./modules/supabase/supabase_manager.ts";
 import { log } from "../client/deno/modules/vircadia-world-meta/general/modules/log.ts";
-import { Server } from "./modules/vircadia-world-meta/meta.ts";
+import { Server, Environment } from "./modules/vircadia-world-meta/meta.ts";
 
 const TEMP_PORT = 3000;
 const TEMP_ALLOWED_ORIGINS = '*';
 const TEMP_ALLOWED_METHODS_REQ = 'GET, POST, PUT, DELETE, OPTIONS';
 const TEMP_ALLOWED_HEADERS_REQ = 'Content-Type, Authorization';
 
+let debugMode = false;
+
 async function init() {
+    const serverDebug = Deno.env.get(Environment.ENVIRONMENT_VARIABLE.SERVER_DEBUG);
+    if (serverDebug) {
+        debugMode = true;
+    }
+
     log({
         message: 'Starting Vircadia World Server',
         type: 'info',
@@ -35,14 +42,17 @@ async function init() {
 
     const forceRestartSupabase = Deno.args.includes('--force-restart-supabase');
 
-    const supabase = Supabase.getInstance(false);
+    const supabase = Supabase.getInstance(debugMode);
     if (!(await supabase.isRunning()) || forceRestartSupabase) {
         try {
             await supabase.initializeAndStart({
                 forceRestart: forceRestartSupabase,
             });
         } catch (error) {
-            log(`Failed to initialize and start Supabase: ${error}`, 'error');
+            log({
+                message: `Failed to initialize and start Supabase: ${error}`,
+                type: 'error',
+            });
             await supabase.debugStatus();
         }
 

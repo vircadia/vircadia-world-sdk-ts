@@ -2,10 +2,30 @@
   "version": "3",
   "packages": {
     "specifiers": {
+      "jsr:@supabase/supabase-js@2": "jsr:@supabase/supabase-js@2.45.3",
+      "npm:@supabase/auth-js@2.65.0": "npm:@supabase/auth-js@2.65.0",
+      "npm:@supabase/functions-js@2.4.1": "npm:@supabase/functions-js@2.4.1",
+      "npm:@supabase/node-fetch@2.6.15": "npm:@supabase/node-fetch@2.6.15",
+      "npm:@supabase/postgrest-js@1.15.8": "npm:@supabase/postgrest-js@1.15.8",
+      "npm:@supabase/realtime-js@2.10.2": "npm:@supabase/realtime-js@2.10.2",
+      "npm:@supabase/storage-js@2.7.0": "npm:@supabase/storage-js@2.7.0",
       "npm:console-log-colors": "npm:console-log-colors@0.5.0",
       "npm:execa": "npm:execa@9.3.1",
       "npm:http-proxy-middleware": "npm:http-proxy-middleware@3.0.2",
       "npm:zod": "npm:zod@3.23.8"
+    },
+    "jsr": {
+      "@supabase/supabase-js@2.45.3": {
+        "integrity": "16f283644a29d70819661047e939754604255c0f77c529876c3fa09ee340eab7",
+        "dependencies": [
+          "npm:@supabase/auth-js@2.65.0",
+          "npm:@supabase/functions-js@2.4.1",
+          "npm:@supabase/node-fetch@2.6.15",
+          "npm:@supabase/postgrest-js@1.15.8",
+          "npm:@supabase/realtime-js@2.10.2",
+          "npm:@supabase/storage-js@2.7.0"
+        ]
+      }
     },
     "npm": {
       "@sec-ant/readable-stream@0.4.1": {
@@ -16,6 +36,45 @@
         "integrity": "sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ==",
         "dependencies": {}
       },
+      "@supabase/auth-js@2.65.0": {
+        "integrity": "sha512-+wboHfZufAE2Y612OsKeVP4rVOeGZzzMLD/Ac3HrTQkkY4qXNjI6Af9gtmxwccE5nFvTiF114FEbIQ1hRq5uUw==",
+        "dependencies": {
+          "@supabase/node-fetch": "@supabase/node-fetch@2.6.15"
+        }
+      },
+      "@supabase/functions-js@2.4.1": {
+        "integrity": "sha512-8sZ2ibwHlf+WkHDUZJUXqqmPvWQ3UHN0W30behOJngVh/qHHekhJLCFbh0AjkE9/FqqXtf9eoVvmYgfCLk5tNA==",
+        "dependencies": {
+          "@supabase/node-fetch": "@supabase/node-fetch@2.6.15"
+        }
+      },
+      "@supabase/node-fetch@2.6.15": {
+        "integrity": "sha512-1ibVeYUacxWYi9i0cf5efil6adJ9WRyZBLivgjs+AUpewx1F3xPi7gLgaASI2SmIQxPoCEjAsLAzKPgMJVgOUQ==",
+        "dependencies": {
+          "whatwg-url": "whatwg-url@5.0.0"
+        }
+      },
+      "@supabase/postgrest-js@1.15.8": {
+        "integrity": "sha512-YunjXpoQjQ0a0/7vGAvGZA2dlMABXFdVI/8TuVKtlePxyT71sl6ERl6ay1fmIeZcqxiuFQuZw/LXUuStUG9bbg==",
+        "dependencies": {
+          "@supabase/node-fetch": "@supabase/node-fetch@2.6.15"
+        }
+      },
+      "@supabase/realtime-js@2.10.2": {
+        "integrity": "sha512-qyCQaNg90HmJstsvr2aJNxK2zgoKh9ZZA8oqb7UT2LCh3mj9zpa3Iwu167AuyNxsxrUE8eEJ2yH6wLCij4EApA==",
+        "dependencies": {
+          "@supabase/node-fetch": "@supabase/node-fetch@2.6.15",
+          "@types/phoenix": "@types/phoenix@1.6.5",
+          "@types/ws": "@types/ws@8.5.12",
+          "ws": "ws@8.18.0"
+        }
+      },
+      "@supabase/storage-js@2.7.0": {
+        "integrity": "sha512-iZenEdO6Mx9iTR6T7wC7sk6KKsoDPLq8rdu5VRy7+JiT1i8fnqfcOr6mfF2Eaqky9VQzhP8zZKQYjzozB65Rig==",
+        "dependencies": {
+          "@supabase/node-fetch": "@supabase/node-fetch@2.6.15"
+        }
+      },
       "@types/http-proxy@1.17.15": {
         "integrity": "sha512-25g5atgiVNTIv0LBDTg1H74Hvayx0ajtJPLLcYE3whFv75J0pWNtOBzaXJQgDTmrX1bx5U9YC2w/n65BN1HwRQ==",
         "dependencies": {
@@ -25,6 +84,16 @@
       "@types/node@18.16.19": {
         "integrity": "sha512-IXl7o+R9iti9eBW4Wg2hx1xQDig183jj7YLn8F7udNceyfkbn1ZxmzZXuak20gR40D7pIkIY1kYGx5VIGbaHKA==",
         "dependencies": {}
+      },
+      "@types/phoenix@1.6.5": {
+        "integrity": "sha512-xegpDuR+z0UqG9fwHqNoy3rI7JDlvaPh2TY47Fl80oq6g+hXT+c/LEuE43X48clZ6lOfANl5WrPur9fYO1RJ/w==",
+        "dependencies": {}
+      },
+      "@types/ws@8.5.12": {
+        "integrity": "sha512-3tPRkv1EtkDpzlgyKyI8pGsGZAGPEaXeu0DOj5DI25Ja91bdAYddYHbADRYVrZMRbfW+1l5YwXVDKohDJNQxkQ==",
+        "dependencies": {
+          "@types/node": "@types/node@18.16.19"
+        }
       },
       "braces@3.0.3": {
         "integrity": "sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==",
@@ -218,11 +287,30 @@
           "is-number": "is-number@7.0.0"
         }
       },
+      "tr46@0.0.3": {
+        "integrity": "sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==",
+        "dependencies": {}
+      },
+      "webidl-conversions@3.0.1": {
+        "integrity": "sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==",
+        "dependencies": {}
+      },
+      "whatwg-url@5.0.0": {
+        "integrity": "sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==",
+        "dependencies": {
+          "tr46": "tr46@0.0.3",
+          "webidl-conversions": "webidl-conversions@3.0.1"
+        }
+      },
       "which@2.0.2": {
         "integrity": "sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==",
         "dependencies": {
           "isexe": "isexe@2.0.0"
         }
+      },
+      "ws@8.18.0": {
+        "integrity": "sha512-8VbfWfHLbbwu3+N6OKsOMpBdT4kXPDDB9cJk2bJ6mh9ucxdlnNvH1e+roYkKmN9Nxw2yjz7VzeO9oOz2zJ04Pw==",
+        "dependencies": {}
       },
       "yoctocolors@2.1.1": {
         "integrity": "sha512-GQHQqAopRhwU8Kt1DDM8NjibDXHC8eoh1erhGAJPEyveY9qqVeXvVikNKrDz69sHowPMorbPUrH/mx8c50eiBQ==",
