@@ -4,16 +4,18 @@ import { log } from "../client/deno/modules/vircadia-world-meta/general/modules/
 import { Server, Environment } from "./modules/vircadia-world-meta/meta.ts";
 
 const TEMP_PORT = 3000;
+const TEMP_HOST = '0.0.0.0';
 const TEMP_ALLOWED_ORIGINS = '*';
 const TEMP_ALLOWED_METHODS_REQ = 'GET, POST, PUT, DELETE, OPTIONS';
 const TEMP_ALLOWED_HEADERS_REQ = 'Content-Type, Authorization';
 
-let debugMode = false;
-
 async function init() {
-    const serverDebug = Deno.env.get(Environment.ENVIRONMENT_VARIABLE.SERVER_DEBUG);
-    if (serverDebug) {
-        debugMode = true;
+    const debugMode = Deno.env.get(Environment.ENVIRONMENT_VARIABLE.SERVER_DEBUG) === 'true';
+    if (debugMode) {
+        log({
+            message: 'Server debug mode enabled',
+            type: 'info',
+        });
     }
 
     log({
@@ -66,14 +68,6 @@ async function init() {
     }
 
     log({
-        message: 'Setting up reverse proxies for Supabase services',
-        type: 'info',
-    });
-
-    // Set up reverse proxies for Supabase services
-    await supabase.setupReverseProxies(router);
-
-    log({
         message: 'Supabase services are running correctly.',
         type: 'info',
     });
@@ -84,10 +78,17 @@ async function init() {
     });
 
     // Add the route from httpRouter.ts
-    router.get(Server.E_HTTPRequestPath.CONFIG_AND_STATUS, (ctx) => {
+    router.get(Server.E_HTTPRequestPath.CONFIG_AND_STATUS, async (ctx) => {
+        log({
+            message: `${Server.E_HTTPRequestPath.CONFIG_AND_STATUS} route called`,
+            type: 'debug',
+            debug: debugMode,
+        });
+
+        const statusUrls = await supabase.getStatus();
         const response: Server.I_REQUEST_ConfigAndStatusResponse = {
-            API_URL: Server.E_HTTPRoute.API,
-            S3_STORAGE_URL: Server.E_HTTPRoute.STORAGE,
+            API_URL: statusUrls.api.host + ':' + statusUrls.api.port + statusUrls.api.path,
+            STORAGE_URL: statusUrls.s3Storage.host + ':' + statusUrls.s3Storage.port + statusUrls.s3Storage.path,
         };
 
         ctx.response.body = response;
@@ -104,10 +105,21 @@ async function init() {
 
     // Launch
     log({
-        message: `Server is running on port ${TEMP_PORT}`,
+        message: `Server is running on ${TEMP_HOST}:${TEMP_PORT}`,
         type: 'success',
     });
-    await app.listen({ port: TEMP_PORT });
+
+    try {
+        await app.listen({ 
+            port: TEMP_PORT,
+            hostname: TEMP_HOST,
+        });
+    } catch (error) {
+        log({
+            message: `Failed to start server: ${error}`,
+            type: 'error',
+        });
+    }
 }
 
 await init();

@@ -363,12 +363,12 @@ export class Supabase {
   }
 
   async getStatus(): Promise<{
-    apiUrl: string | null;
-    graphqlUrl: string | null;
-    s3StorageUrl: string | null;
-    dbUrl: string | null;
-    studioUrl: string | null;
-    inbucketUrl: string | null;
+    api: { host: string; port: number; path: string };
+    graphql: { host: string; port: number; path: string };
+    s3Storage: { host: string; port: number; path: string };
+    db: { user: string; password: string; host: string; port: number; database: string };
+    studio: { host: string; port: number; path: string };
+    inbucket: { host: string; port: number; path: string };
     jwtSecret: string | null;
     anonKey: string | null;
     serviceRoleKey: string | null;
@@ -388,25 +388,49 @@ export class Supabase {
     const S3_ACCESS_KEY = "S3 Access Key";
     const S3_SECRET_KEY = "S3 Secret Key";
     const S3_REGION = "S3 Region";
-
+  
     const output = await this.runSupabaseCommand({
       command: "status",
       appendWorkdir: true,
     });
-
+  
     const parseValue = (key: string): string | null => {
       const regex = new RegExp(`${key}:\\s*(.+)`, "u");
       const match = output.match(regex);
       return match ? match[1].trim() : null;
     };
-
+  
+    const parseUrl = (url: string | null): { host: string; port: number; path: string } => {
+      if (!url) return { host: '', port: 0, path: '' };
+      const parsedUrl = new URL(url);
+      return {
+        host: parsedUrl.hostname,
+        port: parseInt(parsedUrl.port, 10),
+        path: parsedUrl.pathname + parsedUrl.search,
+      };
+    };
+  
+    const parseDbUrl = (url: string | null): { user: string; password: string; host: string; port: number; database: string } => {
+      if (!url) return { user: '', password: '', host: '', port: 0, database: '' };
+      const regex = /postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/;
+      const match = url.match(regex);
+      if (!match) return { user: '', password: '', host: '', port: 0, database: '' };
+      return {
+        user: match[1],
+        password: match[2],
+        host: match[3],
+        port: parseInt(match[4], 10),
+        database: match[5],
+      };
+    };
+  
     return {
-      apiUrl: parseValue(API_URL),
-      graphqlUrl: parseValue(GRAPHQL_URL),
-      s3StorageUrl: parseValue(S3_STORAGE_URL),
-      dbUrl: parseValue(DB_URL),
-      studioUrl: parseValue(STUDIO_URL),
-      inbucketUrl: parseValue(INBUCKET_URL),
+      api: parseUrl(parseValue(API_URL)),
+      graphql: parseUrl(parseValue(GRAPHQL_URL)),
+      s3Storage: parseUrl(parseValue(S3_STORAGE_URL)),
+      db: parseDbUrl(parseValue(DB_URL)),
+      studio: parseUrl(parseValue(STUDIO_URL)),
+      inbucket: parseUrl(parseValue(INBUCKET_URL)),
       jwtSecret: parseValue(JWT_SECRET),
       anonKey: parseValue(ANON_KEY),
       serviceRoleKey: parseValue(SERVICE_ROLE_KEY),
