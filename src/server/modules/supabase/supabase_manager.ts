@@ -1,6 +1,5 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { Router, proxy } from "oak";
 import { log } from "../vircadia-world-meta/general/modules/log.ts";
 import { Server } from "../vircadia-world-meta/meta.ts";
 
@@ -19,16 +18,6 @@ export class Supabase {
   private appDir: string;
   private configDir: string;
   private debug: boolean;
-  private routes: {
-    [key in Server.E_HTTPRoute]: string | null;
-  } = {
-    [Server.E_HTTPRoute.API]: null,
-    [Server.E_HTTPRoute.GRAPHQL]: null,
-    [Server.E_HTTPRoute.STORAGE]: null,
-    [Server.E_HTTPRoute.DB]: null,
-    [Server.E_HTTPRoute.STUDIO]: null,
-    [Server.E_HTTPRoute.INBUCKET]: null,
-  };
 
   constructor(debug: boolean = false) {
     this.appDir = path.resolve("./modules/supabase/app");
@@ -49,33 +38,6 @@ export class Supabase {
     // const configPath = path.join(this.configDir, CONFIG_TOML_FILE);
     // const config = toml.parse(await fs.readFile(configPath, "utf8"));
     // this.routes = config.routes;
-  }
-
-  async setupReverseProxies(router: Router): Promise<void> {
-    const statusUrls = await this.getStatus();
-
-    const setupProxy = (route: Server.E_HTTPRoute, target: string | null) => {
-      if (target) {
-        const targetUrl = new URL(target);
-        router.all(`${route}(.*)`, async (ctx) => {
-          ctx.request.url.pathname = ctx.params[0] || '/';
-          await proxy(ctx, targetUrl.origin);
-        });
-        this.routes[route as Server.E_HTTPRoute] = target;
-        log({
-          message: `Reverse proxy set up for ${route} -> ${target}`,
-          type: "success",
-          debug: this.debug
-        });
-      }
-    };
-
-    setupProxy(Server.E_HTTPRoute.API, statusUrls.apiUrl);
-    setupProxy(Server.E_HTTPRoute.GRAPHQL, statusUrls.graphqlUrl);
-    setupProxy(Server.E_HTTPRoute.STORAGE, statusUrls.s3StorageUrl);
-    setupProxy(Server.E_HTTPRoute.STUDIO, statusUrls.studioUrl);
-    setupProxy(Server.E_HTTPRoute.INBUCKET, statusUrls.inbucketUrl);
-    setupProxy(Server.E_HTTPRoute.DB, statusUrls.dbUrl);
   }
 
   async initializeAndStart(data: { forceRestart: boolean }): Promise<void> {
