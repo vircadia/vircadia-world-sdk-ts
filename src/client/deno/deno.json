@@ -1,14 +1,10 @@
 {
-  "compilerOptions": {
-    "lib": ["esnext", "dom"],
-    "strict": true
-  },
-  "tasks": {
-    "build": "deno bundle client.ts dist/bundle.js",
-    "lint": "deno lint",
-    "test:all": "deno test --allow-net --allow-read --allow-write --allow-env"
-  },
-  "imports": {
-    "@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.45.3"
-  }
+    "tasks": {
+        "build": "deno bundle client.ts dist/bundle.js",
+        "lint": "deno lint",
+        "test:all": "deno test --allow-net --allow-read --allow-write --allow-env"
+    },
+    "imports": {
+        "@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.45.3"
+    }
 }

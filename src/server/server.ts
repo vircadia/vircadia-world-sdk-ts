@@ -1,7 +1,7 @@
-import { Application, Router } from "oak";
-import { Supabase } from "./modules/supabase/supabase_manager.ts";
-import { log } from "../client/deno/modules/vircadia-world-meta/general/modules/log.ts";
-import { Server, Environment } from "./modules/vircadia-world-meta/meta.ts";
+import { Application, Router } from 'jsr:@oak/oak';
+import { log } from '../shared/modules/vircadia-world-meta/general/modules/log.ts';
+import { Supabase } from './modules/supabase/supabase_manager.ts';
+import { Environment, Server } from './modules/vircadia-world-meta/meta.ts';
 
 const TEMP_PORT = 3000;
 const TEMP_HOST = '0.0.0.0';
@@ -10,7 +10,8 @@ const TEMP_ALLOWED_METHODS_REQ = 'GET, POST, PUT, DELETE, OPTIONS';
 const TEMP_ALLOWED_HEADERS_REQ = 'Content-Type, Authorization';
 
 async function init() {
-    const debugMode = Deno.env.get(Environment.ENVIRONMENT_VARIABLE.SERVER_DEBUG) === 'true';
+    const debugMode =
+        Deno.env.get(Environment.ENVIRONMENT_VARIABLE.SERVER_DEBUG) === 'true';
     if (debugMode) {
         log({
             message: 'Server debug mode enabled',
@@ -27,9 +28,18 @@ async function init() {
 
     // CORS middleware
     app.use(async (ctx, next) => {
-        ctx.response.headers.set('Access-Control-Allow-Origin', TEMP_ALLOWED_ORIGINS);
-        ctx.response.headers.set('Access-Control-Allow-Methods', TEMP_ALLOWED_METHODS_REQ);
-        ctx.response.headers.set('Access-Control-Allow-Headers', TEMP_ALLOWED_HEADERS_REQ);
+        ctx.response.headers.set(
+            'Access-Control-Allow-Origin',
+            TEMP_ALLOWED_ORIGINS,
+        );
+        ctx.response.headers.set(
+            'Access-Control-Allow-Methods',
+            TEMP_ALLOWED_METHODS_REQ,
+        );
+        ctx.response.headers.set(
+            'Access-Control-Allow-Headers',
+            TEMP_ALLOWED_HEADERS_REQ,
+        );
         if (ctx.request.method === 'OPTIONS') {
             ctx.response.status = 200;
             return;
@@ -60,7 +70,8 @@ async function init() {
 
         if (!(await supabase.isRunning())) {
             log({
-                message: 'Supabase services are not running after initialization. Exiting.',
+                message:
+                    'Supabase services are not running after initialization. Exiting.',
                 type: 'error',
             });
             Deno.exit(1);
@@ -80,15 +91,18 @@ async function init() {
     // Add the route from httpRouter.ts
     router.get(Server.E_HTTPRequestPath.CONFIG_AND_STATUS, async (ctx) => {
         log({
-            message: `${Server.E_HTTPRequestPath.CONFIG_AND_STATUS} route called`,
+            message:
+                `${Server.E_HTTPRequestPath.CONFIG_AND_STATUS} route called`,
             type: 'debug',
             debug: debugMode,
         });
 
         const statusUrls = await supabase.getStatus();
         const response: Server.I_REQUEST_ConfigAndStatusResponse = {
-            API_URL: statusUrls.api.host + ':' + statusUrls.api.port + statusUrls.api.path,
-            STORAGE_URL: statusUrls.s3Storage.host + ':' + statusUrls.s3Storage.port + statusUrls.s3Storage.path,
+            API_URL: statusUrls.api.host + ':' + statusUrls.api.port +
+                statusUrls.api.path,
+            STORAGE_URL: statusUrls.s3Storage.host + ':' +
+                statusUrls.s3Storage.port + statusUrls.s3Storage.path,
         };
 
         ctx.response.body = response;
@@ -110,7 +124,7 @@ async function init() {
     });
 
     try {
-        await app.listen({ 
+        await app.listen({
             port: TEMP_PORT,
             hostname: TEMP_HOST,
         });

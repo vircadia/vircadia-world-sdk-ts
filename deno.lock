@@ -226,9 +226,6 @@
     "https://deno.land/x/path_to_regexp@v6.2.1/index.ts": "894060567837bae8fc9c5cbd4d0a05e9024672083d5883b525c031eea940e556"
   },
   "workspace": {
-    "dependencies": [
-      "jsr:@supabase/supabase-js@^2.45.3"
-    ],
     "members": {
       "src/client/deno": {
         "dependencies": [

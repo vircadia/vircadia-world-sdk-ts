@@ -9,11 +9,5 @@
     "dev-debug": "VIRCADIA_WORLD_SERVER_DEBUG=true deno run --allow-net --allow-read --allow-env --allow-run --allow-sys --watch server.ts",
     "start": "deno run --allow-net --allow-read --allow-env --allow-run --allow-sys server.ts",
     "build": "deno compile --allow-net --allow-read --allow-env --allow-run --allow-sys server.ts"
-  },
-  "imports": {
-    "oak": "https://deno.land/x/oak@v12.1.0/mod.ts",
-    "dotenv": "https://deno.land/x/dotenv@v3.2.2/mod.ts",
-    "toml": "https://deno.land/std@0.182.0/encoding/toml.ts",
-    "zod": "https://deno.land/x/zod@v3.23.8/mod.ts"
   }
 }

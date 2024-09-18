@@ -4,7 +4,7 @@
             "src/server",
             "src/client/deno",
             "src/client/browser",
-            "src/server/modules/vircadia-world-meta"
+            "src/shared/modules/vircadia-world-meta"
         ]
     },
     "lint": {
@@ -18,8 +18,14 @@
             "./src/**/*.ts",
             "./src/**/*.tsx",
             "./src/**/*.js",
-            "./src/**/*.jsx"
+            "./src/**/*.jsx",
+            "./src/**/*.json"
         ]
+    },
+    "compilerOptions": {
+        "allowJs": true,
+        "lib": ["deno.window", "dom"],
+        "strict": true
     },
     "fmt": {
         "options": {
@@ -33,7 +39,8 @@
             "./src/**/*.ts",
             "./src/**/*.tsx",
             "./src/**/*.js",
-            "./src/**/*.jsx"
+            "./src/**/*.jsx",
+            "./src/**/*.json"
         ]
     }
 }
