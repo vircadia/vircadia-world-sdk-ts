@@ -1,0 +1,5 @@
+
+0.0.0.0:3010 {
+  reverse_proxy 0.0.0.0:3000
+  encode gzip
+}

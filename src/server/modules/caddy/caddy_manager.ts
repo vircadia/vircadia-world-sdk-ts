@@ -8,9 +8,11 @@ interface ProxyConfig {
 export class CaddyManager {
     private static instance: CaddyManager;
     private caddyProcess: Deno.ChildProcess | null = null;
-    private caddyfilePath = 'Caddyfile';
+    private caddyfilePath: string;
 
-    private constructor() {}
+    private constructor() {
+        this.caddyfilePath = './modules/caddy/tmp/Caddyfile';
+    }
 
     public static getInstance(): CaddyManager {
         if (!CaddyManager.instance) {
@@ -32,17 +34,13 @@ export class CaddyManager {
 ${config.from} {
   reverse_proxy ${config.to}
   encode gzip
-  log {
-    output file /var/log/caddy/access.log
-    format json
-  }
 }
 `;
         }
 
         await Deno.writeTextFile(this.caddyfilePath, caddyfileContent);
         log({
-            message: 'Caddyfile created',
+            message: `Caddyfile created at ${this.caddyfilePath}`,
             type: 'info',
         });
     }
@@ -65,14 +63,20 @@ ${config.from} {
         this.caddyProcess.stdout.pipeTo(
             new WritableStream({
                 write(chunk) {
-                    console.log(new TextDecoder().decode(chunk));
+                    log({
+                        message: new TextDecoder().decode(chunk),
+                        type: 'info',
+                    });
                 },
             }),
         );
         this.caddyProcess.stderr.pipeTo(
             new WritableStream({
                 write(chunk) {
-                    console.error(new TextDecoder().decode(chunk));
+                    log({
+                        message: new TextDecoder().decode(chunk),
+                        type: 'error',
+                    });
                 },
             }),
         );

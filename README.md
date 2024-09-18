@@ -2,20 +2,7 @@
 
 ## Install
 
-To get started, clone the repository and install the dependencies:
-
-```sh
-npm install
-```
-
-## Develop
-
-To run all apps and packages in development mode, run the following command:
-
-```sh
-npm run dev
-```
-## Configure
+<!-- brew install caddy -->
 
 ### Core Supabase Project
 
