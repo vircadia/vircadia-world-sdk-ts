@@ -1,0 +1,25 @@
+{
+    "lint": {
+        "rules": {
+            "tags": ["recommended"],
+            "include": ["ban-untagged-todo"],
+            "exclude": ["no-namespace"]
+        },
+        "report": "pretty",
+        "include": [
+            "./src/**/*.ts",
+            "./src/**/*.tsx",
+            "./src/**/*.js",
+            "./src/**/*.jsx"
+        ]
+    },
+    "fmt": {
+        "options": {
+            "useTabs": false,
+            "lineWidth": 80,
+            "indentWidth": 4,
+            "singleQuote": true,
+            "proseWrap": "always"
+        }
+    }
+}

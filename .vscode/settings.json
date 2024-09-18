@@ -3,6 +3,7 @@
     "deno.lint": true,
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "denoland.vscode-deno",
+    "deno.config": "../deno.json",
     "editor.codeActionsOnSave": {
         "source.organizeImports": "always"
     },
@@ -17,5 +18,5 @@
     },
     "[jsonc]": {
         "editor.defaultFormatter": "denoland.vscode-deno"
-    },
+    }
 }

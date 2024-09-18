@@ -4,27 +4,6 @@
     "lib": ["deno.window"],
     "strict": true
   },
-  "lint": {
-    "files": {
-      "include": ["/"]
-    },
-    "rules": {
-      "tags": ["recommended"],
-      "exclude": ["no-namespace"]
-    }
-  },
-  "fmt": {
-    "files": {
-      "include": ["./"]
-    },
-    "options": {
-      "useTabs": false,
-      "lineWidth": 80,
-      "indentWidth": 4,
-      "singleQuote": true,
-      "proseWrap": "always"
-    }
-  },
   "tasks": {
     "dev": "deno run --allow-net --allow-read --allow-env --allow-run --allow-sys --watch server.ts",
     "dev-debug": "VIRCADIA_WORLD_SERVER_DEBUG=true deno run --allow-net --allow-read --allow-env --allow-run --allow-sys --watch server.ts",
