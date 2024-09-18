@@ -9,6 +9,8 @@ import {
 import { CaddyManager, ProxyConfig } from './modules/caddy/caddy_manager.ts';
 import { Supabase } from './modules/supabase/supabase_manager.ts';
 
+// TODO:(@digisomni) We need to make proxy configs key'd by the subdomain, we need to load the domain from the config, we need to make status return the caddy'd URLs which are key'd now.
+
 const config = loadConfig();
 
 async function init() {
@@ -134,7 +136,6 @@ async function init() {
     const caddyRoutes: ProxyConfig[] = [
         {
             subdomain: `${Server.E_ProxySubdomain.GENERAL}.localhost`,
-            path: Server.GENERAL_ENDPOINT_BASE + '/*',
             to: `localhost:${
                 config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT]
             }`,
@@ -142,31 +143,26 @@ async function init() {
         },
         {
             subdomain: `${Server.E_ProxySubdomain.SUPABASE_API}.localhost`,
-            path: '/*',
             to: `localhost:${supabaseStatus.api.port}${supabaseStatus.api.path}`,
             name: 'Supabase API',
         },
         {
             subdomain: `${Server.E_ProxySubdomain.SUPABASE_GRAPHQL}.localhost`,
-            path: '/*',
             to: `localhost:${supabaseStatus.graphql.port}${supabaseStatus.graphql.path}`,
             name: 'Supabase GraphQL',
         },
         {
             subdomain: `${Server.E_ProxySubdomain.SUPABASE_STORAGE}.localhost`,
-            path: '/*',
             to: `localhost:${supabaseStatus.s3Storage.port}${supabaseStatus.s3Storage.path}`,
             name: 'Supabase Storage',
         },
         {
             subdomain: `${Server.E_ProxySubdomain.SUPABASE_STUDIO}.localhost`,
-            path: '/*',
             to: `localhost:${supabaseStatus.studio.port}${supabaseStatus.studio.path}`,
             name: 'Supabase Studio',
         },
         {
             subdomain: `${Server.E_ProxySubdomain.SUPABASE_INBUCKET}.localhost`,
-            path: '/*',
             to: `localhost:${supabaseStatus.inbucket.port}${supabaseStatus.inbucket.path}`,
             name: 'Supabase Inbucket',
         },

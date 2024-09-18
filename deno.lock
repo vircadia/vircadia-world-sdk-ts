@@ -4,6 +4,7 @@
     "specifiers": {
       "jsr:@oak/commons@^1.0": "jsr:@oak/commons@1.0.0",
       "jsr:@oak/oak": "jsr:@oak/oak@17.0.0",
+      "jsr:@std/assert": "jsr:@std/assert@1.0.5",
       "jsr:@std/assert@^0.224.0": "jsr:@std/assert@0.224.0",
       "jsr:@std/assert@^1.0": "jsr:@std/assert@1.0.5",
       "jsr:@std/bytes@^1.0": "jsr:@std/bytes@1.0.2",
@@ -15,6 +16,7 @@
       "jsr:@std/encoding@^1.0.5": "jsr:@std/encoding@1.0.5",
       "jsr:@std/flags": "jsr:@std/flags@0.224.0",
       "jsr:@std/http@^1.0": "jsr:@std/http@1.0.6",
+      "jsr:@std/internal@^1.0.3": "jsr:@std/internal@1.0.3",
       "jsr:@std/io@0.224": "jsr:@std/io@0.224.8",
       "jsr:@std/media-types@^1.0": "jsr:@std/media-types@1.0.3",
       "jsr:@std/path": "jsr:@std/path@1.0.6",
@@ -62,7 +64,10 @@
         "integrity": "8643233ec7aec38a940a8264a6e3eed9bfa44e7a71cc6b3c8874213ff401967f"
       },
       "@std/assert@1.0.5": {
-        "integrity": "e37da8e4033490ce613eec4ac1d78dba1faf5b02a3f6c573a28f15365b9b440f"
+        "integrity": "e37da8e4033490ce613eec4ac1d78dba1faf5b02a3f6c573a28f15365b9b440f",
+        "dependencies": [
+          "jsr:@std/internal@^1.0.3"
+        ]
       },
       "@std/bytes@1.0.2": {
         "integrity": "fbdee322bbd8c599a6af186a1603b3355e59a5fb1baa139f8f4c3c9a1b3e3d57"
@@ -90,6 +95,9 @@
         "dependencies": [
           "jsr:@std/encoding@^1.0.5"
         ]
+      },
+      "@std/internal@1.0.3": {
+        "integrity": "208e9b94a3d5649bd880e9ca38b885ab7651ab5b5303a56ed25de4755fb7b11e"
       },
       "@std/io@0.224.8": {
         "integrity": "f525d05d51fd873de6352b9afcf35cab9ab5dc448bf3c20e0c8b521ded9be392",

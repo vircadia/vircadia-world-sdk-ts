@@ -2,7 +2,6 @@ import { log } from '../../../shared/modules/vircadia-world-meta/general/modules
 
 export interface ProxyConfig {
     subdomain: string; // e.g., "general.localhost", "supabase.localhost"
-    path: string;
     to: string;
     name: string;
 }
@@ -77,7 +76,7 @@ export class CaddyManager {
                 for (const config of configs) {
                     log({
                         message:
-                            `Creating Caddy route for ${subdomain}${config.path} to ${config.to}`,
+                            `Creating Caddy route for ${subdomain} to ${config.to}`,
                         type: 'info',
                     });
                     caddyfileContent += `    reverse_proxy @${
