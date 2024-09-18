@@ -60,26 +60,24 @@ ${config.from} {
         });
 
         // Handle Caddy output
-        this.caddyProcess.stdout.pipeTo(
-            new WritableStream({
-                write(chunk) {
-                    log({
-                        message: new TextDecoder().decode(chunk),
-                        type: 'info',
-                    });
-                },
-            }),
-        );
-        this.caddyProcess.stderr.pipeTo(
-            new WritableStream({
-                write(chunk) {
-                    log({
-                        message: new TextDecoder().decode(chunk),
-                        type: 'error',
-                    });
-                },
-            }),
-        );
+        const logOutput = (stream: ReadableStream<Uint8Array>) => {
+            stream.pipeTo(
+                new WritableStream({
+                    write(chunk) {
+                        const message = new TextDecoder().decode(chunk).trim();
+                        if (message) {
+                            log({
+                                message,
+                                type: 'info',
+                            });
+                        }
+                    },
+                }),
+            );
+        };
+
+        logOutput(this.caddyProcess.stdout);
+        logOutput(this.caddyProcess.stderr);
     }
 
     public async stop(): Promise<void> {

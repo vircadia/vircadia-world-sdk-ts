@@ -3,3 +3,28 @@
   reverse_proxy 0.0.0.0:3000
   encode gzip
 }
+
+0.0.0.0:3010/supabase/api {
+  reverse_proxy 127.0.0.1:54321
+  encode gzip
+}
+
+0.0.0.0:3010/supabase/graphql {
+  reverse_proxy 127.0.0.1:54321/graphql/v1
+  encode gzip
+}
+
+0.0.0.0:3010/supabase/storage {
+  reverse_proxy 127.0.0.1:54321/storage/v1/s3
+  encode gzip
+}
+
+0.0.0.0:3010/supabase/studio {
+  reverse_proxy 127.0.0.1:54323
+  encode gzip
+}
+
+0.0.0.0:3010/supabase/inbucket {
+  reverse_proxy 127.0.0.1:54324
+  encode gzip
+}

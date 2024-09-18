@@ -115,7 +115,7 @@ async function init() {
     });
 
     log({
-        message: 'HTTP routes are set up correctly.',
+        message: 'Oak HTTP routes are set up correctly.',
         type: 'info',
     });
 
@@ -124,8 +124,14 @@ async function init() {
     app.use(router.allowedMethods());
 
     // Setup Caddy
+    log({
+        message: 'Setting up Caddy',
+        type: 'info',
+    });
     const caddyManager = CaddyManager.getInstance();
-    await caddyManager.setupAndStart([
+    const supabaseStatus = await supabase.getStatus();
+
+    const caddyRoutes = [
         {
             from: `${
                 config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
@@ -133,22 +139,73 @@ async function init() {
             to: `${config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST]}:${
                 config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT]
             }`,
+            name: 'Oak Server',
         },
-        // Add more proxy configurations here as needed
-    ]);
-
-    // Launch Oak server
-    log({
-        message: `Oak server is running on ${
-            config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST]
-        }:${config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT]}`,
-        type: 'success',
-    });
+        {
+            from: `${
+                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+            }:${
+                config[
+                    Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT
+                ]
+            }${Server.E_ProxyEndpoint.SUPABASE_API}`,
+            to: `${supabaseStatus.api.host}:${supabaseStatus.api.port}${supabaseStatus.api.path}`,
+            name: 'Supabase API',
+        },
+        {
+            from: `${
+                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+            }:${
+                config[
+                    Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT
+                ]
+            }${Server.E_ProxyEndpoint.SUPABASE_GRAPHQL}`,
+            to: `${supabaseStatus.graphql.host}:${supabaseStatus.graphql.port}${supabaseStatus.graphql.path}`,
+            name: 'Supabase GraphQL',
+        },
+        {
+            from: `${
+                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+            }:${
+                config[
+                    Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT
+                ]
+            }${Server.E_ProxyEndpoint.SUPABASE_STORAGE}`,
+            to: `${supabaseStatus.s3Storage.host}:${supabaseStatus.s3Storage.port}${supabaseStatus.s3Storage.path}`,
+            name: 'Supabase Storage',
+        },
+        {
+            from: `${
+                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+            }:${
+                config[
+                    Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT
+                ]
+            }${Server.E_ProxyEndpoint.SUPABASE_STUDIO}`,
+            to: `${supabaseStatus.studio.host}:${supabaseStatus.studio.port}${supabaseStatus.studio.path}`,
+            name: 'Supabase Studio',
+        },
+        {
+            from: `${
+                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+            }:${
+                config[
+                    Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT
+                ]
+            }${Server.E_ProxyEndpoint.SUPABASE_INBUCKET}`,
+            to: `${supabaseStatus.inbucket.host}:${supabaseStatus.inbucket.port}${supabaseStatus.inbucket.path}`,
+            name: 'Supabase Inbucket',
+        },
+    ];
 
     try {
-        await app.listen({
-            port: config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT],
-            hostname: config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST],
+        // Launch Oak server
+        launchOakServer({ app });
+        log({
+            message: `Oak server is running on ${
+                config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST]
+            }:${config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT]}`,
+            type: 'info',
         });
     } catch (error) {
         log({
@@ -157,6 +214,44 @@ async function init() {
         });
         await caddyManager.stop();
     }
+
+    try {
+        // Setup Caddy routes
+        await caddyManager.setupAndStart(caddyRoutes);
+        log({
+            message: 'Caddy routes are setup and running correctly.',
+            type: 'info',
+        });
+    } catch (error) {
+        log({
+            message: `Failed to setup and start Caddy: ${error}`,
+            type: 'error',
+        });
+    }
+
+    // Log the final endpoints
+    log({
+        message: 'Caddy routes and their endpoints:',
+        type: 'success',
+    });
+
+    for (const route of caddyRoutes) {
+        log({
+            message: `${route.name}: ${route.from} -> ${route.to}`,
+            type: 'success',
+        });
+    }
+}
+
+async function launchOakServer(data: {
+    app: Application;
+}) {
+    const app = data.app;
+
+    app.listen({
+        port: config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT],
+        hostname: config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST],
+    });
 }
 
 await init();
