@@ -9,7 +9,13 @@ import {
 import { CaddyManager, ProxyConfig } from './modules/caddy/caddy_manager.ts';
 import { Supabase } from './modules/supabase/supabase_manager.ts';
 
-// TODO:(@digisomni) We need to make proxy configs key'd by the subdomain, we need to load the domain from the config, we need to make status return the caddy'd URLs which are key'd now.
+// TODO:(@digisomni)
+/*
+ * We need to make proxy configs key'd by the subdomain,
+ * we need to load the domain from the config,
+ * we need to make status return the caddy'd URLs which are key'd now.
+ * we need to make Caddy issue certs for us automatically, OR allow for a custom CA to be used.
+ */
 
 const config = loadConfig();
 
