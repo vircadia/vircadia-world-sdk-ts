@@ -6,7 +6,7 @@ import {
     Environment,
     Server,
 } from '../shared/modules/vircadia-world-meta/meta.ts';
-import { CaddyManager } from './modules/caddy/caddy_manager.ts';
+import { CaddyManager, ProxyConfig } from './modules/caddy/caddy_manager.ts';
 import { Supabase } from './modules/supabase/supabase_manager.ts';
 
 const config = loadConfig();
@@ -95,10 +95,10 @@ async function init() {
     });
 
     // Add the route from httpRouter.ts
-    router.get(Server.E_HTTPRequestPath.CONFIG_AND_STATUS, async (ctx) => {
+    router.get(Server.E_GeneralEndpoint.CONFIG_AND_STATUS, async (ctx) => {
         log({
             message:
-                `${Server.E_HTTPRequestPath.CONFIG_AND_STATUS} route called`,
+                `${Server.E_GeneralEndpoint.CONFIG_AND_STATUS} route called`,
             type: 'debug',
             debug: debugMode,
         });
@@ -131,69 +131,43 @@ async function init() {
     const caddyManager = CaddyManager.getInstance();
     const supabaseStatus = await supabase.getStatus();
 
-    const caddyRoutes = [
+    const caddyRoutes: ProxyConfig[] = [
         {
-            from: `${
-                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
-            }:${config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT]}`,
-            to: `${config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST]}:${
+            subdomain: `${Server.E_ProxySubdomain.GENERAL}.localhost`,
+            path: Server.GENERAL_ENDPOINT_BASE + '/*',
+            to: `localhost:${
                 config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT]
             }`,
-            name: 'Oak Server',
+            name: 'Oak Server (General API)',
         },
         {
-            from: `${
-                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
-            }:${
-                config[
-                    Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT
-                ]
-            }${Server.E_ProxyEndpoint.SUPABASE_API}`,
-            to: `${supabaseStatus.api.host}:${supabaseStatus.api.port}${supabaseStatus.api.path}`,
+            subdomain: `${Server.E_ProxySubdomain.SUPABASE_API}.localhost`,
+            path: '/*',
+            to: `localhost:${supabaseStatus.api.port}${supabaseStatus.api.path}`,
             name: 'Supabase API',
         },
         {
-            from: `${
-                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
-            }:${
-                config[
-                    Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT
-                ]
-            }${Server.E_ProxyEndpoint.SUPABASE_GRAPHQL}`,
-            to: `${supabaseStatus.graphql.host}:${supabaseStatus.graphql.port}${supabaseStatus.graphql.path}`,
+            subdomain: `${Server.E_ProxySubdomain.SUPABASE_GRAPHQL}.localhost`,
+            path: '/*',
+            to: `localhost:${supabaseStatus.graphql.port}${supabaseStatus.graphql.path}`,
             name: 'Supabase GraphQL',
         },
         {
-            from: `${
-                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
-            }:${
-                config[
-                    Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT
-                ]
-            }${Server.E_ProxyEndpoint.SUPABASE_STORAGE}`,
-            to: `${supabaseStatus.s3Storage.host}:${supabaseStatus.s3Storage.port}${supabaseStatus.s3Storage.path}`,
+            subdomain: `${Server.E_ProxySubdomain.SUPABASE_STORAGE}.localhost`,
+            path: '/*',
+            to: `localhost:${supabaseStatus.s3Storage.port}${supabaseStatus.s3Storage.path}`,
             name: 'Supabase Storage',
         },
         {
-            from: `${
-                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
-            }:${
-                config[
-                    Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT
-                ]
-            }${Server.E_ProxyEndpoint.SUPABASE_STUDIO}`,
-            to: `${supabaseStatus.studio.host}:${supabaseStatus.studio.port}${supabaseStatus.studio.path}`,
+            subdomain: `${Server.E_ProxySubdomain.SUPABASE_STUDIO}.localhost`,
+            path: '/*',
+            to: `localhost:${supabaseStatus.studio.port}${supabaseStatus.studio.path}`,
             name: 'Supabase Studio',
         },
         {
-            from: `${
-                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
-            }:${
-                config[
-                    Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT
-                ]
-            }${Server.E_ProxyEndpoint.SUPABASE_INBUCKET}`,
-            to: `${supabaseStatus.inbucket.host}:${supabaseStatus.inbucket.port}${supabaseStatus.inbucket.path}`,
+            subdomain: `${Server.E_ProxySubdomain.SUPABASE_INBUCKET}.localhost`,
+            path: '/*',
+            to: `localhost:${supabaseStatus.inbucket.port}${supabaseStatus.inbucket.path}`,
             name: 'Supabase Inbucket',
         },
     ];
@@ -217,7 +191,10 @@ async function init() {
 
     try {
         // Setup Caddy routes
-        await caddyManager.setupAndStart(caddyRoutes);
+        await caddyManager.setupAndStart({
+            proxyConfigs: caddyRoutes,
+            debug: debugMode,
+        });
         log({
             message: 'Caddy routes are setup and running correctly.',
             type: 'info',
@@ -237,7 +214,13 @@ async function init() {
 
     for (const route of caddyRoutes) {
         log({
-            message: `${route.name}: ${route.from} -> ${route.to}`,
+            message: `${route.name}: ${
+                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+            }:${
+                config[
+                    Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT
+                ]
+            } -> ${route.subdomain}${route.path} -> ${route.to}`,
             type: 'success',
         });
     }

@@ -1,17 +1,21 @@
 import { log } from '../../../shared/modules/vircadia-world-meta/general/modules/log.ts';
 
-interface ProxyConfig {
-    from: string;
+export interface ProxyConfig {
+    subdomain: string; // e.g., "general.localhost", "supabase.localhost"
+    path: string;
     to: string;
+    name: string;
 }
 
 export class CaddyManager {
     private static instance: CaddyManager;
     private caddyProcess: Deno.ChildProcess | null = null;
     private caddyfilePath: string;
+    private port: number;
 
     private constructor() {
         this.caddyfilePath = './modules/caddy/tmp/Caddyfile';
+        this.port = 3010; // Default port, can be made configurable
     }
 
     public static getInstance(): CaddyManager {
@@ -21,22 +25,70 @@ export class CaddyManager {
         return CaddyManager.instance;
     }
 
-    public async setupAndStart(proxyConfigs: ProxyConfig[]): Promise<void> {
-        await this.createCaddyfile(proxyConfigs);
-        await this.startCaddy();
+    public async setupAndStart(data: {
+        proxyConfigs: ProxyConfig[];
+        debug: boolean;
+    }): Promise<void> {
+        await this.createCaddyfile(data);
+        await this.startCaddy({
+            debug: data.debug,
+        });
     }
 
-    private async createCaddyfile(proxyConfigs: ProxyConfig[]): Promise<void> {
+    private async createCaddyfile(data: {
+        proxyConfigs: ProxyConfig[];
+        debug: boolean;
+    }): Promise<void> {
         let caddyfileContent = '';
 
-        for (const config of proxyConfigs) {
-            caddyfileContent += `
-${config.from} {
-  reverse_proxy ${config.to}
-  encode gzip
+        if (data.debug) {
+            caddyfileContent += `{
+    debug
 }
+
 `;
         }
+
+        const subdomains = [
+            ...new Set(data.proxyConfigs.map((config) => config.subdomain)),
+        ];
+        caddyfileContent += `:${this.port} {    
+    @general host general.localhost
+    reverse_proxy @general localhost:3000
+
+`;
+
+        // Group proxy configs by subdomain
+        const configsBySubdomain = data.proxyConfigs.reduce((acc, config) => {
+            if (!acc[config.subdomain]) {
+                acc[config.subdomain] = [];
+            }
+            acc[config.subdomain].push(config);
+            return acc;
+        }, {} as Record<string, ProxyConfig[]>);
+
+        // Create subdomain configurations
+        for (const [subdomain, configs] of Object.entries(configsBySubdomain)) {
+            if (subdomain !== 'general.localhost') {
+                caddyfileContent += `    @${
+                    subdomain.replace('.', '_')
+                } host ${subdomain}
+`;
+                for (const config of configs) {
+                    log({
+                        message:
+                            `Creating Caddy route for ${subdomain}${config.path} to ${config.to}`,
+                        type: 'info',
+                    });
+                    caddyfileContent += `    reverse_proxy @${
+                        subdomain.replace('.', '_')
+                    } ${config.to}
+`;
+                }
+            }
+        }
+
+        caddyfileContent += `}`;
 
         await Deno.writeTextFile(this.caddyfilePath, caddyfileContent);
         log({
@@ -45,9 +97,17 @@ ${config.from} {
         });
     }
 
-    private async startCaddy(): Promise<void> {
+    private async startCaddy(data: { debug: boolean }): Promise<void> {
+        const args = [
+            'run',
+            '--config',
+            this.caddyfilePath,
+            '--adapter',
+            'caddyfile',
+        ];
+
         const caddyCommand = new Deno.Command('caddy', {
-            args: ['run', '--config', this.caddyfilePath],
+            args,
             stdout: 'piped',
             stderr: 'piped',
         });
