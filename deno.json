@@ -1,4 +1,12 @@
 {
+    "workspace": {
+        "members": [
+            "src/server",
+            "src/client/deno",
+            "src/client/browser",
+            "src/server/modules/vircadia-world-meta"
+        ]
+    },
     "lint": {
         "rules": {
             "tags": ["recommended"],
@@ -20,6 +28,12 @@
             "indentWidth": 4,
             "singleQuote": true,
             "proseWrap": "always"
-        }
+        },
+        "include": [
+            "./src/**/*.ts",
+            "./src/**/*.tsx",
+            "./src/**/*.js",
+            "./src/**/*.jsx"
+        ]
     }
 }

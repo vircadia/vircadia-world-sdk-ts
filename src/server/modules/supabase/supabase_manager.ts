@@ -1,7 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { log } from "../vircadia-world-meta/general/modules/log.ts";
-import { Server } from "../vircadia-world-meta/meta.ts";
 
 const CONFIG_TOML_FILE = "config.toml";
 
@@ -403,10 +402,13 @@ export class Supabase {
     const parseUrl = (url: string | null): { host: string; port: number; path: string } => {
       if (!url) return { host: '', port: 0, path: '' };
       const parsedUrl = new URL(url);
+      let path = parsedUrl.pathname + parsedUrl.search;
+      // Remove trailing slash if present
+      path = path.endsWith('/') ? path.slice(0, -1) : path;
       return {
         host: parsedUrl.hostname,
-        port: parseInt(parsedUrl.port, 10),
-        path: parsedUrl.pathname + parsedUrl.search,
+        port: parseInt(parsedUrl.port, 10) || (parsedUrl.protocol === 'https:' ? 443 : 80),
+        path: path,
       };
     };
   

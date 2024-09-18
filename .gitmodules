@@ -1,9 +1,0 @@
-[submodule "src/client/browser/modules/vircadia-world-meta"]
-	path = src/client/browser/modules/vircadia-world-meta
-	url = https://github.com/vircadia/vircadia-world-meta.git
-[submodule "src/client/deno/modules/vircadia-world-meta"]
-	path = src/client/deno/modules/vircadia-world-meta
-	url = https://github.com/vircadia/vircadia-world-meta.git
-[submodule "src/server/modules/vircadia-world-meta"]
-	path = src/server/modules/vircadia-world-meta
-	url = https://github.com/vircadia/vircadia-world-meta.git
