@@ -20,20 +20,23 @@ async function init() {
     const debugMode = config[Environment.ENVIRONMENT_VARIABLE.SERVER_DEBUG];
 
     if (debugMode) {
-        log({
-            message: 'Server debug mode enabled',
-            type: 'info',
-        });
+        log({ message: 'Server debug mode enabled', type: 'info' });
     }
 
-    log({
-        message: 'Starting Vircadia World Server',
-        type: 'info',
-    });
+    log({ message: 'Starting Vircadia World Server', type: 'info' });
+
     const app = new Application();
     const router = new Router();
 
-    // CORS middleware
+    setupCORS(app);
+    await startSupabase(debugMode);
+    const caddyRoutes = await setupCaddyRoutes(debugMode);
+    setupGeneralRoutes(router, caddyRoutes);
+    startOakServer(app);
+    await startCaddyServer(caddyRoutes, debugMode);
+}
+
+function setupCORS(app: Application) {
     app.use(async (ctx, next) => {
         ctx.response.headers.set(
             'Access-Control-Allow-Origin',
@@ -57,15 +60,14 @@ async function init() {
         }
         await next();
     });
+}
 
-    log({
-        message: 'Starting Supabase',
-        type: 'info',
-    });
+async function startSupabase(debugMode: boolean) {
+    log({ message: 'Starting Supabase', type: 'info' });
 
     const forceRestartSupabase = Deno.args.includes('--force-restart-supabase');
-
     const supabase = Supabase.getInstance(debugMode);
+
     if (!(await supabase.isRunning()) || forceRestartSupabase) {
         try {
             await supabase.initializeAndStart({
@@ -89,29 +91,22 @@ async function init() {
         }
     }
 
-    log({
-        message: 'Supabase services are running correctly.',
-        type: 'info',
-    });
+    log({ message: 'Supabase services are running correctly.', type: 'info' });
+}
 
-    // Use the router
-    app.use(router.routes());
-    app.use(router.allowedMethods());
+async function setupCaddyRoutes(
+    debugMode: boolean,
+): Promise<Record<Server.E_ProxySubdomain, ProxyConfig>> {
+    log({ message: 'Creating Caddy routes', type: 'info' });
 
-    // Setup Caddy
-    log({
-        message: 'Setting up Caddy',
-        type: 'info',
-    });
-    const caddyManager = CaddyManager.getInstance();
-    const supabaseStatus = await supabase.getStatus();
+    const supabaseStatus = await Supabase.getInstance(debugMode).getStatus();
 
-    const caddyRoutes: Record<Server.E_ProxySubdomain, ProxyConfig> = {
+    return {
         [Server.E_ProxySubdomain.GENERAL]: {
             subdomain: `${Server.E_ProxySubdomain.GENERAL}.${
                 config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
             }`,
-            to: `localhost:${
+            to: `${config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST]}:${
                 config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT]
             }`,
             name: 'Oak Server (General API)',
@@ -152,19 +147,20 @@ async function init() {
             name: 'Supabase Inbucket',
         },
     };
+}
 
-    log({
-        message: 'Setting up HTTP routes',
-        type: 'info',
-    });
+function setupGeneralRoutes(
+    router: Router,
+    caddyRoutes: Record<Server.E_ProxySubdomain, ProxyConfig>,
+) {
+    log({ message: 'Setting up HTTP routes', type: 'info' });
 
-    // Setup General routes
-    router.get(Server.E_GeneralEndpoint.CONFIG_AND_STATUS, async (ctx) => {
+    router.get(Server.E_GeneralEndpoint.CONFIG_AND_STATUS, (ctx) => {
         log({
             message:
                 `${Server.E_GeneralEndpoint.CONFIG_AND_STATUS} route called`,
             type: 'debug',
-            debug: debugMode,
+            debug: config[Environment.ENVIRONMENT_VARIABLE.SERVER_DEBUG],
         });
 
         const response: Server.I_REQUEST_ConfigAndStatusResponse = {
@@ -177,14 +173,15 @@ async function init() {
         ctx.response.body = response;
     });
 
-    log({
-        message: 'Oak HTTP routes are set up correctly.',
-        type: 'info',
-    });
+    log({ message: 'Oak HTTP routes are set up correctly.', type: 'info' });
+}
 
+function startOakServer(app: Application) {
     try {
-        // Launch Oak server
-        launchOakServer({ app });
+        app.listen({
+            port: config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT],
+            hostname: config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST],
+        });
         log({
             message: `Oak server is running on ${
                 config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST]
@@ -192,15 +189,18 @@ async function init() {
             type: 'info',
         });
     } catch (error) {
-        log({
-            message: `Failed to start Oak server: ${error}`,
-            type: 'error',
-        });
-        await caddyManager.stop();
+        log({ message: `Failed to start Oak server: ${error}`, type: 'error' });
+        Deno.exit(1);
     }
+}
+
+async function startCaddyServer(
+    caddyRoutes: Record<Server.E_ProxySubdomain, ProxyConfig>,
+    debugMode: boolean,
+) {
+    const caddyManager = CaddyManager.getInstance();
 
     try {
-        // Setup Caddy routes
         await caddyManager.setupAndStart({
             proxyConfigs: caddyRoutes,
             debug: debugMode,
@@ -214,13 +214,10 @@ async function init() {
             message: `Failed to setup and start Caddy: ${error}`,
             type: 'error',
         });
+        Deno.exit(1);
     }
 
-    // Log the final endpoints
-    log({
-        message: 'Caddy routes and their endpoints:',
-        type: 'success',
-    });
+    log({ message: 'Caddy routes and their endpoints:', type: 'success' });
 
     for (const route of Object.values(caddyRoutes)) {
         log({
@@ -234,17 +231,6 @@ async function init() {
             type: 'success',
         });
     }
-}
-
-async function launchOakServer(data: {
-    app: Application;
-}) {
-    const app = data.app;
-
-    app.listen({
-        port: config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT],
-        hostname: config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST],
-    });
 }
 
 await init();

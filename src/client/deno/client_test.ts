@@ -20,8 +20,8 @@ Deno.test('Client initialization and connection', async () => {
             useWebRTC: false,
             useWebAudio: false,
         },
-        host: 'http://localhost',
-        port: 3000,
+        host: 'http://general.localhost',
+        port: 3010,
         key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
     });
 
