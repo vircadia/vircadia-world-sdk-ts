@@ -1,4 +1,4 @@
-# Vircadia World
+# Vircadia World Core
 
 ## Install
 
