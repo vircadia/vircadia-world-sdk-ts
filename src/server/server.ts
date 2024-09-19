@@ -12,7 +12,6 @@ import { Supabase } from './modules/supabase/supabase_manager.ts';
 // TODO:(@digisomni)
 /*
  * We need to make proxy configs key'd by the subdomain,
- * we need to load the domain from the config,
  * we need to make status return the caddy'd URLs which are key'd now.
  * we need to make Caddy issue certs for us automatically, OR allow for a custom CA to be used.
  */
@@ -141,34 +140,46 @@ async function init() {
 
     const caddyRoutes: ProxyConfig[] = [
         {
-            subdomain: `${Server.E_ProxySubdomain.GENERAL}.localhost`,
+            subdomain: `${Server.E_ProxySubdomain.GENERAL}.${
+                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+            }`,
             to: `localhost:${
                 config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT]
             }`,
             name: 'Oak Server (General API)',
         },
         {
-            subdomain: `${Server.E_ProxySubdomain.SUPABASE_API}.localhost`,
+            subdomain: `${Server.E_ProxySubdomain.SUPABASE_API}.${
+                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+            }`,
             to: `localhost:${supabaseStatus.api.port}${supabaseStatus.api.path}`,
             name: 'Supabase API',
         },
         {
-            subdomain: `${Server.E_ProxySubdomain.SUPABASE_GRAPHQL}.localhost`,
+            subdomain: `${Server.E_ProxySubdomain.SUPABASE_GRAPHQL}.${
+                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+            }`,
             to: `localhost:${supabaseStatus.graphql.port}${supabaseStatus.graphql.path}`,
             name: 'Supabase GraphQL',
         },
         {
-            subdomain: `${Server.E_ProxySubdomain.SUPABASE_STORAGE}.localhost`,
+            subdomain: `${Server.E_ProxySubdomain.SUPABASE_STORAGE}.${
+                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+            }`,
             to: `localhost:${supabaseStatus.s3Storage.port}${supabaseStatus.s3Storage.path}`,
             name: 'Supabase Storage',
         },
         {
-            subdomain: `${Server.E_ProxySubdomain.SUPABASE_STUDIO}.localhost`,
+            subdomain: `${Server.E_ProxySubdomain.SUPABASE_STUDIO}.${
+                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+            }`,
             to: `localhost:${supabaseStatus.studio.port}${supabaseStatus.studio.path}`,
             name: 'Supabase Studio',
         },
         {
-            subdomain: `${Server.E_ProxySubdomain.SUPABASE_INBUCKET}.localhost`,
+            subdomain: `${Server.E_ProxySubdomain.SUPABASE_INBUCKET}.${
+                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+            }`,
             to: `localhost:${supabaseStatus.inbucket.port}${supabaseStatus.inbucket.path}`,
             name: 'Supabase Inbucket',
         },
@@ -222,7 +233,7 @@ async function init() {
                 config[
                     Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT
                 ]
-            } -> ${route.subdomain}${route.path} -> ${route.to}`,
+            } -> ${route.subdomain} -> ${route.to}`,
             type: 'success',
         });
     }
@@ -284,7 +295,7 @@ export function loadConfig(): ServerConfig {
             ) || args.allowedHeadersReq || 'Content-Type, Authorization',
         [Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]:
             Deno.env.get(Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST) ||
-            args.caddyHost || '0.0.0.0',
+            args.caddyHost || 'localhost',
         [Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT]: parseInt(
             Deno.env.get(Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT) ||
                 args.caddyPort || '3010',
