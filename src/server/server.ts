@@ -11,8 +11,6 @@ import { Supabase } from './modules/supabase/supabase_manager.ts';
 
 // TODO:(@digisomni)
 /*
- * We need to make proxy configs key'd by the subdomain,
- * we need to make status return the caddy'd URLs which are key'd now.
  * we need to make Caddy issue certs for us automatically, OR allow for a custom CA to be used.
  */
 
@@ -96,36 +94,6 @@ async function init() {
         type: 'info',
     });
 
-    log({
-        message: 'Setting up HTTP routes',
-        type: 'info',
-    });
-
-    // Add the route from httpRouter.ts
-    router.get(Server.E_GeneralEndpoint.CONFIG_AND_STATUS, async (ctx) => {
-        log({
-            message:
-                `${Server.E_GeneralEndpoint.CONFIG_AND_STATUS} route called`,
-            type: 'debug',
-            debug: debugMode,
-        });
-
-        const statusUrls = await supabase.getStatus();
-        const response: Server.I_REQUEST_ConfigAndStatusResponse = {
-            API_URL: statusUrls.api.host + ':' + statusUrls.api.port +
-                statusUrls.api.path,
-            STORAGE_URL: statusUrls.s3Storage.host + ':' +
-                statusUrls.s3Storage.port + statusUrls.s3Storage.path,
-        };
-
-        ctx.response.body = response;
-    });
-
-    log({
-        message: 'Oak HTTP routes are set up correctly.',
-        type: 'info',
-    });
-
     // Use the router
     app.use(router.routes());
     app.use(router.allowedMethods());
@@ -138,8 +106,8 @@ async function init() {
     const caddyManager = CaddyManager.getInstance();
     const supabaseStatus = await supabase.getStatus();
 
-    const caddyRoutes: ProxyConfig[] = [
-        {
+    const caddyRoutes: Record<Server.E_ProxySubdomain, ProxyConfig> = {
+        [Server.E_ProxySubdomain.GENERAL]: {
             subdomain: `${Server.E_ProxySubdomain.GENERAL}.${
                 config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
             }`,
@@ -148,42 +116,71 @@ async function init() {
             }`,
             name: 'Oak Server (General API)',
         },
-        {
+        [Server.E_ProxySubdomain.SUPABASE_API]: {
             subdomain: `${Server.E_ProxySubdomain.SUPABASE_API}.${
                 config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
             }`,
             to: `localhost:${supabaseStatus.api.port}${supabaseStatus.api.path}`,
             name: 'Supabase API',
         },
-        {
+        [Server.E_ProxySubdomain.SUPABASE_GRAPHQL]: {
             subdomain: `${Server.E_ProxySubdomain.SUPABASE_GRAPHQL}.${
                 config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
             }`,
             to: `localhost:${supabaseStatus.graphql.port}${supabaseStatus.graphql.path}`,
             name: 'Supabase GraphQL',
         },
-        {
+        [Server.E_ProxySubdomain.SUPABASE_STORAGE]: {
             subdomain: `${Server.E_ProxySubdomain.SUPABASE_STORAGE}.${
                 config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
             }`,
             to: `localhost:${supabaseStatus.s3Storage.port}${supabaseStatus.s3Storage.path}`,
             name: 'Supabase Storage',
         },
-        {
+        [Server.E_ProxySubdomain.SUPABASE_STUDIO]: {
             subdomain: `${Server.E_ProxySubdomain.SUPABASE_STUDIO}.${
                 config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
             }`,
             to: `localhost:${supabaseStatus.studio.port}${supabaseStatus.studio.path}`,
             name: 'Supabase Studio',
         },
-        {
+        [Server.E_ProxySubdomain.SUPABASE_INBUCKET]: {
             subdomain: `${Server.E_ProxySubdomain.SUPABASE_INBUCKET}.${
                 config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
             }`,
             to: `localhost:${supabaseStatus.inbucket.port}${supabaseStatus.inbucket.path}`,
             name: 'Supabase Inbucket',
         },
-    ];
+    };
+
+    log({
+        message: 'Setting up HTTP routes',
+        type: 'info',
+    });
+
+    // Setup General routes
+    router.get(Server.E_GeneralEndpoint.CONFIG_AND_STATUS, async (ctx) => {
+        log({
+            message:
+                `${Server.E_GeneralEndpoint.CONFIG_AND_STATUS} route called`,
+            type: 'debug',
+            debug: debugMode,
+        });
+
+        const response: Server.I_REQUEST_ConfigAndStatusResponse = {
+            API_URL:
+                caddyRoutes[Server.E_ProxySubdomain.SUPABASE_API].subdomain,
+            STORAGE_URL:
+                caddyRoutes[Server.E_ProxySubdomain.SUPABASE_STORAGE].subdomain,
+        };
+
+        ctx.response.body = response;
+    });
+
+    log({
+        message: 'Oak HTTP routes are set up correctly.',
+        type: 'info',
+    });
 
     try {
         // Launch Oak server
@@ -225,7 +222,7 @@ async function init() {
         type: 'success',
     });
 
-    for (const route of caddyRoutes) {
+    for (const route of Object.values(caddyRoutes)) {
         log({
             message: `${route.name}: ${
                 config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]

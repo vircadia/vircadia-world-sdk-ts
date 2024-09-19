@@ -1,4 +1,5 @@
 import { log } from '../../../shared/modules/vircadia-world-meta/general/modules/log.ts';
+import { Server } from '../../../shared/modules/vircadia-world-meta/meta.ts';
 
 export interface ProxyConfig {
     subdomain: string; // e.g., "general.localhost", "supabase.localhost"
@@ -25,7 +26,7 @@ export class CaddyManager {
     }
 
     public async setupAndStart(data: {
-        proxyConfigs: ProxyConfig[];
+        proxyConfigs: Record<Server.E_ProxySubdomain, ProxyConfig>;
         debug: boolean;
     }): Promise<void> {
         await this.createCaddyfile(data);
@@ -35,7 +36,7 @@ export class CaddyManager {
     }
 
     private async createCaddyfile(data: {
-        proxyConfigs: ProxyConfig[];
+        proxyConfigs: Record<Server.E_ProxySubdomain, ProxyConfig>;
         debug: boolean;
     }): Promise<void> {
         let caddyfileContent = '';
@@ -49,7 +50,11 @@ export class CaddyManager {
         }
 
         const subdomains = [
-            ...new Set(data.proxyConfigs.map((config) => config.subdomain)),
+            ...new Set(
+                Object.values(data.proxyConfigs).map((config) =>
+                    config.subdomain
+                ),
+            ),
         ];
         caddyfileContent += `:${this.port} {    
     @general host general.localhost
@@ -58,13 +63,16 @@ export class CaddyManager {
 `;
 
         // Group proxy configs by subdomain
-        const configsBySubdomain = data.proxyConfigs.reduce((acc, config) => {
-            if (!acc[config.subdomain]) {
-                acc[config.subdomain] = [];
-            }
-            acc[config.subdomain].push(config);
-            return acc;
-        }, {} as Record<string, ProxyConfig[]>);
+        const configsBySubdomain = Object.values(data.proxyConfigs).reduce(
+            (acc, config) => {
+                if (!acc[config.subdomain]) {
+                    acc[config.subdomain] = [];
+                }
+                acc[config.subdomain].push(config);
+                return acc;
+            },
+            {} as Record<string, ProxyConfig[]>,
+        );
 
         // Create subdomain configurations
         for (const [subdomain, configs] of Object.entries(configsBySubdomain)) {
