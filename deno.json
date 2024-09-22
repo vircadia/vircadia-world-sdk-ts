@@ -4,6 +4,7 @@
             "src/server",
             "src/client/deno",
             "src/client/browser",
+            "src/client/browser/dev",
             "src/shared/modules/vircadia-world-meta"
         ]
     },
