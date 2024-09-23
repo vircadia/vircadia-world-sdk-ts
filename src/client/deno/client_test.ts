@@ -1,5 +1,5 @@
 import { assert, assertEquals } from 'jsr:@std/assert';
-import { runAgentWorldTest } from '../../shared/modules/vircadia-world-meta/client/modules/agent/agent_world_test.ts';
+import { runAgentWorldTest } from '../../shared/modules/vircadia-world-meta/client/modules/agent/world_test.ts';
 import { log } from '../../shared/modules/vircadia-world-meta/general/modules/log.ts';
 import { Deno_Client } from './client.ts';
 
