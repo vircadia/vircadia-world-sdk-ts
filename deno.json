@@ -1,0 +1,47 @@
+{
+    "workspace": {
+        "members": [
+            "src/server",
+            "src/client/deno",
+            "src/client/browser",
+            "src/client/browser/dev",
+            "src/shared/modules/vircadia-world-meta"
+        ]
+    },
+    "lint": {
+        "rules": {
+            "tags": ["recommended"],
+            "include": ["ban-untagged-todo"],
+            "exclude": ["no-namespace"]
+        },
+        "report": "pretty",
+        "include": [
+            "./src/**/*.ts",
+            "./src/**/*.tsx",
+            "./src/**/*.js",
+            "./src/**/*.jsx",
+            "./src/**/*.json"
+        ]
+    },
+    "compilerOptions": {
+        "allowJs": true,
+        "lib": ["deno.window", "dom"],
+        "strict": true
+    },
+    "fmt": {
+        "options": {
+            "useTabs": false,
+            "lineWidth": 80,
+            "indentWidth": 4,
+            "singleQuote": true,
+            "proseWrap": "always"
+        },
+        "include": [
+            "./src/**/*.ts",
+            "./src/**/*.tsx",
+            "./src/**/*.js",
+            "./src/**/*.jsx",
+            "./src/**/*.json"
+        ]
+    }
+}

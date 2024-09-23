@@ -1,0 +1,12 @@
+{
+    "imports": {
+        "@babylonjs/core": "jsr:@babylonjs/core@7.26.0",
+        "vite": "npm:vite@^5.0.0"
+    },
+    "tasks": {
+        "dev": "deno run --allow-net --allow-read --allow-write --allow-env --allow-run --watch main.ts",
+        "build": "deno bundle main.ts dist/bundle.js",
+        "lint": "deno lint",
+        "test:dev": "deno run --allow-net --allow-read --allow-write --allow-env --allow-run --watch src/client/browser/test/dev-server.ts"
+    }
+}

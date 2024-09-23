@@ -1,20 +1,180 @@
-# Vircadia World
+# Vircadia World Core
 
-This project must be small (fewer lines of code, though no code golf). The scale MUST be balanced: more complexity = less lines of code to allow for that, OR if you want more lines of code, it must be less complex by an order of magnitude, but even then the lines of code must be minimal.
+## Install
 
-Stack:
-1. Bun.sh / Node.js (runtime) 
-2. Fastify (router)
+<!-- brew install caddy -->
 
-## Simulation
+### Core Supabase Project
 
-Simulation of worlds is split into two layers, first is the surface (Metaphysical) and then the foundation (Physical). Traditional games and software follow metaphysical forces where they create the direct idea of something (e.g. a gun or a car, or "a script which will move this planet from A to B when the update starts") and then try to add physical complexity through the top down approach.
+Configurations for the core Supabase project are found in `/src/server/modules/supabase/app/supabase/config.toml`.
 
-### Metaphysical
+### Client-Server Mutations
 
-The **metaphysical simulation layer** allows for development of scripts and functionality of the world in the traditional methods since computing was invented.
+Configurations for client-server mutations are found in 
 
-### Physical
 
-The **physical simulation layer** is constantly applying increased complexity to it as we are able to simulate forces better and better to create "worlds" that follow different physical laws, predefined.
+## TODO: REMOVE: glTF High Level
 
+- glTF
+  - extensionsUsed
+  - extensionsRequired
+  - accessors
+    - bufferView
+    - byteOffset
+    - componentType
+    - normalized
+    - count
+    - type
+    - max
+    - min
+    - sparse
+      - count
+      - indices
+        - bufferView
+        - byteOffset
+        - componentType
+      - values
+        - bufferView
+        - byteOffset
+    - name
+    - extensions
+    - extras
+  - animations
+    - channels
+      - sampler
+      - target
+        - node
+        - path
+    - samplers
+      - input
+      - interpolation
+      - output
+    - name
+    - extensions
+    - extras
+  - asset
+    - copyright
+    - generator
+    - version
+    - minVersion
+    - extensions
+    - extras
+  - buffers
+    - uri
+    - byteLength
+    - name
+    - extensions
+    - extras
+  - bufferViews
+    - buffer
+    - byteOffset
+    - byteLength
+    - byteStride
+    - target
+    - name
+    - extensions
+    - extras
+  - cameras
+    - orthographic
+      - xmag
+      - ymag
+      - zfar
+      - znear
+    - perspective
+      - aspectRatio
+      - yfov
+      - zfar
+      - znear
+    - type
+    - name
+    - extensions
+    - extras
+  - images
+    - uri
+    - mimeType
+    - bufferView
+    - name
+    - extensions
+    - extras
+  - materials
+    - name
+    - extensions
+    - extras
+    - pbrMetallicRoughness
+      - baseColorFactor
+      - baseColorTexture
+        - index
+        - texCoord
+      - metallicFactor
+      - roughnessFactor
+      - metallicRoughnessTexture
+        - index
+        - texCoord
+    - normalTexture
+      - index
+      - texCoord
+      - scale
+    - occlusionTexture
+      - index
+      - texCoord
+      - strength
+    - emissiveTexture
+      - index
+      - texCoord
+    - emissiveFactor
+    - alphaMode
+    - alphaCutoff
+    - doubleSided
+  - meshes
+    - primitives
+      - attributes
+      - indices
+      - material
+      - mode
+      - targets
+    - weights
+    - name
+    - extensions
+    - extras
+  - nodes
+    - camera
+    - children
+    - skin
+    - matrix
+    - mesh
+    - rotation
+    - scale
+    - translation
+    - weights
+    - name
+    - extensions
+    - extras
+  - samplers
+    - magFilter
+    - minFilter
+    - wrapS
+    - wrapT
+    - name
+    - extensions
+    - extras
+  - scene
+  - scenes
+    - nodes
+    - name
+    - extensions
+    - extras
+  - skins
+    - inverseBindMatrices
+    - skeleton
+    - joints
+    - name
+    - extensions
+    - extras
+  - textures
+    - sampler
+    - source
+    - name
+    - extensions
+    - extras
+  - extensions
+  - extras

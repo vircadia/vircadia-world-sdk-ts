@@ -1,0 +1,8 @@
+{
+  "tasks": {
+    "dev": "deno run --allow-write --allow-net --allow-read --allow-env --allow-run --allow-sys --watch server.ts",
+    "dev-debug": "VIRCADIA_WORLD_SERVER_DEBUG=true deno run --allow-write --allow-net --allow-read --allow-env --allow-run --allow-sys --watch server.ts",
+    "start": "deno run --allow-net --allow-read --allow-env --allow-run --allow-sys server.ts",
+    "build": "deno compile --allow-net --allow-read --allow-env --allow-run --allow-sys server.ts"
+  }
+}
