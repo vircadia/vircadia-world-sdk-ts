@@ -55,6 +55,7 @@
       "npm:create-vite@latest": "npm:create-vite@5.5.2",
       "npm:mobx": "npm:mobx@6.13.2",
       "npm:path-to-regexp@6.2.1": "npm:path-to-regexp@6.2.1",
+      "npm:typescript": "npm:typescript@5.5.4",
       "npm:vite": "npm:vite@5.4.3_@types+node@18.16.19",
       "npm:vite@^5.0.0": "npm:vite@5.4.3_@types+node@18.16.19",
       "npm:zod": "npm:zod@3.23.8"
@@ -537,6 +538,10 @@
       },
       "tr46@0.0.3": {
         "integrity": "sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==",
+        "dependencies": {}
+      },
+      "typescript@5.5.4": {
+        "integrity": "sha512-Mtq29sKDAEYP7aljRgtPOpTvOfbwRWlS6dPRzwjdE+C0R4brX/GUyhHSecbHMFLNBLcJIPt9nl9yG5TZ1weH+Q==",
         "dependencies": {}
       },
       "vite@5.4.3_@types+node@18.16.19": {
