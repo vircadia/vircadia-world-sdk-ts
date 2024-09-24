@@ -5,7 +5,7 @@ import { log } from '../shared/modules/vircadia-world-meta/general/modules/log.t
 import {
     Environment,
     Server,
-} from '../shared/modules/vircadia-world-meta/meta.ts';
+} from '../shared/modules/vircadia-world-meta/meta/meta.ts';
 import { CaddyManager, ProxyConfig } from './modules/caddy/caddy_manager.ts';
 import { Supabase } from './modules/supabase/supabase_manager.ts';
 
@@ -45,13 +45,13 @@ function setupCORS(app: Application) {
         ctx.response.headers.set(
             'Access-Control-Allow-Methods',
             config[
-                Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_ALLOWED_METHODS_REQ
+            Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_ALLOWED_METHODS_REQ
             ],
         );
         ctx.response.headers.set(
             'Access-Control-Allow-Headers',
             config[
-                Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_ALLOWED_HEADERS_REQ
+            Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_ALLOWED_HEADERS_REQ
             ],
         );
         if (ctx.request.method === 'OPTIONS') {
@@ -103,46 +103,39 @@ async function setupCaddyRoutes(
 
     return {
         [Server.E_ProxySubdomain.GENERAL]: {
-            subdomain: `${Server.E_ProxySubdomain.GENERAL}.${
-                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
-            }`,
-            to: `${config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST]}:${
-                config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT]
-            }`,
+            subdomain: `${Server.E_ProxySubdomain.GENERAL}.${config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+                }`,
+            to: `${config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST]}:${config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT]
+                }`,
             name: 'Oak Server (General API)',
         },
         [Server.E_ProxySubdomain.SUPABASE_API]: {
-            subdomain: `${Server.E_ProxySubdomain.SUPABASE_API}.${
-                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
-            }`,
+            subdomain: `${Server.E_ProxySubdomain.SUPABASE_API}.${config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+                }`,
             to: `localhost:${supabaseStatus.api.port}${supabaseStatus.api.path}`,
             name: 'Supabase API',
         },
         [Server.E_ProxySubdomain.SUPABASE_GRAPHQL]: {
-            subdomain: `${Server.E_ProxySubdomain.SUPABASE_GRAPHQL}.${
-                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
-            }`,
+            subdomain: `${Server.E_ProxySubdomain.SUPABASE_GRAPHQL}.${config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+                }`,
             to: `localhost:${supabaseStatus.graphql.port}${supabaseStatus.graphql.path}`,
             name: 'Supabase GraphQL',
         },
         [Server.E_ProxySubdomain.SUPABASE_STORAGE]: {
-            subdomain: `${Server.E_ProxySubdomain.SUPABASE_STORAGE}.${
-                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
-            }`,
+            subdomain: `${Server.E_ProxySubdomain.SUPABASE_STORAGE}.${config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+                }`,
             to: `localhost:${supabaseStatus.s3Storage.port}${supabaseStatus.s3Storage.path}`,
             name: 'Supabase Storage',
         },
         [Server.E_ProxySubdomain.SUPABASE_STUDIO]: {
-            subdomain: `${Server.E_ProxySubdomain.SUPABASE_STUDIO}.${
-                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
-            }`,
+            subdomain: `${Server.E_ProxySubdomain.SUPABASE_STUDIO}.${config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+                }`,
             to: `localhost:${supabaseStatus.studio.port}${supabaseStatus.studio.path}`,
             name: 'Supabase Studio',
         },
         [Server.E_ProxySubdomain.SUPABASE_INBUCKET]: {
-            subdomain: `${Server.E_ProxySubdomain.SUPABASE_INBUCKET}.${
-                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
-            }`,
+            subdomain: `${Server.E_ProxySubdomain.SUPABASE_INBUCKET}.${config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+                }`,
             to: `localhost:${supabaseStatus.inbucket.port}${supabaseStatus.inbucket.path}`,
             name: 'Supabase Inbucket',
         },
@@ -183,9 +176,8 @@ function startOakServer(app: Application) {
             hostname: config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST],
         });
         log({
-            message: `Oak server is running on ${
-                config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST]
-            }:${config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT]}`,
+            message: `Oak server is running on ${config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST]
+                }:${config[Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT]}`,
             type: 'info',
         });
     } catch (error) {
@@ -221,13 +213,11 @@ async function startCaddyServer(
 
     for (const route of Object.values(caddyRoutes)) {
         log({
-            message: `${route.name}: ${
-                config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
-            }:${
-                config[
-                    Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT
+            message: `${route.name}: ${config[Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_HOST]
+                }:${config[
+                Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT
                 ]
-            } -> ${route.subdomain} -> ${route.to}`,
+                } -> ${route.subdomain} -> ${route.to}`,
             type: 'success',
         });
     }
@@ -256,13 +246,13 @@ export function loadConfig(): ServerConfig {
     return {
         [Environment.ENVIRONMENT_VARIABLE.SERVER_DEBUG]:
             Deno.env.get(Environment.ENVIRONMENT_VARIABLE.SERVER_DEBUG) ===
-                'true' || args.debug || false,
+            'true' || args.debug || false,
         [Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST]:
             Deno.env.get(Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_HOST) ||
             args.host || '0.0.0.0',
         [Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT]: parseInt(
             Deno.env.get(Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_PORT) ||
-                args.port || '3000',
+            args.port || '3000',
         ),
         [Environment.ENVIRONMENT_VARIABLE.SERVER_OAK_ALLOWED_ORIGINS]:
             Deno.env.get(
@@ -281,7 +271,7 @@ export function loadConfig(): ServerConfig {
             args.caddyHost || 'localhost',
         [Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT]: parseInt(
             Deno.env.get(Environment.ENVIRONMENT_VARIABLE.SERVER_CADDY_PORT) ||
-                args.caddyPort || '3010',
+            args.caddyPort || '3010',
         ),
     };
 }

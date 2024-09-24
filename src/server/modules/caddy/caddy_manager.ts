@@ -1,5 +1,5 @@
 import { log } from '../../../shared/modules/vircadia-world-meta/general/modules/log.ts';
-import { Server } from '../../../shared/modules/vircadia-world-meta/meta.ts';
+import { Server } from '../../../shared/modules/vircadia-world-meta/meta/meta.ts';
 
 export interface ProxyConfig {
     subdomain: string; // e.g., "general.localhost", "supabase.localhost"
@@ -56,7 +56,7 @@ export class CaddyManager {
                 ),
             ),
         ];
-        caddyfileContent += `:${this.port} {    
+        caddyfileContent += `:${this.port} {
     @general host general.localhost
     reverse_proxy @general localhost:3000
 
@@ -77,9 +77,8 @@ export class CaddyManager {
         // Create subdomain configurations
         for (const [subdomain, configs] of Object.entries(configsBySubdomain)) {
             if (subdomain !== 'general.localhost') {
-                caddyfileContent += `    @${
-                    subdomain.replace('.', '_')
-                } host ${subdomain}
+                caddyfileContent += `    @${subdomain.replace('.', '_')
+                    } host ${subdomain}
 `;
                 for (const config of configs) {
                     log({
@@ -87,9 +86,8 @@ export class CaddyManager {
                             `Creating Caddy route for ${subdomain} to ${config.to}`,
                         type: 'info',
                     });
-                    caddyfileContent += `    reverse_proxy @${
-                        subdomain.replace('.', '_')
-                    } ${config.to}
+                    caddyfileContent += `    reverse_proxy @${subdomain.replace('.', '_')
+                        } ${config.to}
 `;
                 }
             }
@@ -131,7 +129,8 @@ export class CaddyManager {
             stream.pipeTo(
                 new WritableStream({
                     write(chunk) {
-                        const message = new TextDecoder().decode(chunk).trim();
+                        const message = new TextDecoder().decode(chunk)
+                            .trim();
                         if (message) {
                             log({
                                 message,

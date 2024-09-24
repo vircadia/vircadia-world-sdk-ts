@@ -43,5 +43,14 @@
             "./src/**/*.jsx",
             "./src/**/*.json"
         ]
+    },
+    "imports": {
+        "typescript": "npm:typescript@latest",
+        "console-log-colors": "npm:console-log-colors@latest",
+        "eight-colors": "npm:eight-colors@latest",
+        "mobx": "npm:mobx@latest",
+        "zod": "npm:zod@latest",
+        "@supabase/supabase-js": "jsr:@supabase/supabase-js@2",
+        "@babylonjs/core": "npm:@babylonjs/core"
     }
 }
