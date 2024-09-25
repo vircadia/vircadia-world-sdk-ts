@@ -1,6 +1,6 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { log } from '../../../shared/modules/vircadia-world-meta/general/modules/log.ts';
+import { log } from '../../../shared/modules/general/log.ts';
 
 const CONFIG_TOML_FILE = 'config.toml';
 
@@ -55,7 +55,8 @@ export class Supabase {
                     stdout: 'piped',
                 });
                 const { stdout } = await command.output();
-                const output = new TextDecoder().decode(stdout).trim();
+                const output = new TextDecoder().decode(stdout)
+                    .trim();
                 log({
                     message: `Supabase CLI version: ${output}`,
                     type: 'success',
@@ -254,9 +255,8 @@ export class Supabase {
         appendWorkdir: boolean;
         suppressError?: boolean;
     }): Promise<string> {
-        const fullCommand = `npx supabase ${data.command}${
-            data.appendWorkdir ? ` --workdir ${this.appDir}` : ''
-        }`;
+        const fullCommand = `npx supabase ${data.command}${data.appendWorkdir ? ` --workdir ${this.appDir}` : ''
+            }`;
 
         try {
             const command = new Deno.Command('npx', {
@@ -301,9 +301,8 @@ export class Supabase {
                     debug: this.debug,
                 });
                 log({
-                    message: `Full error details: ${
-                        JSON.stringify(error, null, 2)
-                    }`,
+                    message: `Full error details: ${JSON.stringify(error, null, 2)
+                        }`,
                     type: 'error',
                     debug: this.debug,
                 });
@@ -336,9 +335,8 @@ export class Supabase {
             });
             const { stdout: dockerPsOutput } = await dockerPs.output();
             log({
-                message: `Docker Containers: ${
-                    new TextDecoder().decode(dockerPsOutput)
-                }`,
+                message: `Docker Containers: ${new TextDecoder().decode(dockerPsOutput)
+                    }`,
                 type: 'info',
                 debug: this.debug,
             });
@@ -350,9 +348,8 @@ export class Supabase {
             });
             const { stdout: dockerLogsOutput } = await dockerLogs.output();
             log({
-                message: `Supabase DB App Logs: ${
-                    new TextDecoder().decode(dockerLogsOutput)
-                }`,
+                message: `Supabase DB App Logs: ${new TextDecoder().decode(dockerLogsOutput)
+                    }`,
                 type: 'info',
                 debug: this.debug,
             });
@@ -365,9 +362,8 @@ export class Supabase {
             const { stdout: dockerInspectOutput } = await dockerInspect
                 .output();
             log({
-                message: `Supabase DB App Inspect: ${
-                    new TextDecoder().decode(dockerInspectOutput)
-                }`,
+                message: `Supabase DB App Inspect: ${new TextDecoder().decode(dockerInspectOutput)
+                    }`,
                 type: 'info',
                 debug: this.debug,
             });
@@ -427,7 +423,9 @@ export class Supabase {
         const parseUrl = (
             url: string | null,
         ): { host: string; port: number; path: string } => {
-            if (!url) return { host: '', port: 0, path: '' };
+            if (!url) {
+                return { host: '', port: 0, path: '' };
+            }
             const parsedUrl = new URL(url);
             let path = parsedUrl.pathname + parsedUrl.search;
             // Remove trailing slash if present
@@ -436,7 +434,7 @@ export class Supabase {
                 host: parsedUrl.hostname,
                 port: parseInt(parsedUrl.port, 10) ||
                     (parsedUrl.protocol === 'https:' ? 443 : 80),
-                path: path,
+                path,
             };
         };
 

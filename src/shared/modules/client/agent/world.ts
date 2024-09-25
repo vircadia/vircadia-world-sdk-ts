@@ -1,5 +1,5 @@
 import { reaction, runInAction } from 'mobx';
-import { log } from '../../vircadia-world-meta/general/modules/log.ts';
+import { log } from '../../general/log.ts';
 import { Agent as AgentMeta, Primitive, Server } from '../../vircadia-world-meta/meta/meta.ts';
 import { World_Client } from './world_client.ts';
 import { Agent_Store } from './store.ts';

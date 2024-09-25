@@ -1,6 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { World } from '../../vircadia-world-meta/meta/meta.ts';
-import { log } from "../../vircadia-world-meta/general/modules/log.ts";
+import { log } from "../../general/log.ts";
 import * as BABYLON from 'npm:@babylonjs/core';
 import Script from './helpers/script.ts';
 

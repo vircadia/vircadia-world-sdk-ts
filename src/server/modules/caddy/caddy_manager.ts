@@ -1,4 +1,4 @@
-import { log } from '../../../shared/modules/vircadia-world-meta/general/modules/log.ts';
+import { log } from '../../../shared/modules/general/log.ts';
 import { Server } from '../../../shared/modules/vircadia-world-meta/meta/meta.ts';
 
 export interface ProxyConfig {

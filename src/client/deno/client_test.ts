@@ -1,6 +1,6 @@
 import { assert, assertEquals } from 'jsr:@std/assert';
 import { runAgentWorldTest } from '../../shared/modules/vircadia-world-meta/client/modules/agent/world_test.ts';
-import { log } from '../../shared/modules/vircadia-world-meta/general/modules/log.ts';
+import { log } from '../../shared/modules/general/log.ts';
 import { Deno_Client } from './client.ts';
 
 const DENO_CLIENT_TEST_LOG_PREFIX = '[DENO_CLIENT_TEST]';

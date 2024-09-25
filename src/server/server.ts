@@ -1,7 +1,7 @@
 import { Application, Router } from 'jsr:@oak/oak';
 import { parseArgs } from 'jsr:@std/cli';
 import { load } from 'jsr:@std/dotenv';
-import { log } from '../shared/modules/vircadia-world-meta/general/modules/log.ts';
+import { log } from '../shared/modules/general/log.ts';
 import {
     Environment,
     Server,

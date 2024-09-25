@@ -1,5 +1,5 @@
 import { transpile } from 'typescript';
-import { log } from '../../../vircadia-world-meta/general/modules/log.ts';
+import { log } from '../../../general/log.ts';
 
 export class Script {
     static readonly scriptLogPrefix = '[SCRIPT]';
