@@ -880,3 +880,139 @@ CREATE POLICY accessors_select_policy ON accessors FOR SELECT USING (true);
 CREATE POLICY accessors_insert_policy ON accessors FOR INSERT WITH CHECK (is_admin());
 CREATE POLICY accessors_update_policy ON accessors FOR UPDATE USING (is_admin());
 CREATE POLICY accessors_delete_policy ON accessors FOR DELETE USING (is_admin());
+
+-- Cameras
+
+CREATE OR REPLACE FUNCTION create_camera(
+  p_vircadia_world_uuid UUID,
+  p_name TEXT,
+  p_type TEXT,
+  p_orthographic JSONB,
+  p_perspective JSONB,
+  p_extensions JSONB,
+  p_extras JSONB
+)
+RETURNS UUID AS $$
+DECLARE
+  new_id UUID;
+BEGIN
+  IF NOT is_admin() THEN
+    RAISE EXCEPTION 'Only admins can create camera entries';
+  END IF;
+
+  INSERT INTO cameras (vircadia_world_uuid, name, type, orthographic, perspective, extensions, extras)
+  VALUES (p_vircadia_world_uuid, p_name, p_type, p_orthographic, p_perspective, p_extensions, p_extras)
+  RETURNING vircadia_uuid INTO new_id;
+  RETURN new_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION update_camera(
+  p_vircadia_uuid UUID,
+  p_name TEXT,
+  p_type TEXT,
+  p_orthographic JSONB,
+  p_perspective JSONB,
+  p_extensions JSONB,
+  p_extras JSONB
+)
+RETURNS VOID AS $$
+BEGIN
+  IF NOT is_admin() THEN
+    RAISE EXCEPTION 'Only admins can update camera entries';
+  END IF;
+
+  UPDATE cameras
+  SET name = p_name,
+      type = p_type,
+      orthographic = p_orthographic,
+      perspective = p_perspective,
+      extensions = p_extensions,
+      extras = p_extras
+  WHERE vircadia_uuid = p_vircadia_uuid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION delete_camera(p_vircadia_uuid UUID)
+RETURNS VOID AS $$
+BEGIN
+  IF NOT is_admin() THEN
+    RAISE EXCEPTION 'Only admins can delete camera entries';
+  END IF;
+
+  DELETE FROM cameras WHERE vircadia_uuid = p_vircadia_uuid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- RLS for cameras
+CREATE POLICY cameras_select_policy ON cameras FOR SELECT USING (true);
+CREATE POLICY cameras_insert_policy ON cameras FOR INSERT WITH CHECK (is_admin());
+CREATE POLICY cameras_update_policy ON cameras FOR UPDATE USING (is_admin());
+CREATE POLICY cameras_delete_policy ON cameras FOR DELETE USING (is_admin());
+
+-- Animations
+
+CREATE OR REPLACE FUNCTION create_animation(
+  p_vircadia_world_uuid UUID,
+  p_name TEXT,
+  p_channels JSONB,
+  p_samplers JSONB,
+  p_extensions JSONB,
+  p_extras JSONB
+)
+RETURNS UUID AS $$
+DECLARE
+  new_id UUID;
+BEGIN
+  IF NOT is_admin() THEN
+    RAISE EXCEPTION 'Only admins can create animation entries';
+  END IF;
+
+  INSERT INTO animations (vircadia_world_uuid, name, channels, samplers, extensions, extras)
+  VALUES (p_vircadia_world_uuid, p_name, p_channels, p_samplers, p_extensions, p_extras)
+  RETURNING vircadia_uuid INTO new_id;
+  RETURN new_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION update_animation(
+  p_vircadia_uuid UUID,
+  p_name TEXT,
+  p_channels JSONB,
+  p_samplers JSONB,
+  p_extensions JSONB,
+  p_extras JSONB
+)
+RETURNS VOID AS $$
+BEGIN
+  IF NOT is_admin() THEN
+    RAISE EXCEPTION 'Only admins can update animation entries';
+  END IF;
+
+  UPDATE animations
+  SET name = p_name,
+      channels = p_channels,
+      samplers = p_samplers,
+      extensions = p_extensions,
+      extras = p_extras
+  WHERE vircadia_uuid = p_vircadia_uuid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION delete_animation(p_vircadia_uuid UUID)
+RETURNS VOID AS $$
+BEGIN
+  IF NOT is_admin() THEN
+    RAISE EXCEPTION 'Only admins can delete animation entries';
+  END IF;
+
+  DELETE FROM animations WHERE vircadia_uuid = p_vircadia_uuid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- RLS for animations
+CREATE POLICY animations_select_policy ON animations FOR SELECT USING (true);
+CREATE POLICY animations_insert_policy ON animations FOR INSERT WITH CHECK (is_admin());
+CREATE POLICY animations_update_policy ON animations FOR UPDATE USING (is_admin());
+CREATE POLICY animations_delete_policy ON animations FOR DELETE USING (is_admin());
+

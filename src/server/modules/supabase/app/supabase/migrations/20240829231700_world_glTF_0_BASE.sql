@@ -4,6 +4,8 @@
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Enable pg_jsonschema extension for JSON schema validation
+CREATE EXTENSION IF NOT EXISTS pg_jsonschema WITH SCHEMA extensions;
 
 --
 --
@@ -41,7 +43,7 @@ CREATE TRIGGER on_auth_user_created
 
 -- Create the world_gltf table
 CREATE TABLE world_gltf (
-    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_uuid UUID UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     version TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -63,7 +65,7 @@ CREATE TABLE world_gltf (
 
 -- Create the scenes table
 CREATE TABLE scenes (
-    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_uuid UUID UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
     vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     nodes JSONB,
@@ -79,7 +81,7 @@ CREATE TABLE scenes (
 
 -- Create the nodes table
 CREATE TABLE nodes (
-    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_uuid UUID UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
     vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     camera TEXT,
@@ -103,7 +105,7 @@ CREATE TABLE nodes (
 
 -- Create the meshes table
 CREATE TABLE meshes (
-    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_uuid UUID UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
     vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     primitives JSONB NOT NULL,
@@ -120,7 +122,7 @@ CREATE TABLE meshes (
 
 -- Create the materials table
 CREATE TABLE materials (
-    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_uuid UUID UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
     vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     pbrMetallicRoughness JSONB,
@@ -158,7 +160,7 @@ CREATE TABLE materials (
 
 -- Create the textures table
 CREATE TABLE textures (
-    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_uuid UUID UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
     vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     sampler TEXT,
@@ -175,7 +177,7 @@ CREATE TABLE textures (
 
 -- Create the images table
 CREATE TABLE images (
-    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_uuid UUID UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
     vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     uri TEXT,
@@ -193,7 +195,7 @@ CREATE TABLE images (
 
 -- Create the samplers table
 CREATE TABLE samplers (
-    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_uuid UUID UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
     vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     magFilter TEXT,
@@ -212,7 +214,7 @@ CREATE TABLE samplers (
 
 -- Create the buffers table
 CREATE TABLE buffers (
-    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_uuid UUID UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
     vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     uri TEXT,
@@ -229,7 +231,7 @@ CREATE TABLE buffers (
 
 -- Create the buffer_views table
 CREATE TABLE buffer_views (
-    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_uuid UUID UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
     vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     buffer TEXT NOT NULL,
     byteOffset INTEGER DEFAULT 0,
@@ -249,7 +251,7 @@ CREATE TABLE buffer_views (
 
 -- Create the accessors table
 CREATE TABLE accessors (
-    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_uuid UUID UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
     vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     bufferView TEXT,
     byteOffset INTEGER DEFAULT 0,
@@ -260,6 +262,7 @@ CREATE TABLE accessors (
     max JSONB,
     min JSONB,
     name TEXT,
+    sparse JSONB,
     extensions JSONB,
     extras JSONB
 );
@@ -272,7 +275,7 @@ CREATE TABLE accessors (
 
 -- Create the animations table
 CREATE TABLE animations (
-    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_uuid UUID UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
     vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     channels JSONB NOT NULL,
@@ -289,7 +292,7 @@ CREATE TABLE animations (
 
 -- Create the cameras table
 CREATE TABLE cameras (
-    vircadia_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_uuid UUID UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
     vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
     name TEXT,
     type TEXT NOT NULL,
@@ -298,6 +301,24 @@ CREATE TABLE cameras (
     extensions JSONB,
     extras JSONB,
     CONSTRAINT check_camera_type CHECK (type IN ('perspective', 'orthographic'))
+);
+
+--
+--
+-- SKINS
+--
+--
+
+-- Create the skins table
+CREATE TABLE skins (
+    vircadia_uuid UUID UNIQUE PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vircadia_world_uuid UUID NOT NULL REFERENCES world_gltf(vircadia_uuid),
+    name TEXT,
+    inverseBindMatrices TEXT,
+    skeleton TEXT,
+    joints JSONB NOT NULL,
+    extensions JSONB,
+    extras JSONB
 );
 
 --
@@ -370,6 +391,10 @@ FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 CREATE TRIGGER update_cameras_modtime
 BEFORE UPDATE ON cameras
+FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
+CREATE TRIGGER update_skins_modtime
+BEFORE UPDATE ON skins
 FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- Enable RLS for all tables
