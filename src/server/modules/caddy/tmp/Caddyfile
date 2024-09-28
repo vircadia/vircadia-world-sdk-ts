@@ -1,8 +1,4 @@
-{
-    debug
-}
-
-:3010 {    
+:3010 {
     @general host general.localhost
     reverse_proxy @general localhost:3000
 

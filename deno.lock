@@ -60,7 +60,8 @@
       "npm:typescript@latest": "npm:typescript@5.5.4",
       "npm:vite": "npm:vite@5.4.3_@types+node@18.16.19",
       "npm:vite@^5.0.0": "npm:vite@5.4.3_@types+node@18.16.19",
-      "npm:zod": "npm:zod@3.23.8"
+      "npm:zod": "npm:zod@3.23.8",
+      "npm:zod@latest": "npm:zod@3.23.8"
     },
     "jsr": {
       "@deno/cache-dir@0.8.0": {
@@ -809,6 +810,15 @@
     "https://deno.land/x/path_to_regexp@v6.2.1/index.ts": "894060567837bae8fc9c5cbd4d0a05e9024672083d5883b525c031eea940e556"
   },
   "workspace": {
+    "dependencies": [
+      "jsr:@supabase/supabase-js@2",
+      "npm:@babylonjs/core",
+      "npm:console-log-colors@latest",
+      "npm:eight-colors@latest",
+      "npm:mobx@latest",
+      "npm:typescript@latest",
+      "npm:zod@latest"
+    ],
     "members": {
       "src/client/browser": {
         "dependencies": [
@@ -824,6 +834,16 @@
       "src/client/deno": {
         "dependencies": [
           "jsr:@supabase/supabase-js@^2.45.3"
+        ]
+      },
+      "src/shared/modules/vircadia-world-meta": {
+        "dependencies": [
+          "jsr:@supabase/supabase-js@2",
+          "npm:console-log-colors@latest",
+          "npm:eight-colors@latest",
+          "npm:mobx@latest",
+          "npm:typescript@latest",
+          "npm:zod@latest"
         ]
       }
     }
