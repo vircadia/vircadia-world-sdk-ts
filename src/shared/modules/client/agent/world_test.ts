@@ -6,13 +6,13 @@ export async function runAgentWorldTest() {
     const DENO_AGENT_WORLD_TEST_LOG_PREFIX = '[DENO_AGENT_WORLD_TEST]';
 
     log({ message: `${DENO_AGENT_WORLD_TEST_LOG_PREFIX} Testing database connection`, type: 'info' });
-    
+
     const world = Agent.Store.world;
     if (!world || !world.supabaseClient) {
         throw new Error(`No world connection or Supabase client available`);
     }
 
-    const tables = Object.values(AgentMeta.E_Realtime_Postgres_TableChannel);
+    const tables = Object.values(AgentMeta.E_Tables);
 
     try {
         for (const table of tables) {

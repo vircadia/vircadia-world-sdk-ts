@@ -139,7 +139,7 @@ export class Agent_World {
         const supabase = Agent_Store.world.worldClient.getSupabaseClient();
 
         // Subscribe to Postgres Changes
-        Object.values(AgentMeta.E_Realtime_Postgres_TableChannel).forEach(
+        Object.values(AgentMeta.E_Tables).forEach(
             (table) => {
                 supabase?.channel(`postgres_changes:${table}`)
                     .on(
