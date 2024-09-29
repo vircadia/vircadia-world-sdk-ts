@@ -17,10 +17,10 @@ export class Agent_World {
     static readonly host = () => Agent_Store.world?.host;
     static readonly port = () => Agent_Store.world?.port;
 
-    static async connectToWorld(data: {
-        host: string;
-        port: number;
-        key: string;
+    static connectToWorld(data: {
+        supabase_api_host: string;
+        supabase_api_port: number;
+        supabase_api_key: string;
         agentId: string;
         capabilities: {
             useWebRTC: boolean;
@@ -50,28 +50,11 @@ export class Agent_World {
         Agent_Store.useWebRTC = data.capabilities.useWebRTC;
         Agent_Store.useWebAudio = data.capabilities.useWebAudio;
 
-        let serverConfigAndStatus: Server.I_REQUEST_ConfigAndStatusResponse;
-        try {
-            serverConfigAndStatus = await Agent_World
-                .getStatus({
-                    host: data.host,
-                    port: data.port,
-                });
-        } catch (error) {
-            throw new Error(
-                `Failed to get server status: ${error}`,
-            );
-        }
-
         let worldClient: World_Client | null = null;
         try {
-            if (!serverConfigAndStatus.API_URL) {
-                throw new Error('No API URL found');
-            }
-
             worldClient = new World_Client({
-                url: serverConfigAndStatus.API_URL,
-                key: data.key,
+                url: data.supabase_api_host,
+                key: data.supabase_api_key,
             });
         } catch (error) {
             throw new Error(
