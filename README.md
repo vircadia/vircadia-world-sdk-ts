@@ -1,4 +1,4 @@
-# Vircadia World TypeScript SDK
+# TypeScript SDKs
 
 ## [Browser](./browser/)
 
