@@ -1,0 +1,10 @@
+{
+    "imports": {
+        "typescript": "npm:typescript@latest",
+        "zod": "npm:zod@latest",
+        "@supabase/supabase-js": "jsr:@supabase/supabase-js@2"
+    },
+    "compilerOptions": {
+        "lib": ["deno.window", "dom"]
+    }
+}

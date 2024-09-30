@@ -1,11 +1,10 @@
 {
     "workspace": {
         "members": [
-            "src/server",
-            "src/client/deno",
-            "src/client/browser",
-            "src/client/browser/dev",
-            "src/shared/modules/vircadia-world-meta"
+            "deno",
+            "browser",
+            "browser/dev",
+            "shared/modules/vircadia-world-meta"
         ]
     },
     "lint": {
@@ -16,11 +15,11 @@
         },
         "report": "pretty",
         "include": [
-            "./src/**/*.ts",
-            "./src/**/*.tsx",
-            "./src/**/*.js",
-            "./src/**/*.jsx",
-            "./src/**/*.json"
+            "./**/*.ts",
+            "./**/*.tsx",
+            "./**/*.js",
+            "./**/*.jsx",
+            "./**/*.json"
         ]
     },
     "compilerOptions": {
@@ -37,11 +36,11 @@
             "proseWrap": "always"
         },
         "include": [
-            "./src/**/*.ts",
-            "./src/**/*.tsx",
-            "./src/**/*.js",
-            "./src/**/*.jsx",
-            "./src/**/*.json"
+            "./**/*.ts",
+            "./**/*.tsx",
+            "./**/*.js",
+            "./**/*.jsx",
+            "./**/*.json"
         ]
     },
     "imports": {

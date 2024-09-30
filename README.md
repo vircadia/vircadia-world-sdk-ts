@@ -1,9 +1,5 @@
-# Vircadia World Typescript Client
+# Vircadia World TypeScript SDK
 
-## Browser
+## [Browser](./browser/)
 
-Found [here](./src/browser/).
-
-## Deno
-
-Found [here](./src/deno/).
+## [Deno](./deno/)
