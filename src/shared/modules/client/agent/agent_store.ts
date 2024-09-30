@@ -1,5 +1,5 @@
 import { makeAutoObservable } from 'npm:mobx';
-import { Agent as AgentMeta } from '../../vircadia-world-meta/meta/meta.ts';
+import { Agent as AgentMeta } from '../../vircadia-world-meta/typescript/meta.ts';
 
 class agentStore {
     world: AgentMeta.I_AgentWorldConnection | null = null;

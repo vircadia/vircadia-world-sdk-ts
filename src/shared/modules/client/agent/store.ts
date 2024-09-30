@@ -1,8 +1,28 @@
 import { makeAutoObservable } from 'mobx';
-import { Agent as AgentMeta } from '../../vircadia-world-meta/meta/meta.ts';
+import type { World_Client } from './world_client';
+
+export interface I_AgentPeerConnection {
+    rtcConnection: RTCPeerConnection | null;
+    rtcConnectionOffer: RTCSessionDescriptionInit | null;
+    rtcConnectionAnswer: RTCSessionDescriptionInit | null;
+    rtcConnectionIceCandidate: RTCIceCandidateInit | null;
+    rtcDataChannel: RTCDataChannel | null;
+    incomingAudioMediaStream: MediaStream | null;
+    incomingAudioMediaPanner: PannerNode | null;
+    presence: Agent.C_Presence | null;
+}
+
+export interface I_AgentWorldConnection {
+    host: string;
+    port: number;
+    worldClient: World_Client | null;
+    agentPeerConnections: { [key: string]: I_AgentPeerConnection };
+    presence: Agent.C_Presence;
+    audioContext: AudioContext | null;
+}
 
 class agentStore {
-    world: AgentMeta.I_AgentWorldConnection | null = null;
+    world: I_AgentWorldConnection | null = null;
     localAudioMediaStream: MediaStream | null = null;
     agentId: string | null = null;
     useWebRTC: boolean = false;
