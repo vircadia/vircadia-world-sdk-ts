@@ -1,6 +1,6 @@
-import { log } from '../../../general/modules/log.ts';
-import { Agent } from './agent.ts';
-import { Agent as AgentMeta } from '../../../meta.ts';
+import { log } from '../../general/log';
+import { Agent } from './agent';
+import { Agent as AgentMeta } from '../../vircadia-world-meta/typescript/meta';
 
 export async function runAgentWorldTest() {
     const DENO_AGENT_WORLD_TEST_LOG_PREFIX = '[DENO_AGENT_WORLD_TEST]';
@@ -30,7 +30,7 @@ export async function runAgentWorldTest() {
                 })
                 .select();
 
-            if (insertError) throw new Error(`Insert error for ${table}: ${insertError.message}`);
+            if (insertError) { throw new Error(`Insert error for ${table}: ${insertError.message}`); }
 
             log({
                 message: `${DENO_AGENT_WORLD_TEST_LOG_PREFIX} Inserted test record in ${table}: ${JSON.stringify(insertData)}`,
@@ -44,7 +44,7 @@ export async function runAgentWorldTest() {
                 .order('created_at', { ascending: false })
                 .limit(1);
 
-            if (retrieveError) throw new Error(`Retrieve error for ${table}: ${retrieveError.message}`);
+            if (retrieveError) { throw new Error(`Retrieve error for ${table}: ${retrieveError.message}`); }
 
             log({
                 message: `${DENO_AGENT_WORLD_TEST_LOG_PREFIX} Retrieved test record from ${table}: ${JSON.stringify(retrieveData)}`,
@@ -57,7 +57,7 @@ export async function runAgentWorldTest() {
                 .delete()
                 .eq('vircadia_uuid', insertData[0].vircadia_uuid);
 
-            if (deleteError) throw new Error(`Delete error for ${table}: ${deleteError.message}`);
+            if (deleteError) { throw new Error(`Delete error for ${table}: ${deleteError.message}`); }
 
             log({
                 message: `${DENO_AGENT_WORLD_TEST_LOG_PREFIX} Deleted test record from ${table}`,

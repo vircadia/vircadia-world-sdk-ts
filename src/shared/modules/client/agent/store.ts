@@ -1,5 +1,6 @@
 import { makeAutoObservable } from 'mobx';
 import type { World_Client } from './world_client';
+import { Agent } from '../../vircadia-world-meta/typescript/meta';
 
 export interface I_AgentPeerConnection {
     rtcConnection: RTCPeerConnection | null;

@@ -1,7 +1,6 @@
-import { Agent as AgentMeta } from '../../../meta.ts';
-import { Helpers } from './helpers/index.ts';
-import { Agent_World } from './world.ts';
-import { Agent_Store } from './store.ts';
+import { Helpers } from './helpers/index';
+import { Agent_World } from './world';
+import { Agent_Store } from './store';
 
 export class Agent {
     static readonly AGENT_LOG_PREFIX = '[AGENT]';

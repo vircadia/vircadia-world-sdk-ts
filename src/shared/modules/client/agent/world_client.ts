@@ -1,5 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { log } from "../../general/log.ts";
+import { log } from "../../general/log";
 
 export class World_Client {
     private supabaseClient: SupabaseClient | null = null;
