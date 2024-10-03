@@ -1,9 +1,9 @@
 {
     "workspace": {
         "members": [
-            "deno",
-            "browser",
-            "browser/dev",
+            "client/deno",
+            "client/browser",
+            "client/browser/dev",
             "shared/modules/vircadia-world-meta"
         ]
     },
