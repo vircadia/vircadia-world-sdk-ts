@@ -6,7 +6,6 @@
     "tasks": {
         "dev": "deno run --allow-net --allow-read --allow-write --allow-env --allow-run --watch main.ts",
         "build": "deno bundle main.ts dist/bundle.js",
-        "lint": "deno lint",
-        "test:dev": "deno run --allow-net --allow-read --allow-write --allow-env --allow-run --watch src/client/browser/test/dev-server.ts"
+        "lint": "deno lint"
     }
 }

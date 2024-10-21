@@ -76,6 +76,10 @@ export namespace Environment {
 }
 
 export namespace World {
+    export namespace Seed {
+        export const DEFAULT_SEED_NAME = "boot_to_vircadia_world";
+    }
+
     export namespace LOD {
         export enum E_Mode {
             DISTANCE = "distance",
