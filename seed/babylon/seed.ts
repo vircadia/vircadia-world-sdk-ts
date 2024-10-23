@@ -1,6 +1,6 @@
-import type { World } from "../../shared/modules/vircadia-world-meta/typescript/meta";
+// import type { World } from "../../shared/modules/vircadia-world-meta/typescript/meta";
 
-function seedScript(context: World.Babylon.Script.I_Context): void {
+function seedScript(context: any): void {
     const { scene, mesh, BABYLON } = context;
 
     console.info('Scene:', scene);
