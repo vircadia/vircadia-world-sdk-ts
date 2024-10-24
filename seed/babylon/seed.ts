@@ -1,4 +1,4 @@
-// import type { World } from "../../shared/modules/vircadia-world-meta/typescript/meta";
+import { zod } from 'npm:zod'
 
 function seedScript(context: any): void {
     const { scene, mesh, BABYLON } = context;
@@ -6,6 +6,7 @@ function seedScript(context: any): void {
     console.info('Scene:', scene);
     console.info('Mesh:', mesh);
     console.info('BABYLON:', BABYLON);
+    console.info('zod:', zod);
 }
 
 seedScript;
