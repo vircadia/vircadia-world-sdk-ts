@@ -1,0 +1,21 @@
+{
+	"name": "vircadia-world-sdk-ts",
+	"type": "module",
+	"dependencies": {
+		"typescript": "latest",
+		"console-log-colors": "latest",
+		"eight-colors": "latest",
+		"mobx": "latest",
+		"zod": "latest",
+		"@supabase/supabase-js": "^2.45.6",
+		"@babylonjs/core": "latest"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "1.9.4",
+		"@types/node": "latest"
+	},
+	"scripts": {
+		"format": "prettier --write './**/*.{ts,tsx,js,jsx,json}'",
+		"lint": "eslint './**/*.{ts,tsx,js,jsx}'"
+	}
+}
