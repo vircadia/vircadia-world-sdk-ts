@@ -1,4 +1,4 @@
-import { Script } from './script.ts';
+import { Script } from './script.js';
 
 Deno.test('Script execution with context', () => {
     const player = {

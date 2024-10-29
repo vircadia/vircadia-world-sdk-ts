@@ -1,50 +1,63 @@
-import { transpile } from 'typescript';
-import { log } from '../../general/log.ts';
+import * as ts from 'typescript';
+import { log } from '../../general/log';
+import type { World } from '../../vircadia-world-meta/typescript/meta';
 
 export class Script {
     static readonly scriptLogPrefix = '[SCRIPT]';
 
-    private static async transpile(script: string): Promise<string> {
+    private static transpile(script: string): string {
         log({
             message: `${Script.scriptLogPrefix} Transpiling script: ${script}`,
             type: 'info',
         });
 
-        const transpiledScript: string = await (transpile as (input: string) => string)(script);
+        const result = ts.transpileModule(script, {
+            compilerOptions: {
+                module: ts.ModuleKind.None,
+                target: ts.ScriptTarget.ES2015,
+                strict: false,
+            },
+        });
 
         log({
-            message: `${Script.scriptLogPrefix} Transpiled script: ${transpiledScript}`,
+            message: `${Script.scriptLogPrefix} Transpiled script: ${result.outputText}`,
             type: 'info',
         });
 
-        return transpiledScript;
+        return result.outputText;
     }
 
-    private static async wrapAndTranspile(script: string, contextKeys: string[]): Promise<string> {
-        const contextParamsString = contextKeys.join(', ');
-        const wrappedScript = `
-            (function(${contextParamsString}) {
-                ${script}
-            });
+    private static wrapScript(script: string): string {
+        return `
+            return function(context) {
+                with (context) {
+                    ${script}
+                }
+            };
         `;
-
-        const transpiledScript = await this.transpile(wrappedScript);
-
-        return transpiledScript;
     }
 
     static async execute(script: string, context: Record<string, any>): Promise<any> {
-        const contextKeys = Object.keys(context);
-        const wrappedAndTranspiledScript = await this.wrapAndTranspile(script, contextKeys);
+        const transpiledScript = this.transpile(script);
+        const wrappedScript = this.wrapScript(transpiledScript);
 
-        log({
-            message: `${Script.scriptLogPrefix} Executing script with context: ${wrappedAndTranspiledScript}`,
-            type: 'info',
-        });
+        try {
+            const scriptFunction = new Function(wrappedScript)();
+            if (typeof scriptFunction !== 'function') {
+                throw new Error('Failed to create a valid function from the script');
+            }
+            return scriptFunction(context);
+        } catch (error) {
+            log({
+                message: `${Script.scriptLogPrefix} Error executing script: ${error}`,
+                type: 'error',
+            });
+            throw error;
+        }
+    }
 
-        // eslint-disable-next-line no-eval
-        const scriptFunction = eval(wrappedAndTranspiledScript) as (...args: unknown[]) => unknown;
-        return scriptFunction(...Object.values(context) as unknown[]);
+    static async executeBabylonScript(script: string, context: World.Babylon.Script.I_Context): Promise<any> {
+        return this.execute(script, { ...context, console });
     }
 }
 
