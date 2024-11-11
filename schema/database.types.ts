@@ -907,7 +907,7 @@ export type Database = {
           git_repo_url: string | null
           is_persistent: boolean
           permissions__groups__mutations: string[] | null
-          permissions_world_connection: boolean
+          permissions__world_connection: boolean
           script_id: string
           updated_at: string | null
           web__compiled__browser__script: string | null
@@ -933,7 +933,7 @@ export type Database = {
           git_repo_url?: string | null
           is_persistent?: boolean
           permissions__groups__mutations?: string[] | null
-          permissions_world_connection?: boolean
+          permissions__world_connection?: boolean
           script_id?: string
           updated_at?: string | null
           web__compiled__browser__script?: string | null
@@ -959,7 +959,7 @@ export type Database = {
           git_repo_url?: string | null
           is_persistent?: boolean
           permissions__groups__mutations?: string[] | null
-          permissions_world_connection?: boolean
+          permissions__world_connection?: boolean
           script_id?: string
           updated_at?: string | null
           web__compiled__browser__script?: string | null

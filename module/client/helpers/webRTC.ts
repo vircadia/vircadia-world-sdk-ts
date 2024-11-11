@@ -1,6 +1,6 @@
 import { log } from '../../../../general/modules/log.ts';
 import { Agent as AgentMeta } from '../../../../meta.ts';
-import { Audio } from './audio.ts';
+import { Audio } from './audio.js';
 
 export namespace WebRTC {
     export const WEBRTC_LOG_PREFIX = '[WEBRTC]';
