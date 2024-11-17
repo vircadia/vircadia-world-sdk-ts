@@ -9,7 +9,7 @@ export class WorldTickManager {
     private lastServerTime: Date | null = null;
     private tickCount = 0;
     private tickBufferDurationMs = 1000;
-    private tickMetricsHistorySeconds = 3600;
+    private tickMetricsHistoryMs = 3600;
     private configSubscription: any = null;
 
     constructor(
@@ -93,10 +93,8 @@ export class WorldTickManager {
             case "tick_buffer_duration_ms":
                 this.tickBufferDurationMs = Number.parseFloat(config.value);
                 break;
-            case "tick_metrics_history_seconds":
-                this.tickMetricsHistorySeconds = Number.parseFloat(
-                    config.value,
-                );
+            case "tick_metrics_history_ms":
+                this.tickMetricsHistoryMs = Number.parseFloat(config.value);
                 break;
         }
     }
@@ -141,7 +139,7 @@ export class WorldTickManager {
                     type: "error",
                 });
             }
-        }, this.tickMetricsHistorySeconds * 1000); // Convert seconds to milliseconds
+        }, this.tickMetricsHistoryMs);
     }
 
     async captureTick() {
