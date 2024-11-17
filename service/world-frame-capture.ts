@@ -45,6 +45,8 @@ export class WorldFrameCaptureService {
 
     async captureFrame() {
         try {
+            const startTime = performance.now();
+
             // Get current server time before capture
             const { data: timeData, error: timeError } =
                 await this.supabase.rpc("get_server_time");
@@ -62,6 +64,14 @@ export class WorldFrameCaptureService {
             } else {
                 this.lastServerTime = currentServerTime;
                 this.frameCount++;
+
+                // Log performance metrics
+                const elapsed = performance.now() - startTime;
+                if (elapsed > this.targetIntervalMs) {
+                    console.warn(
+                        `Frame took ${elapsed.toFixed(2)}ms (target: ${this.targetIntervalMs}ms)`,
+                    );
+                }
             }
         } catch (error) {
             console.error("Error during frame capture:", error);
@@ -78,14 +88,27 @@ export class WorldFrameCaptureService {
             `Starting frame capture service with ${this.targetIntervalMs}ms interval`,
         );
 
-        // Use Bun's setTimeout for precise timing
+        let lastTickTime = performance.now();
+        let drift = 0;
+
+        // Use a more precise timing mechanism
         const tick = async () => {
-            const startTime = performance.now();
+            const now = performance.now();
+            const delta = now - lastTickTime;
 
             await this.captureFrame();
 
-            const elapsed = performance.now() - startTime;
-            const nextDelay = Math.max(0, this.targetIntervalMs - elapsed);
+            // Calculate next tick time accounting for drift
+            lastTickTime = now;
+            drift += delta - this.targetIntervalMs;
+
+            // Adjust next interval to account for drift
+            const nextDelay = Math.max(0, this.targetIntervalMs - drift);
+
+            // Reset drift if it gets too large
+            if (Math.abs(drift) > this.targetIntervalMs * 2) {
+                drift = 0;
+            }
 
             // Schedule next frame
             this.intervalId = setTimeout(tick, nextDelay);
