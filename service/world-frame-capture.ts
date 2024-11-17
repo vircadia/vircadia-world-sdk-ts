@@ -1,17 +1,17 @@
-import { createClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { log } from "../module/general/log";
 
 export class WorldFrameCaptureService {
-    private supabase;
     private intervalId: Timer | null = null;
-    private targetIntervalMs: number = 16.67;
+    private targetIntervalMs = 50;
     private lastServerTime: Date | null = null;
-    private frameCount: number = 0;
+    private frameCount = 0;
 
     constructor(
-        private readonly supabaseUrl: string,
-        private readonly supabaseKey: string,
+        private readonly supabase: SupabaseClient,
+        private readonly debugMode: boolean = false,
     ) {
-        this.supabase = createClient(supabaseUrl, supabaseKey);
+        this.debugMode = debugMode;
     }
 
     async initialize() {
@@ -34,11 +34,17 @@ export class WorldFrameCaptureService {
             this.lastServerTime = new Date(timeData);
             this.targetIntervalMs = Number.parseFloat(data.value as string);
 
-            console.log(
-                `Initialized with frame duration: ${this.targetIntervalMs}ms, server time: ${this.lastServerTime}`,
-            );
+            log({
+                message: `Initialized with frame duration: ${this.targetIntervalMs}ms, server time: ${this.lastServerTime}`,
+                debug: this.debugMode,
+                type: "debug",
+            });
         } catch (error) {
-            console.error("Failed to initialize frame capture service:", error);
+            log({
+                message: `Failed to initialize frame capture service: ${error}`,
+                debug: this.debugMode,
+                type: "error",
+            });
             throw error;
         }
     }
@@ -52,7 +58,11 @@ export class WorldFrameCaptureService {
                 await this.supabase.rpc("get_server_time");
 
             if (timeError) {
-                console.error("Failed to get server time:", timeError);
+                log({
+                    message: `Failed to get server time: ${timeError}`,
+                    debug: this.debugMode,
+                    type: "error",
+                });
                 return;
             }
 
@@ -60,7 +70,11 @@ export class WorldFrameCaptureService {
             const { error } = await this.supabase.rpc("capture_entity_state");
 
             if (error) {
-                console.error("Frame capture failed:", error);
+                log({
+                    message: `Frame capture failed: ${error}`,
+                    debug: this.debugMode,
+                    type: "error",
+                });
             } else {
                 this.lastServerTime = currentServerTime;
                 this.frameCount++;
@@ -68,25 +82,37 @@ export class WorldFrameCaptureService {
                 // Log performance metrics
                 const elapsed = performance.now() - startTime;
                 if (elapsed > this.targetIntervalMs) {
-                    console.warn(
-                        `Frame took ${elapsed.toFixed(2)}ms (target: ${this.targetIntervalMs}ms)`,
-                    );
+                    log({
+                        message: `Frame took ${elapsed.toFixed(2)}ms (target: ${this.targetIntervalMs}ms)`,
+                        debug: this.debugMode,
+                        type: "warn",
+                    });
                 }
             }
         } catch (error) {
-            console.error("Error during frame capture:", error);
+            log({
+                message: `Error during frame capture: ${error}`,
+                debug: this.debugMode,
+                type: "error",
+            });
         }
     }
 
     start() {
         if (this.intervalId) {
-            console.warn("Frame capture service is already running");
+            log({
+                message: "Frame capture service is already running",
+                debug: this.debugMode,
+                type: "warn",
+            });
             return;
         }
 
-        console.log(
-            `Starting frame capture service with ${this.targetIntervalMs}ms interval`,
-        );
+        log({
+            message: `Starting frame capture service with ${this.targetIntervalMs}ms interval`,
+            debug: this.debugMode,
+            type: "debug",
+        });
 
         let lastTickTime = performance.now();
         let drift = 0;
@@ -122,7 +148,11 @@ export class WorldFrameCaptureService {
         if (this.intervalId) {
             clearTimeout(this.intervalId);
             this.intervalId = null;
-            console.log("Frame capture service stopped");
+            log({
+                message: "Frame capture service stopped",
+                debug: this.debugMode,
+                type: "debug",
+            });
         }
     }
 
