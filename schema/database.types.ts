@@ -264,9 +264,7 @@ export type Database = {
         Row: {
           agent__ai_properties: Json | null
           agent__inventory: Json | null
-          babylonjs__billboard_mode:
-            | Database["public"]["Enums"]["babylon_billboard_mode"]
-            | null
+          babylonjs__billboard_mode: string | null
           babylonjs__exclude_mesh_ids: string[] | null
           babylonjs__include_only_mesh_ids: string[] | null
           babylonjs__light_angle: number | null
@@ -283,9 +281,7 @@ export type Database = {
             | null
           babylonjs__light_intensity: number | null
           babylonjs__light_intensity_mode: string | null
-          babylonjs__light_mode:
-            | Database["public"]["Enums"]["babylon_light_mode"]
-            | null
+          babylonjs__light_mode: string | null
           babylonjs__light_radius: number | null
           babylonjs__light_range: number | null
           babylonjs__light_specular:
@@ -295,59 +291,43 @@ export type Database = {
           babylonjs__lod_auto: boolean | null
           babylonjs__lod_distance: number | null
           babylonjs__lod_hide: number | null
-          babylonjs__lod_level:
-            | Database["public"]["Enums"]["babylon_lod_level"]
-            | null
-          babylonjs__lod_mode:
-            | Database["public"]["Enums"]["babylon_lod_mode"]
-            | null
+          babylonjs__lod_level: string | null
+          babylonjs__lod_mode: string | null
           babylonjs__lod_size: number | null
           babylonjs__material_alpha: number | null
           babylonjs__material_ambient:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_ambient_texture: string | null
-          babylonjs__material_ambient_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_ambient_texture_color_space: string | null
           babylonjs__material_ambient_texture_impact_on_analytical_lights:
             | number
             | null
           babylonjs__material_ambient_texture_strength: number | null
           babylonjs__material_backfaceculling: boolean | null
           babylonjs__material_bump_texture: string | null
-          babylonjs__material_bump_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_bump_texture_color_space: string | null
           babylonjs__material_custom_properties: Json | null
           babylonjs__material_diffuse:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_diffuse_texture: string | null
-          babylonjs__material_diffuse_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_diffuse_texture_color_space: string | null
           babylonjs__material_direct_intensity: number | null
           babylonjs__material_emissive:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_emissive_texture: string | null
-          babylonjs__material_emissive_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_emissive_texture_color_space: string | null
           babylonjs__material_enable_irradiance_map: boolean | null
           babylonjs__material_enable_specular_anti_aliasing: boolean | null
           babylonjs__material_environment_intensity: number | null
           babylonjs__material_environment_texture: string | null
-          babylonjs__material_environment_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_environment_texture_color_space: string | null
           babylonjs__material_force_normal_forward: boolean | null
           babylonjs__material_index_of_refraction: number | null
           babylonjs__material_lightmap_texture: string | null
-          babylonjs__material_lightmap_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_lightmap_texture_color_space: string | null
           babylonjs__material_max_simultaneous_lights: number | null
           babylonjs__material_metallic: number | null
           babylonjs__material_metallic_f0_factor: number | null
@@ -355,36 +335,24 @@ export type Database = {
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_metallic_texture: string | null
-          babylonjs__material_metallic_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_metallic_texture_color_space: string | null
           babylonjs__material_microsurface: number | null
           babylonjs__material_microsurface_texture: string | null
-          babylonjs__material_microsurface_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_microsurface_texture_color_space: string | null
           babylonjs__material_opacity_texture: string | null
-          babylonjs__material_opacity_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_opacity_texture_color_space: string | null
           babylonjs__material_reflection_color:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_reflection_texture: string | null
-          babylonjs__material_reflection_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_reflection_texture_color_space: string | null
           babylonjs__material_reflectivity_color:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_reflectivity_texture: string | null
-          babylonjs__material_reflectivity_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_reflectivity_texture_color_space: string | null
           babylonjs__material_refraction_texture: string | null
-          babylonjs__material_refraction_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_refraction_texture_color_space: string | null
           babylonjs__material_roughness: number | null
           babylonjs__material_shader_code: string | null
           babylonjs__material_shader_parameters: Json | null
@@ -393,9 +361,7 @@ export type Database = {
             | null
           babylonjs__material_specular_power: number | null
           babylonjs__material_specular_texture: string | null
-          babylonjs__material_specular_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_specular_texture_color_space: string | null
           babylonjs__material_type: string | null
           babylonjs__material_use_alpha_from_diffuse_texture: boolean | null
           babylonjs__material_use_auto_microsurface_from_reflectivity_map:
@@ -481,9 +447,7 @@ export type Database = {
         Insert: {
           agent__ai_properties?: Json | null
           agent__inventory?: Json | null
-          babylonjs__billboard_mode?:
-            | Database["public"]["Enums"]["babylon_billboard_mode"]
-            | null
+          babylonjs__billboard_mode?: string | null
           babylonjs__exclude_mesh_ids?: string[] | null
           babylonjs__include_only_mesh_ids?: string[] | null
           babylonjs__light_angle?: number | null
@@ -500,9 +464,7 @@ export type Database = {
             | null
           babylonjs__light_intensity?: number | null
           babylonjs__light_intensity_mode?: string | null
-          babylonjs__light_mode?:
-            | Database["public"]["Enums"]["babylon_light_mode"]
-            | null
+          babylonjs__light_mode?: string | null
           babylonjs__light_radius?: number | null
           babylonjs__light_range?: number | null
           babylonjs__light_specular?:
@@ -512,59 +474,43 @@ export type Database = {
           babylonjs__lod_auto?: boolean | null
           babylonjs__lod_distance?: number | null
           babylonjs__lod_hide?: number | null
-          babylonjs__lod_level?:
-            | Database["public"]["Enums"]["babylon_lod_level"]
-            | null
-          babylonjs__lod_mode?:
-            | Database["public"]["Enums"]["babylon_lod_mode"]
-            | null
+          babylonjs__lod_level?: string | null
+          babylonjs__lod_mode?: string | null
           babylonjs__lod_size?: number | null
           babylonjs__material_alpha?: number | null
           babylonjs__material_ambient?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_ambient_texture?: string | null
-          babylonjs__material_ambient_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_ambient_texture_color_space?: string | null
           babylonjs__material_ambient_texture_impact_on_analytical_lights?:
             | number
             | null
           babylonjs__material_ambient_texture_strength?: number | null
           babylonjs__material_backfaceculling?: boolean | null
           babylonjs__material_bump_texture?: string | null
-          babylonjs__material_bump_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_bump_texture_color_space?: string | null
           babylonjs__material_custom_properties?: Json | null
           babylonjs__material_diffuse?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_diffuse_texture?: string | null
-          babylonjs__material_diffuse_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_diffuse_texture_color_space?: string | null
           babylonjs__material_direct_intensity?: number | null
           babylonjs__material_emissive?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_emissive_texture?: string | null
-          babylonjs__material_emissive_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_emissive_texture_color_space?: string | null
           babylonjs__material_enable_irradiance_map?: boolean | null
           babylonjs__material_enable_specular_anti_aliasing?: boolean | null
           babylonjs__material_environment_intensity?: number | null
           babylonjs__material_environment_texture?: string | null
-          babylonjs__material_environment_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_environment_texture_color_space?: string | null
           babylonjs__material_force_normal_forward?: boolean | null
           babylonjs__material_index_of_refraction?: number | null
           babylonjs__material_lightmap_texture?: string | null
-          babylonjs__material_lightmap_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_lightmap_texture_color_space?: string | null
           babylonjs__material_max_simultaneous_lights?: number | null
           babylonjs__material_metallic?: number | null
           babylonjs__material_metallic_f0_factor?: number | null
@@ -572,36 +518,24 @@ export type Database = {
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_metallic_texture?: string | null
-          babylonjs__material_metallic_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_metallic_texture_color_space?: string | null
           babylonjs__material_microsurface?: number | null
           babylonjs__material_microsurface_texture?: string | null
-          babylonjs__material_microsurface_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_microsurface_texture_color_space?: string | null
           babylonjs__material_opacity_texture?: string | null
-          babylonjs__material_opacity_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_opacity_texture_color_space?: string | null
           babylonjs__material_reflection_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_reflection_texture?: string | null
-          babylonjs__material_reflection_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_reflection_texture_color_space?: string | null
           babylonjs__material_reflectivity_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_reflectivity_texture?: string | null
-          babylonjs__material_reflectivity_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_reflectivity_texture_color_space?: string | null
           babylonjs__material_refraction_texture?: string | null
-          babylonjs__material_refraction_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_refraction_texture_color_space?: string | null
           babylonjs__material_roughness?: number | null
           babylonjs__material_shader_code?: string | null
           babylonjs__material_shader_parameters?: Json | null
@@ -610,9 +544,7 @@ export type Database = {
             | null
           babylonjs__material_specular_power?: number | null
           babylonjs__material_specular_texture?: string | null
-          babylonjs__material_specular_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_specular_texture_color_space?: string | null
           babylonjs__material_type?: string | null
           babylonjs__material_use_alpha_from_diffuse_texture?: boolean | null
           babylonjs__material_use_auto_microsurface_from_reflectivity_map?:
@@ -698,9 +630,7 @@ export type Database = {
         Update: {
           agent__ai_properties?: Json | null
           agent__inventory?: Json | null
-          babylonjs__billboard_mode?:
-            | Database["public"]["Enums"]["babylon_billboard_mode"]
-            | null
+          babylonjs__billboard_mode?: string | null
           babylonjs__exclude_mesh_ids?: string[] | null
           babylonjs__include_only_mesh_ids?: string[] | null
           babylonjs__light_angle?: number | null
@@ -717,9 +647,7 @@ export type Database = {
             | null
           babylonjs__light_intensity?: number | null
           babylonjs__light_intensity_mode?: string | null
-          babylonjs__light_mode?:
-            | Database["public"]["Enums"]["babylon_light_mode"]
-            | null
+          babylonjs__light_mode?: string | null
           babylonjs__light_radius?: number | null
           babylonjs__light_range?: number | null
           babylonjs__light_specular?:
@@ -729,59 +657,43 @@ export type Database = {
           babylonjs__lod_auto?: boolean | null
           babylonjs__lod_distance?: number | null
           babylonjs__lod_hide?: number | null
-          babylonjs__lod_level?:
-            | Database["public"]["Enums"]["babylon_lod_level"]
-            | null
-          babylonjs__lod_mode?:
-            | Database["public"]["Enums"]["babylon_lod_mode"]
-            | null
+          babylonjs__lod_level?: string | null
+          babylonjs__lod_mode?: string | null
           babylonjs__lod_size?: number | null
           babylonjs__material_alpha?: number | null
           babylonjs__material_ambient?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_ambient_texture?: string | null
-          babylonjs__material_ambient_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_ambient_texture_color_space?: string | null
           babylonjs__material_ambient_texture_impact_on_analytical_lights?:
             | number
             | null
           babylonjs__material_ambient_texture_strength?: number | null
           babylonjs__material_backfaceculling?: boolean | null
           babylonjs__material_bump_texture?: string | null
-          babylonjs__material_bump_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_bump_texture_color_space?: string | null
           babylonjs__material_custom_properties?: Json | null
           babylonjs__material_diffuse?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_diffuse_texture?: string | null
-          babylonjs__material_diffuse_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_diffuse_texture_color_space?: string | null
           babylonjs__material_direct_intensity?: number | null
           babylonjs__material_emissive?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_emissive_texture?: string | null
-          babylonjs__material_emissive_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_emissive_texture_color_space?: string | null
           babylonjs__material_enable_irradiance_map?: boolean | null
           babylonjs__material_enable_specular_anti_aliasing?: boolean | null
           babylonjs__material_environment_intensity?: number | null
           babylonjs__material_environment_texture?: string | null
-          babylonjs__material_environment_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_environment_texture_color_space?: string | null
           babylonjs__material_force_normal_forward?: boolean | null
           babylonjs__material_index_of_refraction?: number | null
           babylonjs__material_lightmap_texture?: string | null
-          babylonjs__material_lightmap_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_lightmap_texture_color_space?: string | null
           babylonjs__material_max_simultaneous_lights?: number | null
           babylonjs__material_metallic?: number | null
           babylonjs__material_metallic_f0_factor?: number | null
@@ -789,36 +701,24 @@ export type Database = {
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_metallic_texture?: string | null
-          babylonjs__material_metallic_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_metallic_texture_color_space?: string | null
           babylonjs__material_microsurface?: number | null
           babylonjs__material_microsurface_texture?: string | null
-          babylonjs__material_microsurface_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_microsurface_texture_color_space?: string | null
           babylonjs__material_opacity_texture?: string | null
-          babylonjs__material_opacity_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_opacity_texture_color_space?: string | null
           babylonjs__material_reflection_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_reflection_texture?: string | null
-          babylonjs__material_reflection_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_reflection_texture_color_space?: string | null
           babylonjs__material_reflectivity_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_reflectivity_texture?: string | null
-          babylonjs__material_reflectivity_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_reflectivity_texture_color_space?: string | null
           babylonjs__material_refraction_texture?: string | null
-          babylonjs__material_refraction_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_refraction_texture_color_space?: string | null
           babylonjs__material_roughness?: number | null
           babylonjs__material_shader_code?: string | null
           babylonjs__material_shader_parameters?: Json | null
@@ -827,9 +727,7 @@ export type Database = {
             | null
           babylonjs__material_specular_power?: number | null
           babylonjs__material_specular_texture?: string | null
-          babylonjs__material_specular_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_specular_texture_color_space?: string | null
           babylonjs__material_type?: string | null
           babylonjs__material_use_alpha_from_diffuse_texture?: boolean | null
           babylonjs__material_use_auto_microsurface_from_reflectivity_map?:
@@ -992,19 +890,13 @@ export type Database = {
           updated_at: string | null
           web__compiled__browser__script: string | null
           web__compiled__browser__script_sha256: string | null
-          web__compiled__browser__script_status:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__browser__script_status: string | null
           web__compiled__bun__script: string | null
           web__compiled__bun__script_sha256: string | null
-          web__compiled__bun__script_status:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__bun__script_status: string | null
           web__compiled__node__script: string | null
           web__compiled__node__script_sha256: string | null
-          web__compiled__node__script_status:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__node__script_status: string | null
         }
         Insert: {
           created_at?: string | null
@@ -1017,19 +909,13 @@ export type Database = {
           updated_at?: string | null
           web__compiled__browser__script?: string | null
           web__compiled__browser__script_sha256?: string | null
-          web__compiled__browser__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__browser__script_status?: string | null
           web__compiled__bun__script?: string | null
           web__compiled__bun__script_sha256?: string | null
-          web__compiled__bun__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__bun__script_status?: string | null
           web__compiled__node__script?: string | null
           web__compiled__node__script_sha256?: string | null
-          web__compiled__node__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__node__script_status?: string | null
         }
         Update: {
           created_at?: string | null
@@ -1042,19 +928,13 @@ export type Database = {
           updated_at?: string | null
           web__compiled__browser__script?: string | null
           web__compiled__browser__script_sha256?: string | null
-          web__compiled__browser__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__browser__script_status?: string | null
           web__compiled__bun__script?: string | null
           web__compiled__bun__script_sha256?: string | null
-          web__compiled__bun__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__bun__script_status?: string | null
           web__compiled__node__script?: string | null
           web__compiled__node__script_sha256?: string | null
-          web__compiled__node__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__node__script_status?: string | null
         }
         Relationships: [
           {
@@ -1070,9 +950,7 @@ export type Database = {
         Row: {
           agent__ai_properties: Json | null
           agent__inventory: Json | null
-          babylonjs__billboard_mode:
-            | Database["public"]["Enums"]["babylon_billboard_mode"]
-            | null
+          babylonjs__billboard_mode: string | null
           babylonjs__exclude_mesh_ids: string[] | null
           babylonjs__include_only_mesh_ids: string[] | null
           babylonjs__light_angle: number | null
@@ -1089,9 +967,7 @@ export type Database = {
             | null
           babylonjs__light_intensity: number | null
           babylonjs__light_intensity_mode: string | null
-          babylonjs__light_mode:
-            | Database["public"]["Enums"]["babylon_light_mode"]
-            | null
+          babylonjs__light_mode: string | null
           babylonjs__light_radius: number | null
           babylonjs__light_range: number | null
           babylonjs__light_specular:
@@ -1101,59 +977,43 @@ export type Database = {
           babylonjs__lod_auto: boolean | null
           babylonjs__lod_distance: number | null
           babylonjs__lod_hide: number | null
-          babylonjs__lod_level:
-            | Database["public"]["Enums"]["babylon_lod_level"]
-            | null
-          babylonjs__lod_mode:
-            | Database["public"]["Enums"]["babylon_lod_mode"]
-            | null
+          babylonjs__lod_level: string | null
+          babylonjs__lod_mode: string | null
           babylonjs__lod_size: number | null
           babylonjs__material_alpha: number | null
           babylonjs__material_ambient:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_ambient_texture: string | null
-          babylonjs__material_ambient_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_ambient_texture_color_space: string | null
           babylonjs__material_ambient_texture_impact_on_analytical_lights:
             | number
             | null
           babylonjs__material_ambient_texture_strength: number | null
           babylonjs__material_backfaceculling: boolean | null
           babylonjs__material_bump_texture: string | null
-          babylonjs__material_bump_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_bump_texture_color_space: string | null
           babylonjs__material_custom_properties: Json | null
           babylonjs__material_diffuse:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_diffuse_texture: string | null
-          babylonjs__material_diffuse_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_diffuse_texture_color_space: string | null
           babylonjs__material_direct_intensity: number | null
           babylonjs__material_emissive:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_emissive_texture: string | null
-          babylonjs__material_emissive_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_emissive_texture_color_space: string | null
           babylonjs__material_enable_irradiance_map: boolean | null
           babylonjs__material_enable_specular_anti_aliasing: boolean | null
           babylonjs__material_environment_intensity: number | null
           babylonjs__material_environment_texture: string | null
-          babylonjs__material_environment_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_environment_texture_color_space: string | null
           babylonjs__material_force_normal_forward: boolean | null
           babylonjs__material_index_of_refraction: number | null
           babylonjs__material_lightmap_texture: string | null
-          babylonjs__material_lightmap_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_lightmap_texture_color_space: string | null
           babylonjs__material_max_simultaneous_lights: number | null
           babylonjs__material_metallic: number | null
           babylonjs__material_metallic_f0_factor: number | null
@@ -1161,36 +1021,24 @@ export type Database = {
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_metallic_texture: string | null
-          babylonjs__material_metallic_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_metallic_texture_color_space: string | null
           babylonjs__material_microsurface: number | null
           babylonjs__material_microsurface_texture: string | null
-          babylonjs__material_microsurface_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_microsurface_texture_color_space: string | null
           babylonjs__material_opacity_texture: string | null
-          babylonjs__material_opacity_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_opacity_texture_color_space: string | null
           babylonjs__material_reflection_color:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_reflection_texture: string | null
-          babylonjs__material_reflection_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_reflection_texture_color_space: string | null
           babylonjs__material_reflectivity_color:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_reflectivity_texture: string | null
-          babylonjs__material_reflectivity_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_reflectivity_texture_color_space: string | null
           babylonjs__material_refraction_texture: string | null
-          babylonjs__material_refraction_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_refraction_texture_color_space: string | null
           babylonjs__material_roughness: number | null
           babylonjs__material_shader_code: string | null
           babylonjs__material_shader_parameters: Json | null
@@ -1199,9 +1047,7 @@ export type Database = {
             | null
           babylonjs__material_specular_power: number | null
           babylonjs__material_specular_texture: string | null
-          babylonjs__material_specular_texture_color_space:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_specular_texture_color_space: string | null
           babylonjs__material_type: string | null
           babylonjs__material_use_alpha_from_diffuse_texture: boolean | null
           babylonjs__material_use_auto_microsurface_from_reflectivity_map:
@@ -1293,9 +1139,7 @@ export type Database = {
         Insert: {
           agent__ai_properties?: Json | null
           agent__inventory?: Json | null
-          babylonjs__billboard_mode?:
-            | Database["public"]["Enums"]["babylon_billboard_mode"]
-            | null
+          babylonjs__billboard_mode?: string | null
           babylonjs__exclude_mesh_ids?: string[] | null
           babylonjs__include_only_mesh_ids?: string[] | null
           babylonjs__light_angle?: number | null
@@ -1312,9 +1156,7 @@ export type Database = {
             | null
           babylonjs__light_intensity?: number | null
           babylonjs__light_intensity_mode?: string | null
-          babylonjs__light_mode?:
-            | Database["public"]["Enums"]["babylon_light_mode"]
-            | null
+          babylonjs__light_mode?: string | null
           babylonjs__light_radius?: number | null
           babylonjs__light_range?: number | null
           babylonjs__light_specular?:
@@ -1324,59 +1166,43 @@ export type Database = {
           babylonjs__lod_auto?: boolean | null
           babylonjs__lod_distance?: number | null
           babylonjs__lod_hide?: number | null
-          babylonjs__lod_level?:
-            | Database["public"]["Enums"]["babylon_lod_level"]
-            | null
-          babylonjs__lod_mode?:
-            | Database["public"]["Enums"]["babylon_lod_mode"]
-            | null
+          babylonjs__lod_level?: string | null
+          babylonjs__lod_mode?: string | null
           babylonjs__lod_size?: number | null
           babylonjs__material_alpha?: number | null
           babylonjs__material_ambient?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_ambient_texture?: string | null
-          babylonjs__material_ambient_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_ambient_texture_color_space?: string | null
           babylonjs__material_ambient_texture_impact_on_analytical_lights?:
             | number
             | null
           babylonjs__material_ambient_texture_strength?: number | null
           babylonjs__material_backfaceculling?: boolean | null
           babylonjs__material_bump_texture?: string | null
-          babylonjs__material_bump_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_bump_texture_color_space?: string | null
           babylonjs__material_custom_properties?: Json | null
           babylonjs__material_diffuse?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_diffuse_texture?: string | null
-          babylonjs__material_diffuse_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_diffuse_texture_color_space?: string | null
           babylonjs__material_direct_intensity?: number | null
           babylonjs__material_emissive?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_emissive_texture?: string | null
-          babylonjs__material_emissive_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_emissive_texture_color_space?: string | null
           babylonjs__material_enable_irradiance_map?: boolean | null
           babylonjs__material_enable_specular_anti_aliasing?: boolean | null
           babylonjs__material_environment_intensity?: number | null
           babylonjs__material_environment_texture?: string | null
-          babylonjs__material_environment_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_environment_texture_color_space?: string | null
           babylonjs__material_force_normal_forward?: boolean | null
           babylonjs__material_index_of_refraction?: number | null
           babylonjs__material_lightmap_texture?: string | null
-          babylonjs__material_lightmap_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_lightmap_texture_color_space?: string | null
           babylonjs__material_max_simultaneous_lights?: number | null
           babylonjs__material_metallic?: number | null
           babylonjs__material_metallic_f0_factor?: number | null
@@ -1384,36 +1210,24 @@ export type Database = {
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_metallic_texture?: string | null
-          babylonjs__material_metallic_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_metallic_texture_color_space?: string | null
           babylonjs__material_microsurface?: number | null
           babylonjs__material_microsurface_texture?: string | null
-          babylonjs__material_microsurface_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_microsurface_texture_color_space?: string | null
           babylonjs__material_opacity_texture?: string | null
-          babylonjs__material_opacity_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_opacity_texture_color_space?: string | null
           babylonjs__material_reflection_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_reflection_texture?: string | null
-          babylonjs__material_reflection_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_reflection_texture_color_space?: string | null
           babylonjs__material_reflectivity_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_reflectivity_texture?: string | null
-          babylonjs__material_reflectivity_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_reflectivity_texture_color_space?: string | null
           babylonjs__material_refraction_texture?: string | null
-          babylonjs__material_refraction_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_refraction_texture_color_space?: string | null
           babylonjs__material_roughness?: number | null
           babylonjs__material_shader_code?: string | null
           babylonjs__material_shader_parameters?: Json | null
@@ -1422,9 +1236,7 @@ export type Database = {
             | null
           babylonjs__material_specular_power?: number | null
           babylonjs__material_specular_texture?: string | null
-          babylonjs__material_specular_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_specular_texture_color_space?: string | null
           babylonjs__material_type?: string | null
           babylonjs__material_use_alpha_from_diffuse_texture?: boolean | null
           babylonjs__material_use_auto_microsurface_from_reflectivity_map?:
@@ -1516,9 +1328,7 @@ export type Database = {
         Update: {
           agent__ai_properties?: Json | null
           agent__inventory?: Json | null
-          babylonjs__billboard_mode?:
-            | Database["public"]["Enums"]["babylon_billboard_mode"]
-            | null
+          babylonjs__billboard_mode?: string | null
           babylonjs__exclude_mesh_ids?: string[] | null
           babylonjs__include_only_mesh_ids?: string[] | null
           babylonjs__light_angle?: number | null
@@ -1535,9 +1345,7 @@ export type Database = {
             | null
           babylonjs__light_intensity?: number | null
           babylonjs__light_intensity_mode?: string | null
-          babylonjs__light_mode?:
-            | Database["public"]["Enums"]["babylon_light_mode"]
-            | null
+          babylonjs__light_mode?: string | null
           babylonjs__light_radius?: number | null
           babylonjs__light_range?: number | null
           babylonjs__light_specular?:
@@ -1547,59 +1355,43 @@ export type Database = {
           babylonjs__lod_auto?: boolean | null
           babylonjs__lod_distance?: number | null
           babylonjs__lod_hide?: number | null
-          babylonjs__lod_level?:
-            | Database["public"]["Enums"]["babylon_lod_level"]
-            | null
-          babylonjs__lod_mode?:
-            | Database["public"]["Enums"]["babylon_lod_mode"]
-            | null
+          babylonjs__lod_level?: string | null
+          babylonjs__lod_mode?: string | null
           babylonjs__lod_size?: number | null
           babylonjs__material_alpha?: number | null
           babylonjs__material_ambient?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_ambient_texture?: string | null
-          babylonjs__material_ambient_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_ambient_texture_color_space?: string | null
           babylonjs__material_ambient_texture_impact_on_analytical_lights?:
             | number
             | null
           babylonjs__material_ambient_texture_strength?: number | null
           babylonjs__material_backfaceculling?: boolean | null
           babylonjs__material_bump_texture?: string | null
-          babylonjs__material_bump_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_bump_texture_color_space?: string | null
           babylonjs__material_custom_properties?: Json | null
           babylonjs__material_diffuse?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_diffuse_texture?: string | null
-          babylonjs__material_diffuse_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_diffuse_texture_color_space?: string | null
           babylonjs__material_direct_intensity?: number | null
           babylonjs__material_emissive?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_emissive_texture?: string | null
-          babylonjs__material_emissive_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_emissive_texture_color_space?: string | null
           babylonjs__material_enable_irradiance_map?: boolean | null
           babylonjs__material_enable_specular_anti_aliasing?: boolean | null
           babylonjs__material_environment_intensity?: number | null
           babylonjs__material_environment_texture?: string | null
-          babylonjs__material_environment_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_environment_texture_color_space?: string | null
           babylonjs__material_force_normal_forward?: boolean | null
           babylonjs__material_index_of_refraction?: number | null
           babylonjs__material_lightmap_texture?: string | null
-          babylonjs__material_lightmap_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_lightmap_texture_color_space?: string | null
           babylonjs__material_max_simultaneous_lights?: number | null
           babylonjs__material_metallic?: number | null
           babylonjs__material_metallic_f0_factor?: number | null
@@ -1607,36 +1399,24 @@ export type Database = {
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_metallic_texture?: string | null
-          babylonjs__material_metallic_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_metallic_texture_color_space?: string | null
           babylonjs__material_microsurface?: number | null
           babylonjs__material_microsurface_texture?: string | null
-          babylonjs__material_microsurface_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_microsurface_texture_color_space?: string | null
           babylonjs__material_opacity_texture?: string | null
-          babylonjs__material_opacity_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_opacity_texture_color_space?: string | null
           babylonjs__material_reflection_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_reflection_texture?: string | null
-          babylonjs__material_reflection_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_reflection_texture_color_space?: string | null
           babylonjs__material_reflectivity_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__material_reflectivity_texture?: string | null
-          babylonjs__material_reflectivity_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_reflectivity_texture_color_space?: string | null
           babylonjs__material_refraction_texture?: string | null
-          babylonjs__material_refraction_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_refraction_texture_color_space?: string | null
           babylonjs__material_roughness?: number | null
           babylonjs__material_shader_code?: string | null
           babylonjs__material_shader_parameters?: Json | null
@@ -1645,9 +1425,7 @@ export type Database = {
             | null
           babylonjs__material_specular_power?: number | null
           babylonjs__material_specular_texture?: string | null
-          babylonjs__material_specular_texture_color_space?:
-            | Database["public"]["Enums"]["babylon_texture_color_space"]
-            | null
+          babylonjs__material_specular_texture_color_space?: string | null
           babylonjs__material_type?: string | null
           babylonjs__material_use_alpha_from_diffuse_texture?: boolean | null
           babylonjs__material_use_auto_microsurface_from_reflectivity_map?:
@@ -1758,19 +1536,13 @@ export type Database = {
           updated_at: string | null
           web__compiled__browser__script: string | null
           web__compiled__browser__script_sha256: string | null
-          web__compiled__browser__script_status:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__browser__script_status: string | null
           web__compiled__bun__script: string | null
           web__compiled__bun__script_sha256: string | null
-          web__compiled__bun__script_status:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__bun__script_status: string | null
           web__compiled__node__script: string | null
           web__compiled__node__script_sha256: string | null
-          web__compiled__node__script_status:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__node__script_status: string | null
         }
         Insert: {
           created_at?: string | null
@@ -1783,19 +1555,13 @@ export type Database = {
           updated_at?: string | null
           web__compiled__browser__script?: string | null
           web__compiled__browser__script_sha256?: string | null
-          web__compiled__browser__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__browser__script_status?: string | null
           web__compiled__bun__script?: string | null
           web__compiled__bun__script_sha256?: string | null
-          web__compiled__bun__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__bun__script_status?: string | null
           web__compiled__node__script?: string | null
           web__compiled__node__script_sha256?: string | null
-          web__compiled__node__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__node__script_status?: string | null
         }
         Update: {
           created_at?: string | null
@@ -1808,19 +1574,13 @@ export type Database = {
           updated_at?: string | null
           web__compiled__browser__script?: string | null
           web__compiled__browser__script_sha256?: string | null
-          web__compiled__browser__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__browser__script_status?: string | null
           web__compiled__bun__script?: string | null
           web__compiled__bun__script_sha256?: string | null
-          web__compiled__bun__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__bun__script_status?: string | null
           web__compiled__node__script?: string | null
           web__compiled__node__script_sha256?: string | null
-          web__compiled__node__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__node__script_status?: string | null
         }
         Relationships: []
       }
@@ -1856,19 +1616,13 @@ export type Database = {
           updated_at: string | null
           web__compiled__browser__script: string | null
           web__compiled__browser__script_sha256: string | null
-          web__compiled__browser__script_status:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__browser__script_status: string | null
           web__compiled__bun__script: string | null
           web__compiled__bun__script_sha256: string | null
-          web__compiled__bun__script_status:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__bun__script_status: string | null
           web__compiled__node__script: string | null
           web__compiled__node__script_sha256: string | null
-          web__compiled__node__script_status:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__node__script_status: string | null
         }
         Insert: {
           created_at?: string | null
@@ -1877,19 +1631,13 @@ export type Database = {
           updated_at?: string | null
           web__compiled__browser__script?: string | null
           web__compiled__browser__script_sha256?: string | null
-          web__compiled__browser__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__browser__script_status?: string | null
           web__compiled__bun__script?: string | null
           web__compiled__bun__script_sha256?: string | null
-          web__compiled__bun__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__bun__script_status?: string | null
           web__compiled__node__script?: string | null
           web__compiled__node__script_sha256?: string | null
-          web__compiled__node__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__node__script_status?: string | null
         }
         Update: {
           created_at?: string | null
@@ -1898,19 +1646,13 @@ export type Database = {
           updated_at?: string | null
           web__compiled__browser__script?: string | null
           web__compiled__browser__script_sha256?: string | null
-          web__compiled__browser__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__browser__script_status?: string | null
           web__compiled__bun__script?: string | null
           web__compiled__bun__script_sha256?: string | null
-          web__compiled__bun__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__bun__script_status?: string | null
           web__compiled__node__script?: string | null
           web__compiled__node__script_sha256?: string | null
-          web__compiled__node__script_status?:
-            | Database["public"]["Enums"]["script_compilation_status"]
-            | null
+          web__compiled__node__script_status?: string | null
         }
         Relationships: []
       }
@@ -2182,18 +1924,7 @@ export type Database = {
         | "REJECTED"
         | "EXPIRED"
         | "CANCELLED"
-      babylon_billboard_mode:
-        | "BILLBOARDMODE_NONE"
-        | "BILLBOARDMODE_X"
-        | "BILLBOARDMODE_Y"
-        | "BILLBOARDMODE_Z"
-        | "BILLBOARDMODE_ALL"
-      babylon_light_mode: "default" | "shadowsOnly" | "specular"
-      babylon_lod_level: "LOD0" | "LOD1" | "LOD2" | "LOD3" | "LOD4"
-      babylon_lod_mode: "distance" | "size"
-      babylon_texture_color_space: "linear" | "sRGB" | "gamma"
       mutation_type: "INSERT" | "UPDATE" | "DELETE"
-      script_compilation_status: "PENDING" | "COMPILED" | "FAILED"
       update_category: "FORCE" | "PROPERTY"
     }
     CompositeTypes: {
