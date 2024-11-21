@@ -10,13 +10,17 @@ export namespace Script {
     export namespace Babylon {
         export interface I_Context {
             Vircadia: {
-                Supabase: SupabaseClient;
-                Scene: Scene;
+                WorldClient: SupabaseClient;
+                WorldScene: Scene;
                 Meta: {
-                    isClient: boolean;
-                    isWorld: boolean;
+                    isRunningOnClient: boolean;
+                    isRunningOnWorld: boolean;
                 };
             };
+        }
+
+        export interface I_Hooks {
+            onBeforeUnmount: () => void;
         }
     }
 }
