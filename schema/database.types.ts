@@ -259,32 +259,60 @@ export type Database = {
       }
       entities: {
         Row: {
-          agent__ai_properties: Json | null
-          agent__inventory: Json | null
+          babylonjs__animation_auto_animate: boolean | null
+          babylonjs__animation_auto_animate_from: number | null
+          babylonjs__animation_auto_animate_loop: boolean | null
+          babylonjs__animation_auto_animate_speed_ratio: number | null
+          babylonjs__animation_auto_animate_to: number | null
           babylonjs__billboard_mode:
             | Database["public"]["Enums"]["billboard_mode_enum"]
             | null
-          babylonjs__exclude_mesh_ids: string[] | null
-          babylonjs__include_only_mesh_ids: string[] | null
+          babylonjs__camera_alpha: number | null
+          babylonjs__camera_angle: number | null
+          babylonjs__camera_apply_gravity: boolean | null
+          babylonjs__camera_beta: number | null
+          babylonjs__camera_check_collisions: boolean | null
+          babylonjs__camera_ellipsoid:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
+          babylonjs__camera_ellipsoid_offset:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
+          babylonjs__camera_fov: number | null
+          babylonjs__camera_inertia: number | null
+          babylonjs__camera_max_z: number | null
+          babylonjs__camera_min_z: number | null
+          babylonjs__camera_radius: number | null
+          babylonjs__camera_rotation_speed: number | null
+          babylonjs__camera_speed: number | null
+          babylonjs__camera_target:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__light_angle: number | null
+          babylonjs__light_custom_projection_texture: string | null
           babylonjs__light_diffuse:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__light_direction:
             | Database["public"]["CompositeTypes"]["vector3"]
             | null
+          babylonjs__light_exclude_mesh_ids: string[] | null
           babylonjs__light_exponent: number | null
           babylonjs__light_falloff_type: string | null
           babylonjs__light_ground_color:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
+          babylonjs__light_include_only_mesh_ids: string[] | null
           babylonjs__light_intensity: number | null
           babylonjs__light_intensity_mode: string | null
           babylonjs__light_mode:
             | Database["public"]["Enums"]["light_mode_enum"]
             | null
+          babylonjs__light_projection_texture_matrix: number[] | null
           babylonjs__light_radius: number | null
           babylonjs__light_range: number | null
+          babylonjs__light_shadow_max_z: number | null
+          babylonjs__light_shadow_min_z: number | null
           babylonjs__light_specular:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -327,6 +355,7 @@ export type Database = {
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
           babylonjs__material_direct_intensity: number | null
+          babylonjs__material_disable_lighting: boolean | null
           babylonjs__material_emissive:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -342,6 +371,7 @@ export type Database = {
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
           babylonjs__material_force_normal_forward: boolean | null
+          babylonjs__material_fresnel_parameters: Json | null
           babylonjs__material_index_of_refraction: number | null
           babylonjs__material_lightmap_texture: string | null
           babylonjs__material_lightmap_texture_color_space:
@@ -366,6 +396,8 @@ export type Database = {
           babylonjs__material_opacity_texture_color_space:
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
+          babylonjs__material_parallax_bias: number | null
+          babylonjs__material_parallax_scale: number | null
           babylonjs__material_reflection_color:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -402,6 +434,7 @@ export type Database = {
             | null
           babylonjs__material_use_emissive_as_illumination: boolean | null
           babylonjs__material_use_gltf_light_falloff: boolean | null
+          babylonjs__material_use_horizon_occlusion: boolean | null
           babylonjs__material_use_lightmap_as_shadowmap: boolean | null
           babylonjs__material_use_metallness_from_metallic_texture_blue:
             | boolean
@@ -409,7 +442,10 @@ export type Database = {
           babylonjs__material_use_microsurface_from_reflectivity_map_alph:
             | boolean
             | null
+          babylonjs__material_use_parallax: boolean | null
+          babylonjs__material_use_parallax_occlusion: boolean | null
           babylonjs__material_use_physical_light_falloff: boolean | null
+          babylonjs__material_use_radiance_occlusion: boolean | null
           babylonjs__material_use_radiance_over_alpha: boolean | null
           babylonjs__material_use_roughness_from_metallic_texture_alpha:
             | boolean
@@ -419,15 +455,31 @@ export type Database = {
             | null
           babylonjs__material_use_specular_over_alpha: boolean | null
           babylonjs__material_wireframe: boolean | null
+          babylonjs__mesh_alpha_index: number | null
+          babylonjs__mesh_check_collisions: boolean | null
           babylonjs__mesh_gltf_data: Json | null
           babylonjs__mesh_gltf_file_path: string | null
+          babylonjs__mesh_has_vertex_alpha: boolean | null
+          babylonjs__mesh_infinite_distance: boolean | null
           babylonjs__mesh_instance_of_id: string | null
           babylonjs__mesh_is_instance: boolean | null
+          babylonjs__mesh_is_pickable: boolean | null
+          babylonjs__mesh_is_visible: boolean | null
           babylonjs__mesh_joints:
             | Database["public"]["CompositeTypes"]["joint"][]
             | null
           babylonjs__mesh_material_id: string | null
+          babylonjs__mesh_overlay_alpha: number | null
+          babylonjs__mesh_overlay_color:
+            | Database["public"]["CompositeTypes"]["color4"]
+            | null
           babylonjs__mesh_physics_properties: Json | null
+          babylonjs__mesh_receive_shadows: boolean | null
+          babylonjs__mesh_rendering_group_id: number | null
+          babylonjs__mesh_show_bounding_box: boolean | null
+          babylonjs__mesh_show_submeshes_bounding_box: boolean | null
+          babylonjs__mesh_use_vertex_colors: boolean | null
+          babylonjs__mesh_visibility: number | null
           babylonjs__physics_angular_damping: number | null
           babylonjs__physics_angular_velocity:
             | Database["public"]["CompositeTypes"]["vector3"]
@@ -435,9 +487,17 @@ export type Database = {
           babylonjs__physics_angular_velocity_x: number | null
           babylonjs__physics_angular_velocity_y: number | null
           babylonjs__physics_angular_velocity_z: number | null
+          babylonjs__physics_center_of_mass:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__physics_collision_filter_group: number | null
           babylonjs__physics_collision_filter_mask: number | null
+          babylonjs__physics_collision_response: boolean | null
+          babylonjs__physics_collision_retry_count: number | null
           babylonjs__physics_friction: number | null
+          babylonjs__physics_inertia_tensor:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__physics_is_static: boolean | null
           babylonjs__physics_linear_damping: number | null
           babylonjs__physics_linear_velocity:
@@ -448,6 +508,9 @@ export type Database = {
           babylonjs__physics_restitution: number | null
           babylonjs__physics_shape_data: Json | null
           babylonjs__physics_shape_type: string | null
+          babylonjs__physics_sleeping_threshold_angular: number | null
+          babylonjs__physics_sleeping_threshold_linear: number | null
+          babylonjs__physics_use_gravity: boolean | null
           babylonjs__physics_velocity_x: number | null
           babylonjs__physics_velocity_y: number | null
           babylonjs__physics_velocity_z: number | null
@@ -460,6 +523,13 @@ export type Database = {
           babylonjs__shadow_quality:
             | Database["public"]["Enums"]["shadow_quality_enum"]
             | null
+          babylonjs__state_freeze_world_matrix: boolean | null
+          babylonjs__state_ignore_parent_scaling: boolean | null
+          babylonjs__state_is_enabled: boolean | null
+          babylonjs__state_is_picked: boolean | null
+          babylonjs__state_preserve_parent_rotation_for_billboard:
+            | boolean
+            | null
           babylonjs__transform_position_x: number | null
           babylonjs__transform_position_y: number | null
           babylonjs__transform_position_z: number | null
@@ -470,42 +540,70 @@ export type Database = {
           babylonjs__transform_scale_x: number | null
           babylonjs__transform_scale_y: number | null
           babylonjs__transform_scale_z: number | null
+          babylonjs__type: Database["public"]["Enums"]["entity_type_babylonjs_enum"]
           general__created_at: string | null
           general__name: string
           general__parent_entity_id: string | null
+          general__permissions__can_view_roles: string[] | null
           general__semantic_version: string
-          general__type: Database["public"]["Enums"]["general_type_enum"]
           general__updated_at: string | null
           general__uuid: string
-          permissions__can_view_roles: string[] | null
         }
         Insert: {
-          agent__ai_properties?: Json | null
-          agent__inventory?: Json | null
+          babylonjs__animation_auto_animate?: boolean | null
+          babylonjs__animation_auto_animate_from?: number | null
+          babylonjs__animation_auto_animate_loop?: boolean | null
+          babylonjs__animation_auto_animate_speed_ratio?: number | null
+          babylonjs__animation_auto_animate_to?: number | null
           babylonjs__billboard_mode?:
             | Database["public"]["Enums"]["billboard_mode_enum"]
             | null
-          babylonjs__exclude_mesh_ids?: string[] | null
-          babylonjs__include_only_mesh_ids?: string[] | null
+          babylonjs__camera_alpha?: number | null
+          babylonjs__camera_angle?: number | null
+          babylonjs__camera_apply_gravity?: boolean | null
+          babylonjs__camera_beta?: number | null
+          babylonjs__camera_check_collisions?: boolean | null
+          babylonjs__camera_ellipsoid?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
+          babylonjs__camera_ellipsoid_offset?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
+          babylonjs__camera_fov?: number | null
+          babylonjs__camera_inertia?: number | null
+          babylonjs__camera_max_z?: number | null
+          babylonjs__camera_min_z?: number | null
+          babylonjs__camera_radius?: number | null
+          babylonjs__camera_rotation_speed?: number | null
+          babylonjs__camera_speed?: number | null
+          babylonjs__camera_target?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__light_angle?: number | null
+          babylonjs__light_custom_projection_texture?: string | null
           babylonjs__light_diffuse?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__light_direction?:
             | Database["public"]["CompositeTypes"]["vector3"]
             | null
+          babylonjs__light_exclude_mesh_ids?: string[] | null
           babylonjs__light_exponent?: number | null
           babylonjs__light_falloff_type?: string | null
           babylonjs__light_ground_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
+          babylonjs__light_include_only_mesh_ids?: string[] | null
           babylonjs__light_intensity?: number | null
           babylonjs__light_intensity_mode?: string | null
           babylonjs__light_mode?:
             | Database["public"]["Enums"]["light_mode_enum"]
             | null
+          babylonjs__light_projection_texture_matrix?: number[] | null
           babylonjs__light_radius?: number | null
           babylonjs__light_range?: number | null
+          babylonjs__light_shadow_max_z?: number | null
+          babylonjs__light_shadow_min_z?: number | null
           babylonjs__light_specular?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -548,6 +646,7 @@ export type Database = {
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
           babylonjs__material_direct_intensity?: number | null
+          babylonjs__material_disable_lighting?: boolean | null
           babylonjs__material_emissive?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -563,6 +662,7 @@ export type Database = {
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
           babylonjs__material_force_normal_forward?: boolean | null
+          babylonjs__material_fresnel_parameters?: Json | null
           babylonjs__material_index_of_refraction?: number | null
           babylonjs__material_lightmap_texture?: string | null
           babylonjs__material_lightmap_texture_color_space?:
@@ -587,6 +687,8 @@ export type Database = {
           babylonjs__material_opacity_texture_color_space?:
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
+          babylonjs__material_parallax_bias?: number | null
+          babylonjs__material_parallax_scale?: number | null
           babylonjs__material_reflection_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -623,6 +725,7 @@ export type Database = {
             | null
           babylonjs__material_use_emissive_as_illumination?: boolean | null
           babylonjs__material_use_gltf_light_falloff?: boolean | null
+          babylonjs__material_use_horizon_occlusion?: boolean | null
           babylonjs__material_use_lightmap_as_shadowmap?: boolean | null
           babylonjs__material_use_metallness_from_metallic_texture_blue?:
             | boolean
@@ -630,7 +733,10 @@ export type Database = {
           babylonjs__material_use_microsurface_from_reflectivity_map_alph?:
             | boolean
             | null
+          babylonjs__material_use_parallax?: boolean | null
+          babylonjs__material_use_parallax_occlusion?: boolean | null
           babylonjs__material_use_physical_light_falloff?: boolean | null
+          babylonjs__material_use_radiance_occlusion?: boolean | null
           babylonjs__material_use_radiance_over_alpha?: boolean | null
           babylonjs__material_use_roughness_from_metallic_texture_alpha?:
             | boolean
@@ -640,15 +746,31 @@ export type Database = {
             | null
           babylonjs__material_use_specular_over_alpha?: boolean | null
           babylonjs__material_wireframe?: boolean | null
+          babylonjs__mesh_alpha_index?: number | null
+          babylonjs__mesh_check_collisions?: boolean | null
           babylonjs__mesh_gltf_data?: Json | null
           babylonjs__mesh_gltf_file_path?: string | null
+          babylonjs__mesh_has_vertex_alpha?: boolean | null
+          babylonjs__mesh_infinite_distance?: boolean | null
           babylonjs__mesh_instance_of_id?: string | null
           babylonjs__mesh_is_instance?: boolean | null
+          babylonjs__mesh_is_pickable?: boolean | null
+          babylonjs__mesh_is_visible?: boolean | null
           babylonjs__mesh_joints?:
             | Database["public"]["CompositeTypes"]["joint"][]
             | null
           babylonjs__mesh_material_id?: string | null
+          babylonjs__mesh_overlay_alpha?: number | null
+          babylonjs__mesh_overlay_color?:
+            | Database["public"]["CompositeTypes"]["color4"]
+            | null
           babylonjs__mesh_physics_properties?: Json | null
+          babylonjs__mesh_receive_shadows?: boolean | null
+          babylonjs__mesh_rendering_group_id?: number | null
+          babylonjs__mesh_show_bounding_box?: boolean | null
+          babylonjs__mesh_show_submeshes_bounding_box?: boolean | null
+          babylonjs__mesh_use_vertex_colors?: boolean | null
+          babylonjs__mesh_visibility?: number | null
           babylonjs__physics_angular_damping?: number | null
           babylonjs__physics_angular_velocity?:
             | Database["public"]["CompositeTypes"]["vector3"]
@@ -656,9 +778,17 @@ export type Database = {
           babylonjs__physics_angular_velocity_x?: number | null
           babylonjs__physics_angular_velocity_y?: number | null
           babylonjs__physics_angular_velocity_z?: number | null
+          babylonjs__physics_center_of_mass?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__physics_collision_filter_group?: number | null
           babylonjs__physics_collision_filter_mask?: number | null
+          babylonjs__physics_collision_response?: boolean | null
+          babylonjs__physics_collision_retry_count?: number | null
           babylonjs__physics_friction?: number | null
+          babylonjs__physics_inertia_tensor?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__physics_is_static?: boolean | null
           babylonjs__physics_linear_damping?: number | null
           babylonjs__physics_linear_velocity?:
@@ -669,6 +799,9 @@ export type Database = {
           babylonjs__physics_restitution?: number | null
           babylonjs__physics_shape_data?: Json | null
           babylonjs__physics_shape_type?: string | null
+          babylonjs__physics_sleeping_threshold_angular?: number | null
+          babylonjs__physics_sleeping_threshold_linear?: number | null
+          babylonjs__physics_use_gravity?: boolean | null
           babylonjs__physics_velocity_x?: number | null
           babylonjs__physics_velocity_y?: number | null
           babylonjs__physics_velocity_z?: number | null
@@ -681,6 +814,13 @@ export type Database = {
           babylonjs__shadow_quality?:
             | Database["public"]["Enums"]["shadow_quality_enum"]
             | null
+          babylonjs__state_freeze_world_matrix?: boolean | null
+          babylonjs__state_ignore_parent_scaling?: boolean | null
+          babylonjs__state_is_enabled?: boolean | null
+          babylonjs__state_is_picked?: boolean | null
+          babylonjs__state_preserve_parent_rotation_for_billboard?:
+            | boolean
+            | null
           babylonjs__transform_position_x?: number | null
           babylonjs__transform_position_y?: number | null
           babylonjs__transform_position_z?: number | null
@@ -691,42 +831,70 @@ export type Database = {
           babylonjs__transform_scale_x?: number | null
           babylonjs__transform_scale_y?: number | null
           babylonjs__transform_scale_z?: number | null
+          babylonjs__type: Database["public"]["Enums"]["entity_type_babylonjs_enum"]
           general__created_at?: string | null
           general__name: string
           general__parent_entity_id?: string | null
+          general__permissions__can_view_roles?: string[] | null
           general__semantic_version?: string
-          general__type: Database["public"]["Enums"]["general_type_enum"]
           general__updated_at?: string | null
           general__uuid?: string
-          permissions__can_view_roles?: string[] | null
         }
         Update: {
-          agent__ai_properties?: Json | null
-          agent__inventory?: Json | null
+          babylonjs__animation_auto_animate?: boolean | null
+          babylonjs__animation_auto_animate_from?: number | null
+          babylonjs__animation_auto_animate_loop?: boolean | null
+          babylonjs__animation_auto_animate_speed_ratio?: number | null
+          babylonjs__animation_auto_animate_to?: number | null
           babylonjs__billboard_mode?:
             | Database["public"]["Enums"]["billboard_mode_enum"]
             | null
-          babylonjs__exclude_mesh_ids?: string[] | null
-          babylonjs__include_only_mesh_ids?: string[] | null
+          babylonjs__camera_alpha?: number | null
+          babylonjs__camera_angle?: number | null
+          babylonjs__camera_apply_gravity?: boolean | null
+          babylonjs__camera_beta?: number | null
+          babylonjs__camera_check_collisions?: boolean | null
+          babylonjs__camera_ellipsoid?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
+          babylonjs__camera_ellipsoid_offset?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
+          babylonjs__camera_fov?: number | null
+          babylonjs__camera_inertia?: number | null
+          babylonjs__camera_max_z?: number | null
+          babylonjs__camera_min_z?: number | null
+          babylonjs__camera_radius?: number | null
+          babylonjs__camera_rotation_speed?: number | null
+          babylonjs__camera_speed?: number | null
+          babylonjs__camera_target?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__light_angle?: number | null
+          babylonjs__light_custom_projection_texture?: string | null
           babylonjs__light_diffuse?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__light_direction?:
             | Database["public"]["CompositeTypes"]["vector3"]
             | null
+          babylonjs__light_exclude_mesh_ids?: string[] | null
           babylonjs__light_exponent?: number | null
           babylonjs__light_falloff_type?: string | null
           babylonjs__light_ground_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
+          babylonjs__light_include_only_mesh_ids?: string[] | null
           babylonjs__light_intensity?: number | null
           babylonjs__light_intensity_mode?: string | null
           babylonjs__light_mode?:
             | Database["public"]["Enums"]["light_mode_enum"]
             | null
+          babylonjs__light_projection_texture_matrix?: number[] | null
           babylonjs__light_radius?: number | null
           babylonjs__light_range?: number | null
+          babylonjs__light_shadow_max_z?: number | null
+          babylonjs__light_shadow_min_z?: number | null
           babylonjs__light_specular?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -769,6 +937,7 @@ export type Database = {
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
           babylonjs__material_direct_intensity?: number | null
+          babylonjs__material_disable_lighting?: boolean | null
           babylonjs__material_emissive?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -784,6 +953,7 @@ export type Database = {
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
           babylonjs__material_force_normal_forward?: boolean | null
+          babylonjs__material_fresnel_parameters?: Json | null
           babylonjs__material_index_of_refraction?: number | null
           babylonjs__material_lightmap_texture?: string | null
           babylonjs__material_lightmap_texture_color_space?:
@@ -808,6 +978,8 @@ export type Database = {
           babylonjs__material_opacity_texture_color_space?:
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
+          babylonjs__material_parallax_bias?: number | null
+          babylonjs__material_parallax_scale?: number | null
           babylonjs__material_reflection_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -844,6 +1016,7 @@ export type Database = {
             | null
           babylonjs__material_use_emissive_as_illumination?: boolean | null
           babylonjs__material_use_gltf_light_falloff?: boolean | null
+          babylonjs__material_use_horizon_occlusion?: boolean | null
           babylonjs__material_use_lightmap_as_shadowmap?: boolean | null
           babylonjs__material_use_metallness_from_metallic_texture_blue?:
             | boolean
@@ -851,7 +1024,10 @@ export type Database = {
           babylonjs__material_use_microsurface_from_reflectivity_map_alph?:
             | boolean
             | null
+          babylonjs__material_use_parallax?: boolean | null
+          babylonjs__material_use_parallax_occlusion?: boolean | null
           babylonjs__material_use_physical_light_falloff?: boolean | null
+          babylonjs__material_use_radiance_occlusion?: boolean | null
           babylonjs__material_use_radiance_over_alpha?: boolean | null
           babylonjs__material_use_roughness_from_metallic_texture_alpha?:
             | boolean
@@ -861,15 +1037,31 @@ export type Database = {
             | null
           babylonjs__material_use_specular_over_alpha?: boolean | null
           babylonjs__material_wireframe?: boolean | null
+          babylonjs__mesh_alpha_index?: number | null
+          babylonjs__mesh_check_collisions?: boolean | null
           babylonjs__mesh_gltf_data?: Json | null
           babylonjs__mesh_gltf_file_path?: string | null
+          babylonjs__mesh_has_vertex_alpha?: boolean | null
+          babylonjs__mesh_infinite_distance?: boolean | null
           babylonjs__mesh_instance_of_id?: string | null
           babylonjs__mesh_is_instance?: boolean | null
+          babylonjs__mesh_is_pickable?: boolean | null
+          babylonjs__mesh_is_visible?: boolean | null
           babylonjs__mesh_joints?:
             | Database["public"]["CompositeTypes"]["joint"][]
             | null
           babylonjs__mesh_material_id?: string | null
+          babylonjs__mesh_overlay_alpha?: number | null
+          babylonjs__mesh_overlay_color?:
+            | Database["public"]["CompositeTypes"]["color4"]
+            | null
           babylonjs__mesh_physics_properties?: Json | null
+          babylonjs__mesh_receive_shadows?: boolean | null
+          babylonjs__mesh_rendering_group_id?: number | null
+          babylonjs__mesh_show_bounding_box?: boolean | null
+          babylonjs__mesh_show_submeshes_bounding_box?: boolean | null
+          babylonjs__mesh_use_vertex_colors?: boolean | null
+          babylonjs__mesh_visibility?: number | null
           babylonjs__physics_angular_damping?: number | null
           babylonjs__physics_angular_velocity?:
             | Database["public"]["CompositeTypes"]["vector3"]
@@ -877,9 +1069,17 @@ export type Database = {
           babylonjs__physics_angular_velocity_x?: number | null
           babylonjs__physics_angular_velocity_y?: number | null
           babylonjs__physics_angular_velocity_z?: number | null
+          babylonjs__physics_center_of_mass?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__physics_collision_filter_group?: number | null
           babylonjs__physics_collision_filter_mask?: number | null
+          babylonjs__physics_collision_response?: boolean | null
+          babylonjs__physics_collision_retry_count?: number | null
           babylonjs__physics_friction?: number | null
+          babylonjs__physics_inertia_tensor?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__physics_is_static?: boolean | null
           babylonjs__physics_linear_damping?: number | null
           babylonjs__physics_linear_velocity?:
@@ -890,6 +1090,9 @@ export type Database = {
           babylonjs__physics_restitution?: number | null
           babylonjs__physics_shape_data?: Json | null
           babylonjs__physics_shape_type?: string | null
+          babylonjs__physics_sleeping_threshold_angular?: number | null
+          babylonjs__physics_sleeping_threshold_linear?: number | null
+          babylonjs__physics_use_gravity?: boolean | null
           babylonjs__physics_velocity_x?: number | null
           babylonjs__physics_velocity_y?: number | null
           babylonjs__physics_velocity_z?: number | null
@@ -902,6 +1105,13 @@ export type Database = {
           babylonjs__shadow_quality?:
             | Database["public"]["Enums"]["shadow_quality_enum"]
             | null
+          babylonjs__state_freeze_world_matrix?: boolean | null
+          babylonjs__state_ignore_parent_scaling?: boolean | null
+          babylonjs__state_is_enabled?: boolean | null
+          babylonjs__state_is_picked?: boolean | null
+          babylonjs__state_preserve_parent_rotation_for_billboard?:
+            | boolean
+            | null
           babylonjs__transform_position_x?: number | null
           babylonjs__transform_position_y?: number | null
           babylonjs__transform_position_z?: number | null
@@ -912,14 +1122,14 @@ export type Database = {
           babylonjs__transform_scale_x?: number | null
           babylonjs__transform_scale_y?: number | null
           babylonjs__transform_scale_z?: number | null
+          babylonjs__type?: Database["public"]["Enums"]["entity_type_babylonjs_enum"]
           general__created_at?: string | null
           general__name?: string
           general__parent_entity_id?: string | null
+          general__permissions__can_view_roles?: string[] | null
           general__semantic_version?: string
-          general__type?: Database["public"]["Enums"]["general_type_enum"]
           general__updated_at?: string | null
           general__uuid?: string
-          permissions__can_view_roles?: string[] | null
         }
         Relationships: [
           {
@@ -1053,32 +1263,60 @@ export type Database = {
       }
       entity_states: {
         Row: {
-          agent__ai_properties: Json | null
-          agent__inventory: Json | null
+          babylonjs__animation_auto_animate: boolean | null
+          babylonjs__animation_auto_animate_from: number | null
+          babylonjs__animation_auto_animate_loop: boolean | null
+          babylonjs__animation_auto_animate_speed_ratio: number | null
+          babylonjs__animation_auto_animate_to: number | null
           babylonjs__billboard_mode:
             | Database["public"]["Enums"]["billboard_mode_enum"]
             | null
-          babylonjs__exclude_mesh_ids: string[] | null
-          babylonjs__include_only_mesh_ids: string[] | null
+          babylonjs__camera_alpha: number | null
+          babylonjs__camera_angle: number | null
+          babylonjs__camera_apply_gravity: boolean | null
+          babylonjs__camera_beta: number | null
+          babylonjs__camera_check_collisions: boolean | null
+          babylonjs__camera_ellipsoid:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
+          babylonjs__camera_ellipsoid_offset:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
+          babylonjs__camera_fov: number | null
+          babylonjs__camera_inertia: number | null
+          babylonjs__camera_max_z: number | null
+          babylonjs__camera_min_z: number | null
+          babylonjs__camera_radius: number | null
+          babylonjs__camera_rotation_speed: number | null
+          babylonjs__camera_speed: number | null
+          babylonjs__camera_target:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__light_angle: number | null
+          babylonjs__light_custom_projection_texture: string | null
           babylonjs__light_diffuse:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__light_direction:
             | Database["public"]["CompositeTypes"]["vector3"]
             | null
+          babylonjs__light_exclude_mesh_ids: string[] | null
           babylonjs__light_exponent: number | null
           babylonjs__light_falloff_type: string | null
           babylonjs__light_ground_color:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
+          babylonjs__light_include_only_mesh_ids: string[] | null
           babylonjs__light_intensity: number | null
           babylonjs__light_intensity_mode: string | null
           babylonjs__light_mode:
             | Database["public"]["Enums"]["light_mode_enum"]
             | null
+          babylonjs__light_projection_texture_matrix: number[] | null
           babylonjs__light_radius: number | null
           babylonjs__light_range: number | null
+          babylonjs__light_shadow_max_z: number | null
+          babylonjs__light_shadow_min_z: number | null
           babylonjs__light_specular:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -1121,6 +1359,7 @@ export type Database = {
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
           babylonjs__material_direct_intensity: number | null
+          babylonjs__material_disable_lighting: boolean | null
           babylonjs__material_emissive:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -1136,6 +1375,7 @@ export type Database = {
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
           babylonjs__material_force_normal_forward: boolean | null
+          babylonjs__material_fresnel_parameters: Json | null
           babylonjs__material_index_of_refraction: number | null
           babylonjs__material_lightmap_texture: string | null
           babylonjs__material_lightmap_texture_color_space:
@@ -1160,6 +1400,8 @@ export type Database = {
           babylonjs__material_opacity_texture_color_space:
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
+          babylonjs__material_parallax_bias: number | null
+          babylonjs__material_parallax_scale: number | null
           babylonjs__material_reflection_color:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -1196,6 +1438,7 @@ export type Database = {
             | null
           babylonjs__material_use_emissive_as_illumination: boolean | null
           babylonjs__material_use_gltf_light_falloff: boolean | null
+          babylonjs__material_use_horizon_occlusion: boolean | null
           babylonjs__material_use_lightmap_as_shadowmap: boolean | null
           babylonjs__material_use_metallness_from_metallic_texture_blue:
             | boolean
@@ -1203,7 +1446,10 @@ export type Database = {
           babylonjs__material_use_microsurface_from_reflectivity_map_alph:
             | boolean
             | null
+          babylonjs__material_use_parallax: boolean | null
+          babylonjs__material_use_parallax_occlusion: boolean | null
           babylonjs__material_use_physical_light_falloff: boolean | null
+          babylonjs__material_use_radiance_occlusion: boolean | null
           babylonjs__material_use_radiance_over_alpha: boolean | null
           babylonjs__material_use_roughness_from_metallic_texture_alpha:
             | boolean
@@ -1213,15 +1459,31 @@ export type Database = {
             | null
           babylonjs__material_use_specular_over_alpha: boolean | null
           babylonjs__material_wireframe: boolean | null
+          babylonjs__mesh_alpha_index: number | null
+          babylonjs__mesh_check_collisions: boolean | null
           babylonjs__mesh_gltf_data: Json | null
           babylonjs__mesh_gltf_file_path: string | null
+          babylonjs__mesh_has_vertex_alpha: boolean | null
+          babylonjs__mesh_infinite_distance: boolean | null
           babylonjs__mesh_instance_of_id: string | null
           babylonjs__mesh_is_instance: boolean | null
+          babylonjs__mesh_is_pickable: boolean | null
+          babylonjs__mesh_is_visible: boolean | null
           babylonjs__mesh_joints:
             | Database["public"]["CompositeTypes"]["joint"][]
             | null
           babylonjs__mesh_material_id: string | null
+          babylonjs__mesh_overlay_alpha: number | null
+          babylonjs__mesh_overlay_color:
+            | Database["public"]["CompositeTypes"]["color4"]
+            | null
           babylonjs__mesh_physics_properties: Json | null
+          babylonjs__mesh_receive_shadows: boolean | null
+          babylonjs__mesh_rendering_group_id: number | null
+          babylonjs__mesh_show_bounding_box: boolean | null
+          babylonjs__mesh_show_submeshes_bounding_box: boolean | null
+          babylonjs__mesh_use_vertex_colors: boolean | null
+          babylonjs__mesh_visibility: number | null
           babylonjs__physics_angular_damping: number | null
           babylonjs__physics_angular_velocity:
             | Database["public"]["CompositeTypes"]["vector3"]
@@ -1229,9 +1491,17 @@ export type Database = {
           babylonjs__physics_angular_velocity_x: number | null
           babylonjs__physics_angular_velocity_y: number | null
           babylonjs__physics_angular_velocity_z: number | null
+          babylonjs__physics_center_of_mass:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__physics_collision_filter_group: number | null
           babylonjs__physics_collision_filter_mask: number | null
+          babylonjs__physics_collision_response: boolean | null
+          babylonjs__physics_collision_retry_count: number | null
           babylonjs__physics_friction: number | null
+          babylonjs__physics_inertia_tensor:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__physics_is_static: boolean | null
           babylonjs__physics_linear_damping: number | null
           babylonjs__physics_linear_velocity:
@@ -1242,6 +1512,9 @@ export type Database = {
           babylonjs__physics_restitution: number | null
           babylonjs__physics_shape_data: Json | null
           babylonjs__physics_shape_type: string | null
+          babylonjs__physics_sleeping_threshold_angular: number | null
+          babylonjs__physics_sleeping_threshold_linear: number | null
+          babylonjs__physics_use_gravity: boolean | null
           babylonjs__physics_velocity_x: number | null
           babylonjs__physics_velocity_y: number | null
           babylonjs__physics_velocity_z: number | null
@@ -1254,6 +1527,13 @@ export type Database = {
           babylonjs__shadow_quality:
             | Database["public"]["Enums"]["shadow_quality_enum"]
             | null
+          babylonjs__state_freeze_world_matrix: boolean | null
+          babylonjs__state_ignore_parent_scaling: boolean | null
+          babylonjs__state_is_enabled: boolean | null
+          babylonjs__state_is_picked: boolean | null
+          babylonjs__state_preserve_parent_rotation_for_billboard:
+            | boolean
+            | null
           babylonjs__transform_position_x: number | null
           babylonjs__transform_position_y: number | null
           babylonjs__transform_position_z: number | null
@@ -1264,15 +1544,15 @@ export type Database = {
           babylonjs__transform_scale_x: number | null
           babylonjs__transform_scale_y: number | null
           babylonjs__transform_scale_z: number | null
+          babylonjs__type: Database["public"]["Enums"]["entity_type_babylonjs_enum"]
           entity_id: string
           general__created_at: string | null
           general__name: string
           general__parent_entity_id: string | null
+          general__permissions__can_view_roles: string[] | null
           general__semantic_version: string
-          general__type: Database["public"]["Enums"]["general_type_enum"]
           general__updated_at: string | null
           general__uuid: string
-          permissions__can_view_roles: string[] | null
           tick_duration_ms: number | null
           tick_end_time: string | null
           tick_number: number
@@ -1280,32 +1560,60 @@ export type Database = {
           timestamp: string | null
         }
         Insert: {
-          agent__ai_properties?: Json | null
-          agent__inventory?: Json | null
+          babylonjs__animation_auto_animate?: boolean | null
+          babylonjs__animation_auto_animate_from?: number | null
+          babylonjs__animation_auto_animate_loop?: boolean | null
+          babylonjs__animation_auto_animate_speed_ratio?: number | null
+          babylonjs__animation_auto_animate_to?: number | null
           babylonjs__billboard_mode?:
             | Database["public"]["Enums"]["billboard_mode_enum"]
             | null
-          babylonjs__exclude_mesh_ids?: string[] | null
-          babylonjs__include_only_mesh_ids?: string[] | null
+          babylonjs__camera_alpha?: number | null
+          babylonjs__camera_angle?: number | null
+          babylonjs__camera_apply_gravity?: boolean | null
+          babylonjs__camera_beta?: number | null
+          babylonjs__camera_check_collisions?: boolean | null
+          babylonjs__camera_ellipsoid?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
+          babylonjs__camera_ellipsoid_offset?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
+          babylonjs__camera_fov?: number | null
+          babylonjs__camera_inertia?: number | null
+          babylonjs__camera_max_z?: number | null
+          babylonjs__camera_min_z?: number | null
+          babylonjs__camera_radius?: number | null
+          babylonjs__camera_rotation_speed?: number | null
+          babylonjs__camera_speed?: number | null
+          babylonjs__camera_target?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__light_angle?: number | null
+          babylonjs__light_custom_projection_texture?: string | null
           babylonjs__light_diffuse?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__light_direction?:
             | Database["public"]["CompositeTypes"]["vector3"]
             | null
+          babylonjs__light_exclude_mesh_ids?: string[] | null
           babylonjs__light_exponent?: number | null
           babylonjs__light_falloff_type?: string | null
           babylonjs__light_ground_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
+          babylonjs__light_include_only_mesh_ids?: string[] | null
           babylonjs__light_intensity?: number | null
           babylonjs__light_intensity_mode?: string | null
           babylonjs__light_mode?:
             | Database["public"]["Enums"]["light_mode_enum"]
             | null
+          babylonjs__light_projection_texture_matrix?: number[] | null
           babylonjs__light_radius?: number | null
           babylonjs__light_range?: number | null
+          babylonjs__light_shadow_max_z?: number | null
+          babylonjs__light_shadow_min_z?: number | null
           babylonjs__light_specular?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -1348,6 +1656,7 @@ export type Database = {
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
           babylonjs__material_direct_intensity?: number | null
+          babylonjs__material_disable_lighting?: boolean | null
           babylonjs__material_emissive?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -1363,6 +1672,7 @@ export type Database = {
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
           babylonjs__material_force_normal_forward?: boolean | null
+          babylonjs__material_fresnel_parameters?: Json | null
           babylonjs__material_index_of_refraction?: number | null
           babylonjs__material_lightmap_texture?: string | null
           babylonjs__material_lightmap_texture_color_space?:
@@ -1387,6 +1697,8 @@ export type Database = {
           babylonjs__material_opacity_texture_color_space?:
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
+          babylonjs__material_parallax_bias?: number | null
+          babylonjs__material_parallax_scale?: number | null
           babylonjs__material_reflection_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -1423,6 +1735,7 @@ export type Database = {
             | null
           babylonjs__material_use_emissive_as_illumination?: boolean | null
           babylonjs__material_use_gltf_light_falloff?: boolean | null
+          babylonjs__material_use_horizon_occlusion?: boolean | null
           babylonjs__material_use_lightmap_as_shadowmap?: boolean | null
           babylonjs__material_use_metallness_from_metallic_texture_blue?:
             | boolean
@@ -1430,7 +1743,10 @@ export type Database = {
           babylonjs__material_use_microsurface_from_reflectivity_map_alph?:
             | boolean
             | null
+          babylonjs__material_use_parallax?: boolean | null
+          babylonjs__material_use_parallax_occlusion?: boolean | null
           babylonjs__material_use_physical_light_falloff?: boolean | null
+          babylonjs__material_use_radiance_occlusion?: boolean | null
           babylonjs__material_use_radiance_over_alpha?: boolean | null
           babylonjs__material_use_roughness_from_metallic_texture_alpha?:
             | boolean
@@ -1440,15 +1756,31 @@ export type Database = {
             | null
           babylonjs__material_use_specular_over_alpha?: boolean | null
           babylonjs__material_wireframe?: boolean | null
+          babylonjs__mesh_alpha_index?: number | null
+          babylonjs__mesh_check_collisions?: boolean | null
           babylonjs__mesh_gltf_data?: Json | null
           babylonjs__mesh_gltf_file_path?: string | null
+          babylonjs__mesh_has_vertex_alpha?: boolean | null
+          babylonjs__mesh_infinite_distance?: boolean | null
           babylonjs__mesh_instance_of_id?: string | null
           babylonjs__mesh_is_instance?: boolean | null
+          babylonjs__mesh_is_pickable?: boolean | null
+          babylonjs__mesh_is_visible?: boolean | null
           babylonjs__mesh_joints?:
             | Database["public"]["CompositeTypes"]["joint"][]
             | null
           babylonjs__mesh_material_id?: string | null
+          babylonjs__mesh_overlay_alpha?: number | null
+          babylonjs__mesh_overlay_color?:
+            | Database["public"]["CompositeTypes"]["color4"]
+            | null
           babylonjs__mesh_physics_properties?: Json | null
+          babylonjs__mesh_receive_shadows?: boolean | null
+          babylonjs__mesh_rendering_group_id?: number | null
+          babylonjs__mesh_show_bounding_box?: boolean | null
+          babylonjs__mesh_show_submeshes_bounding_box?: boolean | null
+          babylonjs__mesh_use_vertex_colors?: boolean | null
+          babylonjs__mesh_visibility?: number | null
           babylonjs__physics_angular_damping?: number | null
           babylonjs__physics_angular_velocity?:
             | Database["public"]["CompositeTypes"]["vector3"]
@@ -1456,9 +1788,17 @@ export type Database = {
           babylonjs__physics_angular_velocity_x?: number | null
           babylonjs__physics_angular_velocity_y?: number | null
           babylonjs__physics_angular_velocity_z?: number | null
+          babylonjs__physics_center_of_mass?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__physics_collision_filter_group?: number | null
           babylonjs__physics_collision_filter_mask?: number | null
+          babylonjs__physics_collision_response?: boolean | null
+          babylonjs__physics_collision_retry_count?: number | null
           babylonjs__physics_friction?: number | null
+          babylonjs__physics_inertia_tensor?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__physics_is_static?: boolean | null
           babylonjs__physics_linear_damping?: number | null
           babylonjs__physics_linear_velocity?:
@@ -1469,6 +1809,9 @@ export type Database = {
           babylonjs__physics_restitution?: number | null
           babylonjs__physics_shape_data?: Json | null
           babylonjs__physics_shape_type?: string | null
+          babylonjs__physics_sleeping_threshold_angular?: number | null
+          babylonjs__physics_sleeping_threshold_linear?: number | null
+          babylonjs__physics_use_gravity?: boolean | null
           babylonjs__physics_velocity_x?: number | null
           babylonjs__physics_velocity_y?: number | null
           babylonjs__physics_velocity_z?: number | null
@@ -1481,6 +1824,13 @@ export type Database = {
           babylonjs__shadow_quality?:
             | Database["public"]["Enums"]["shadow_quality_enum"]
             | null
+          babylonjs__state_freeze_world_matrix?: boolean | null
+          babylonjs__state_ignore_parent_scaling?: boolean | null
+          babylonjs__state_is_enabled?: boolean | null
+          babylonjs__state_is_picked?: boolean | null
+          babylonjs__state_preserve_parent_rotation_for_billboard?:
+            | boolean
+            | null
           babylonjs__transform_position_x?: number | null
           babylonjs__transform_position_y?: number | null
           babylonjs__transform_position_z?: number | null
@@ -1491,15 +1841,15 @@ export type Database = {
           babylonjs__transform_scale_x?: number | null
           babylonjs__transform_scale_y?: number | null
           babylonjs__transform_scale_z?: number | null
+          babylonjs__type: Database["public"]["Enums"]["entity_type_babylonjs_enum"]
           entity_id: string
           general__created_at?: string | null
           general__name: string
           general__parent_entity_id?: string | null
+          general__permissions__can_view_roles?: string[] | null
           general__semantic_version?: string
-          general__type: Database["public"]["Enums"]["general_type_enum"]
           general__updated_at?: string | null
           general__uuid?: string
-          permissions__can_view_roles?: string[] | null
           tick_duration_ms?: number | null
           tick_end_time?: string | null
           tick_number: number
@@ -1507,32 +1857,60 @@ export type Database = {
           timestamp?: string | null
         }
         Update: {
-          agent__ai_properties?: Json | null
-          agent__inventory?: Json | null
+          babylonjs__animation_auto_animate?: boolean | null
+          babylonjs__animation_auto_animate_from?: number | null
+          babylonjs__animation_auto_animate_loop?: boolean | null
+          babylonjs__animation_auto_animate_speed_ratio?: number | null
+          babylonjs__animation_auto_animate_to?: number | null
           babylonjs__billboard_mode?:
             | Database["public"]["Enums"]["billboard_mode_enum"]
             | null
-          babylonjs__exclude_mesh_ids?: string[] | null
-          babylonjs__include_only_mesh_ids?: string[] | null
+          babylonjs__camera_alpha?: number | null
+          babylonjs__camera_angle?: number | null
+          babylonjs__camera_apply_gravity?: boolean | null
+          babylonjs__camera_beta?: number | null
+          babylonjs__camera_check_collisions?: boolean | null
+          babylonjs__camera_ellipsoid?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
+          babylonjs__camera_ellipsoid_offset?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
+          babylonjs__camera_fov?: number | null
+          babylonjs__camera_inertia?: number | null
+          babylonjs__camera_max_z?: number | null
+          babylonjs__camera_min_z?: number | null
+          babylonjs__camera_radius?: number | null
+          babylonjs__camera_rotation_speed?: number | null
+          babylonjs__camera_speed?: number | null
+          babylonjs__camera_target?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__light_angle?: number | null
+          babylonjs__light_custom_projection_texture?: string | null
           babylonjs__light_diffuse?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
           babylonjs__light_direction?:
             | Database["public"]["CompositeTypes"]["vector3"]
             | null
+          babylonjs__light_exclude_mesh_ids?: string[] | null
           babylonjs__light_exponent?: number | null
           babylonjs__light_falloff_type?: string | null
           babylonjs__light_ground_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
+          babylonjs__light_include_only_mesh_ids?: string[] | null
           babylonjs__light_intensity?: number | null
           babylonjs__light_intensity_mode?: string | null
           babylonjs__light_mode?:
             | Database["public"]["Enums"]["light_mode_enum"]
             | null
+          babylonjs__light_projection_texture_matrix?: number[] | null
           babylonjs__light_radius?: number | null
           babylonjs__light_range?: number | null
+          babylonjs__light_shadow_max_z?: number | null
+          babylonjs__light_shadow_min_z?: number | null
           babylonjs__light_specular?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -1575,6 +1953,7 @@ export type Database = {
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
           babylonjs__material_direct_intensity?: number | null
+          babylonjs__material_disable_lighting?: boolean | null
           babylonjs__material_emissive?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -1590,6 +1969,7 @@ export type Database = {
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
           babylonjs__material_force_normal_forward?: boolean | null
+          babylonjs__material_fresnel_parameters?: Json | null
           babylonjs__material_index_of_refraction?: number | null
           babylonjs__material_lightmap_texture?: string | null
           babylonjs__material_lightmap_texture_color_space?:
@@ -1614,6 +1994,8 @@ export type Database = {
           babylonjs__material_opacity_texture_color_space?:
             | Database["public"]["Enums"]["texture_color_space_enum"]
             | null
+          babylonjs__material_parallax_bias?: number | null
+          babylonjs__material_parallax_scale?: number | null
           babylonjs__material_reflection_color?:
             | Database["public"]["CompositeTypes"]["color4"]
             | null
@@ -1650,6 +2032,7 @@ export type Database = {
             | null
           babylonjs__material_use_emissive_as_illumination?: boolean | null
           babylonjs__material_use_gltf_light_falloff?: boolean | null
+          babylonjs__material_use_horizon_occlusion?: boolean | null
           babylonjs__material_use_lightmap_as_shadowmap?: boolean | null
           babylonjs__material_use_metallness_from_metallic_texture_blue?:
             | boolean
@@ -1657,7 +2040,10 @@ export type Database = {
           babylonjs__material_use_microsurface_from_reflectivity_map_alph?:
             | boolean
             | null
+          babylonjs__material_use_parallax?: boolean | null
+          babylonjs__material_use_parallax_occlusion?: boolean | null
           babylonjs__material_use_physical_light_falloff?: boolean | null
+          babylonjs__material_use_radiance_occlusion?: boolean | null
           babylonjs__material_use_radiance_over_alpha?: boolean | null
           babylonjs__material_use_roughness_from_metallic_texture_alpha?:
             | boolean
@@ -1667,15 +2053,31 @@ export type Database = {
             | null
           babylonjs__material_use_specular_over_alpha?: boolean | null
           babylonjs__material_wireframe?: boolean | null
+          babylonjs__mesh_alpha_index?: number | null
+          babylonjs__mesh_check_collisions?: boolean | null
           babylonjs__mesh_gltf_data?: Json | null
           babylonjs__mesh_gltf_file_path?: string | null
+          babylonjs__mesh_has_vertex_alpha?: boolean | null
+          babylonjs__mesh_infinite_distance?: boolean | null
           babylonjs__mesh_instance_of_id?: string | null
           babylonjs__mesh_is_instance?: boolean | null
+          babylonjs__mesh_is_pickable?: boolean | null
+          babylonjs__mesh_is_visible?: boolean | null
           babylonjs__mesh_joints?:
             | Database["public"]["CompositeTypes"]["joint"][]
             | null
           babylonjs__mesh_material_id?: string | null
+          babylonjs__mesh_overlay_alpha?: number | null
+          babylonjs__mesh_overlay_color?:
+            | Database["public"]["CompositeTypes"]["color4"]
+            | null
           babylonjs__mesh_physics_properties?: Json | null
+          babylonjs__mesh_receive_shadows?: boolean | null
+          babylonjs__mesh_rendering_group_id?: number | null
+          babylonjs__mesh_show_bounding_box?: boolean | null
+          babylonjs__mesh_show_submeshes_bounding_box?: boolean | null
+          babylonjs__mesh_use_vertex_colors?: boolean | null
+          babylonjs__mesh_visibility?: number | null
           babylonjs__physics_angular_damping?: number | null
           babylonjs__physics_angular_velocity?:
             | Database["public"]["CompositeTypes"]["vector3"]
@@ -1683,9 +2085,17 @@ export type Database = {
           babylonjs__physics_angular_velocity_x?: number | null
           babylonjs__physics_angular_velocity_y?: number | null
           babylonjs__physics_angular_velocity_z?: number | null
+          babylonjs__physics_center_of_mass?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__physics_collision_filter_group?: number | null
           babylonjs__physics_collision_filter_mask?: number | null
+          babylonjs__physics_collision_response?: boolean | null
+          babylonjs__physics_collision_retry_count?: number | null
           babylonjs__physics_friction?: number | null
+          babylonjs__physics_inertia_tensor?:
+            | Database["public"]["CompositeTypes"]["vector3"]
+            | null
           babylonjs__physics_is_static?: boolean | null
           babylonjs__physics_linear_damping?: number | null
           babylonjs__physics_linear_velocity?:
@@ -1696,6 +2106,9 @@ export type Database = {
           babylonjs__physics_restitution?: number | null
           babylonjs__physics_shape_data?: Json | null
           babylonjs__physics_shape_type?: string | null
+          babylonjs__physics_sleeping_threshold_angular?: number | null
+          babylonjs__physics_sleeping_threshold_linear?: number | null
+          babylonjs__physics_use_gravity?: boolean | null
           babylonjs__physics_velocity_x?: number | null
           babylonjs__physics_velocity_y?: number | null
           babylonjs__physics_velocity_z?: number | null
@@ -1708,6 +2121,13 @@ export type Database = {
           babylonjs__shadow_quality?:
             | Database["public"]["Enums"]["shadow_quality_enum"]
             | null
+          babylonjs__state_freeze_world_matrix?: boolean | null
+          babylonjs__state_ignore_parent_scaling?: boolean | null
+          babylonjs__state_is_enabled?: boolean | null
+          babylonjs__state_is_picked?: boolean | null
+          babylonjs__state_preserve_parent_rotation_for_billboard?:
+            | boolean
+            | null
           babylonjs__transform_position_x?: number | null
           babylonjs__transform_position_y?: number | null
           babylonjs__transform_position_z?: number | null
@@ -1718,15 +2138,15 @@ export type Database = {
           babylonjs__transform_scale_x?: number | null
           babylonjs__transform_scale_y?: number | null
           babylonjs__transform_scale_z?: number | null
+          babylonjs__type?: Database["public"]["Enums"]["entity_type_babylonjs_enum"]
           entity_id?: string
           general__created_at?: string | null
           general__name?: string
           general__parent_entity_id?: string | null
+          general__permissions__can_view_roles?: string[] | null
           general__semantic_version?: string
-          general__type?: Database["public"]["Enums"]["general_type_enum"]
           general__updated_at?: string | null
           general__uuid?: string
-          permissions__can_view_roles?: string[] | null
           tick_duration_ms?: number | null
           tick_end_time?: string | null
           tick_number?: number
@@ -1764,54 +2184,6 @@ export type Database = {
           is_active?: boolean
           is_system?: boolean
           role_name?: string
-        }
-        Relationships: []
-      }
-      script_sources: {
-        Row: {
-          created_at: string | null
-          git_repo_entry_path: string | null
-          git_repo_url: string | null
-          updated_at: string | null
-          web__compiled__browser__script: string | null
-          web__compiled__browser__script_sha256: string | null
-          web__compiled__browser__script_status: string | null
-          web__compiled__bun__script: string | null
-          web__compiled__bun__script_sha256: string | null
-          web__compiled__bun__script_status: string | null
-          web__compiled__node__script: string | null
-          web__compiled__node__script_sha256: string | null
-          web__compiled__node__script_status: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          git_repo_entry_path?: string | null
-          git_repo_url?: string | null
-          updated_at?: string | null
-          web__compiled__browser__script?: string | null
-          web__compiled__browser__script_sha256?: string | null
-          web__compiled__browser__script_status?: string | null
-          web__compiled__bun__script?: string | null
-          web__compiled__bun__script_sha256?: string | null
-          web__compiled__bun__script_status?: string | null
-          web__compiled__node__script?: string | null
-          web__compiled__node__script_sha256?: string | null
-          web__compiled__node__script_status?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          git_repo_entry_path?: string | null
-          git_repo_url?: string | null
-          updated_at?: string | null
-          web__compiled__browser__script?: string | null
-          web__compiled__browser__script_sha256?: string | null
-          web__compiled__browser__script_status?: string | null
-          web__compiled__bun__script?: string | null
-          web__compiled__bun__script_sha256?: string | null
-          web__compiled__bun__script_status?: string | null
-          web__compiled__node__script?: string | null
-          web__compiled__node__script_sha256?: string | null
-          web__compiled__node__script_status?: string | null
         }
         Relationships: []
       }
@@ -2114,7 +2486,41 @@ export type Database = {
         | "BILLBOARDMODE_Y"
         | "BILLBOARDMODE_Z"
         | "BILLBOARDMODE_ALL"
-      general_type_enum: "MESH" | "LIGHT" | "VOLUME" | "MATERIAL" | "CAMERA"
+      entity_type_babylonjs_enum:
+        | "MESH"
+        | "LIGHT"
+        | "CAMERA"
+        | "MATERIAL"
+        | "INSTANCE_MESH"
+        | "GROUND_MESH"
+        | "BOX_MESH"
+        | "SPHERE_MESH"
+        | "CYLINDER_MESH"
+        | "PLANE_MESH"
+        | "DISC_MESH"
+        | "TORUS_MESH"
+        | "CAPSULE_MESH"
+        | "SPRITE"
+        | "PARTICLE_SYSTEM"
+        | "GLTF_MESH"
+        | "VOLUME"
+        | "SKELETAL_MESH"
+        | "MORPH_MESH"
+        | "INSTANCED_MESH"
+        | "TRANSFORM_NODE"
+        | "BONE_NODE"
+        | "PHYSICS_BODY"
+        | "COLLISION_MESH"
+        | "SKYBOX"
+        | "ENVIRONMENT"
+        | "POST_PROCESS"
+        | "LENS_FLARE"
+        | "REFLECTION_PROBE"
+        | "GUI_ELEMENT"
+        | "CONTROL"
+        | "SOUND"
+        | "ANIMATION"
+        | "ANIMATION_GROUP"
       light_mode_enum: "default" | "shadowsOnly" | "specular"
       light_type_enum: "POINT" | "DIRECTIONAL" | "SPOT" | "HEMISPHERIC"
       lod_level_enum: "LOD0" | "LOD1" | "LOD2" | "LOD3" | "LOD4"
