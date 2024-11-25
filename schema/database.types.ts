@@ -36,8 +36,8 @@ export type Database = {
     Tables: {
       actions: {
         Row: {
-          general__action_data: Json
           general__action_id: string
+          general__action_query: Json
           general__action_status: Database["public"]["Enums"]["action_status"]
           general__claimed_by: string | null
           general__created_at: string | null
@@ -46,8 +46,8 @@ export type Database = {
           general__last_heartbeat: string | null
         }
         Insert: {
-          general__action_data: Json
           general__action_id?: string
+          general__action_query: Json
           general__action_status?: Database["public"]["Enums"]["action_status"]
           general__claimed_by?: string | null
           general__created_at?: string | null
@@ -56,8 +56,8 @@ export type Database = {
           general__last_heartbeat?: string | null
         }
         Update: {
-          general__action_data?: Json
           general__action_id?: string
+          general__action_query?: Json
           general__action_status?: Database["public"]["Enums"]["action_status"]
           general__claimed_by?: string | null
           general__created_at?: string | null
@@ -540,7 +540,7 @@ export type Database = {
           babylonjs__transform_scale_x: number | null
           babylonjs__transform_scale_y: number | null
           babylonjs__transform_scale_z: number | null
-          babylonjs__type: Database["public"]["Enums"]["entity_type_babylonjs_enum"]
+          babylonjs__type: Database["public"]["Enums"]["babylonjs_entity_type"]
           general__created_at: string | null
           general__name: string
           general__parent_entity_id: string | null
@@ -831,7 +831,7 @@ export type Database = {
           babylonjs__transform_scale_x?: number | null
           babylonjs__transform_scale_y?: number | null
           babylonjs__transform_scale_z?: number | null
-          babylonjs__type: Database["public"]["Enums"]["entity_type_babylonjs_enum"]
+          babylonjs__type: Database["public"]["Enums"]["babylonjs_entity_type"]
           general__created_at?: string | null
           general__name: string
           general__parent_entity_id?: string | null
@@ -1122,7 +1122,7 @@ export type Database = {
           babylonjs__transform_scale_x?: number | null
           babylonjs__transform_scale_y?: number | null
           babylonjs__transform_scale_z?: number | null
-          babylonjs__type?: Database["public"]["Enums"]["entity_type_babylonjs_enum"]
+          babylonjs__type?: Database["public"]["Enums"]["babylonjs_entity_type"]
           general__created_at?: string | null
           general__name?: string
           general__parent_entity_id?: string | null
@@ -1544,7 +1544,7 @@ export type Database = {
           babylonjs__transform_scale_x: number | null
           babylonjs__transform_scale_y: number | null
           babylonjs__transform_scale_z: number | null
-          babylonjs__type: Database["public"]["Enums"]["entity_type_babylonjs_enum"]
+          babylonjs__type: Database["public"]["Enums"]["babylonjs_entity_type"]
           entity_id: string
           general__created_at: string | null
           general__name: string
@@ -1841,7 +1841,7 @@ export type Database = {
           babylonjs__transform_scale_x?: number | null
           babylonjs__transform_scale_y?: number | null
           babylonjs__transform_scale_z?: number | null
-          babylonjs__type: Database["public"]["Enums"]["entity_type_babylonjs_enum"]
+          babylonjs__type: Database["public"]["Enums"]["babylonjs_entity_type"]
           entity_id: string
           general__created_at?: string | null
           general__name: string
@@ -2138,7 +2138,7 @@ export type Database = {
           babylonjs__transform_scale_x?: number | null
           babylonjs__transform_scale_y?: number | null
           babylonjs__transform_scale_z?: number | null
-          babylonjs__type?: Database["public"]["Enums"]["entity_type_babylonjs_enum"]
+          babylonjs__type?: Database["public"]["Enums"]["babylonjs_entity_type"]
           entity_id?: string
           general__created_at?: string | null
           general__name?: string
@@ -2291,10 +2291,10 @@ export type Database = {
       execute_entity_action: {
         Args: {
           p_entity_script_id: string
-          p_action_input: Json
           p_sql_query: string
+          p_action_input: Json
         }
-        Returns: Json
+        Returns: undefined
       }
       expire_abandoned_actions: {
         Args: {
@@ -2479,27 +2479,18 @@ export type Database = {
       babylonjs__lod_mode_enum: "distance" | "size"
       babylonjs__shadow_quality_enum: "LOW" | "MEDIUM" | "HIGH"
       babylonjs__texture_color_space_enum: "linear" | "sRGB" | "gamma"
-      entity_type_babylonjs_enum:
-        | "MESH"
+      babylonjs_entity_type:
         | "LIGHT"
         | "CAMERA"
         | "MATERIAL"
-        | "INSTANCE_MESH"
+        | "INSTANCED_MESH"
         | "GROUND_MESH"
-        | "BOX_MESH"
-        | "SPHERE_MESH"
-        | "CYLINDER_MESH"
-        | "PLANE_MESH"
-        | "DISC_MESH"
-        | "TORUS_MESH"
-        | "CAPSULE_MESH"
+        | "MESH"
         | "SPRITE"
         | "PARTICLE_SYSTEM"
-        | "GLTF_MESH"
         | "VOLUME"
         | "SKELETAL_MESH"
         | "MORPH_MESH"
-        | "INSTANCED_MESH"
         | "TRANSFORM_NODE"
         | "BONE_NODE"
         | "PHYSICS_BODY"
