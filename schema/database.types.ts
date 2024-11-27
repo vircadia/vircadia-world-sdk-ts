@@ -407,55 +407,73 @@ export type Database = {
       }
       entity_scripts: {
         Row: {
+          compiled__web__browser__script: string | null
+          compiled__web__browser__script_sha256: string | null
+          compiled__web__browser__script_status:
+            | Database["public"]["Enums"]["script_compilation_status"]
+            | null
+          compiled__web__bun__script: string | null
+          compiled__web__bun__script_sha256: string | null
+          compiled__web__bun__script_status:
+            | Database["public"]["Enums"]["script_compilation_status"]
+            | null
+          compiled__web__node__script: string | null
+          compiled__web__node__script_sha256: string | null
+          compiled__web__node__script_status:
+            | Database["public"]["Enums"]["script_compilation_status"]
+            | null
           general__created_at: string | null
           general__entity_id: string
           general__script_id: string
           general__updated_at: string | null
           source__git__repo_entry_path: string | null
           source__git__repo_url: string | null
-          web__compiled__browser__script: string | null
-          web__compiled__browser__script_sha256: string | null
-          web__compiled__browser__script_status: string | null
-          web__compiled__bun__script: string | null
-          web__compiled__bun__script_sha256: string | null
-          web__compiled__bun__script_status: string | null
-          web__compiled__node__script: string | null
-          web__compiled__node__script_sha256: string | null
-          web__compiled__node__script_status: string | null
         }
         Insert: {
+          compiled__web__browser__script?: string | null
+          compiled__web__browser__script_sha256?: string | null
+          compiled__web__browser__script_status?:
+            | Database["public"]["Enums"]["script_compilation_status"]
+            | null
+          compiled__web__bun__script?: string | null
+          compiled__web__bun__script_sha256?: string | null
+          compiled__web__bun__script_status?:
+            | Database["public"]["Enums"]["script_compilation_status"]
+            | null
+          compiled__web__node__script?: string | null
+          compiled__web__node__script_sha256?: string | null
+          compiled__web__node__script_status?:
+            | Database["public"]["Enums"]["script_compilation_status"]
+            | null
           general__created_at?: string | null
           general__entity_id: string
           general__script_id?: string
           general__updated_at?: string | null
           source__git__repo_entry_path?: string | null
           source__git__repo_url?: string | null
-          web__compiled__browser__script?: string | null
-          web__compiled__browser__script_sha256?: string | null
-          web__compiled__browser__script_status?: string | null
-          web__compiled__bun__script?: string | null
-          web__compiled__bun__script_sha256?: string | null
-          web__compiled__bun__script_status?: string | null
-          web__compiled__node__script?: string | null
-          web__compiled__node__script_sha256?: string | null
-          web__compiled__node__script_status?: string | null
         }
         Update: {
+          compiled__web__browser__script?: string | null
+          compiled__web__browser__script_sha256?: string | null
+          compiled__web__browser__script_status?:
+            | Database["public"]["Enums"]["script_compilation_status"]
+            | null
+          compiled__web__bun__script?: string | null
+          compiled__web__bun__script_sha256?: string | null
+          compiled__web__bun__script_status?:
+            | Database["public"]["Enums"]["script_compilation_status"]
+            | null
+          compiled__web__node__script?: string | null
+          compiled__web__node__script_sha256?: string | null
+          compiled__web__node__script_status?:
+            | Database["public"]["Enums"]["script_compilation_status"]
+            | null
           general__created_at?: string | null
           general__entity_id?: string
           general__script_id?: string
           general__updated_at?: string | null
           source__git__repo_entry_path?: string | null
           source__git__repo_url?: string | null
-          web__compiled__browser__script?: string | null
-          web__compiled__browser__script_sha256?: string | null
-          web__compiled__browser__script_status?: string | null
-          web__compiled__bun__script?: string | null
-          web__compiled__bun__script_sha256?: string | null
-          web__compiled__bun__script_status?: string | null
-          web__compiled__node__script?: string | null
-          web__compiled__node__script_sha256?: string | null
-          web__compiled__node__script_status?: string | null
         }
         Relationships: [
           {
@@ -811,6 +829,7 @@ export type Database = {
         | "REJECTED"
         | "EXPIRED"
         | "CANCELLED"
+      script_compilation_status: "PENDING" | "COMPILED" | "FAILED"
     }
     CompositeTypes: {
       [_ in never]: never
