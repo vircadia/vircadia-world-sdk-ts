@@ -260,8 +260,8 @@ export type Database = {
       entities: {
         Row: {
           general__created_at: string | null
+          general__created_by: string | null
           general__name: string
-          general__parent_entity_id: string | null
           general__permissions__roles__full: string[] | null
           general__permissions__roles__view: string[] | null
           general__semantic_version: string
@@ -271,8 +271,8 @@ export type Database = {
         }
         Insert: {
           general__created_at?: string | null
+          general__created_by?: string | null
           general__name: string
-          general__parent_entity_id?: string | null
           general__permissions__roles__full?: string[] | null
           general__permissions__roles__view?: string[] | null
           general__semantic_version?: string
@@ -282,8 +282,8 @@ export type Database = {
         }
         Update: {
           general__created_at?: string | null
+          general__created_by?: string | null
           general__name?: string
-          general__parent_entity_id?: string | null
           general__permissions__roles__full?: string[] | null
           general__permissions__roles__view?: string[] | null
           general__semantic_version?: string
@@ -291,19 +291,12 @@ export type Database = {
           general__uuid?: string
           type__babylonjs?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "entities_general__parent_entity_id_fkey"
-            columns: ["general__parent_entity_id"]
-            isOneToOne: false
-            referencedRelation: "entities"
-            referencedColumns: ["general__uuid"]
-          },
-        ]
+        Relationships: []
       }
       entities_metadata: {
         Row: {
           general__created_at: string | null
+          general__created_by: string | null
           general__entity_id: string
           general__metadata_id: string
           general__updated_at: string | null
@@ -315,6 +308,7 @@ export type Database = {
         }
         Insert: {
           general__created_at?: string | null
+          general__created_by?: string | null
           general__entity_id: string
           general__metadata_id?: string
           general__updated_at?: string | null
@@ -326,6 +320,7 @@ export type Database = {
         }
         Update: {
           general__created_at?: string | null
+          general__created_by?: string | null
           general__entity_id?: string
           general__metadata_id?: string
           general__updated_at?: string | null
@@ -349,6 +344,7 @@ export type Database = {
         Row: {
           entity_metadata_id: string
           general__created_at: string | null
+          general__created_by: string | null
           general__entity_id: string
           general__metadata_id: string
           general__updated_at: string | null
@@ -366,6 +362,7 @@ export type Database = {
         Insert: {
           entity_metadata_id: string
           general__created_at?: string | null
+          general__created_by?: string | null
           general__entity_id: string
           general__metadata_id?: string
           general__updated_at?: string | null
@@ -383,6 +380,7 @@ export type Database = {
         Update: {
           entity_metadata_id?: string
           general__created_at?: string | null
+          general__created_by?: string | null
           general__entity_id?: string
           general__metadata_id?: string
           general__updated_at?: string | null
@@ -472,9 +470,9 @@ export type Database = {
       entity_states: {
         Row: {
           general__created_at: string | null
+          general__created_by: string | null
           general__entity_id: string
           general__name: string
-          general__parent_entity_id: string | null
           general__permissions__roles__full: string[] | null
           general__permissions__roles__view: string[] | null
           general__semantic_version: string
@@ -489,9 +487,9 @@ export type Database = {
         }
         Insert: {
           general__created_at?: string | null
+          general__created_by?: string | null
           general__entity_id: string
           general__name: string
-          general__parent_entity_id?: string | null
           general__permissions__roles__full?: string[] | null
           general__permissions__roles__view?: string[] | null
           general__semantic_version?: string
@@ -506,9 +504,9 @@ export type Database = {
         }
         Update: {
           general__created_at?: string | null
+          general__created_by?: string | null
           general__entity_id?: string
           general__name?: string
-          general__parent_entity_id?: string | null
           general__permissions__roles__full?: string[] | null
           general__permissions__roles__view?: string[] | null
           general__semantic_version?: string
