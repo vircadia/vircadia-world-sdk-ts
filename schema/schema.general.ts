@@ -1,12 +1,13 @@
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Scene } from "@babylonjs/core";
+import type { Database } from "./schema.database";
 
 export namespace Script {
     export namespace Babylon {
         export interface I_Context {
             Vircadia: {
-                WorldClient: SupabaseClient;
+                WorldClient: SupabaseClient<Database, "public">;
                 WorldScene: Scene;
                 Meta: {
                     isRunningOnClient: boolean;

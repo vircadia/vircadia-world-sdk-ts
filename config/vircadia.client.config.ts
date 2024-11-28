@@ -20,8 +20,14 @@ const envSchema = z.object({
             "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0",
         ),
 
-    VRCA_DEFAULT_WORLD_ACCOUNT_USERNAME: z.string().nullable().default(null),
-    VRCA_DEFAULT_WORLD_ACCOUNT_PASSWORD: z.string().nullable().default(null),
+    VRCA_DEFAULT_WORLD_ACCOUNT_USERNAME: z
+        .string()
+        .nullable()
+        .default("admin@changeme.com"),
+    VRCA_DEFAULT_WORLD_ACCOUNT_PASSWORD: z
+        .string()
+        .nullable()
+        .default("CHANGE_ME!"),
 });
 
 const env = envSchema.parse(import.meta.env);

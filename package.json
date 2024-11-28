@@ -2,8 +2,8 @@
 	"name": "vircadia-world-sdk-ts",
 	"type": "module",
 	"dependencies": {
-		"@babylonjs/core": "latest",
-		"@supabase/supabase-js": "^2.45.6",
+		"@babylonjs/core": "7.36.0",
+		"@supabase/supabase-js": "^2.46.2",
 		"console-log-colors": "latest",
 		"eight-colors": "latest",
 		"mobx": "latest",
