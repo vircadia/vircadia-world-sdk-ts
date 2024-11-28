@@ -2,10 +2,6 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Scene } from "@babylonjs/core";
 
-import * as WorldTypes from "./database.types";
-
-export import World = WorldTypes;
-
 export namespace Script {
     export namespace Babylon {
         export interface I_Context {
