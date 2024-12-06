@@ -4,20 +4,54 @@ import type { Scene } from "@babylonjs/core";
 
 export namespace Script {
     export namespace Babylon {
-        export interface I_Context {
-            Vircadia: {
-                WorldClient: typeof postgres;
-                WorldScene: Scene;
-                Meta: {
-                    isRunningOnClient: boolean;
-                    isRunningOnWorld: boolean;
+        export interface I_Context extends Base.I_Context {
+            Vircadia: Base.I_Context["Vircadia"] & {
+                Babylon: {
+                    Scene: Scene;
                 };
             };
         }
 
-        export interface I_Hooks {
-            onBeforeUnmount: () => void;
+        export interface I_Return extends Base.I_Return {}
+    }
+
+    export namespace Base {
+        export interface I_Context {
+            Vircadia: {
+                Client: typeof postgres;
+                Meta: {
+                    isRunningOnClient: boolean;
+                    isRunningOnWorld: boolean;
+                };
+                Hook: I_Hook;
+                Performance: {
+                    clientUpdateSyncMs: number;
+                    clientKeyframeSyncMs: number;
+                };
+                [key: string]: any;
+            };
         }
+
+        export interface I_Return {
+            scriptFunction: (context: I_Context) => unknown;
+            hooks: I_Hook;
+        }
+
+        export interface I_Hook {
+            onBeforeScriptUnmount?: () => void;
+            onBeforeEntityUnmount?: () => void;
+            onUpdate?: () => void;
+            onFixedUpdate?: () => void;
+            onMount?: () => void;
+            onEntityUpdateSync?: (entity: Entity.I_EntityData) => void;
+            onEntityKeyframeSync?: (entity: Entity.I_EntityData) => void;
+        }
+    }
+}
+
+export namespace Entity {
+    export interface I_EntityData {
+        [key: string]: any;
     }
 }
 
