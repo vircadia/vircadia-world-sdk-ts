@@ -38,13 +38,13 @@ export namespace Script {
         }
 
         export interface I_Hook {
-            onBeforeScriptUnmount?: () => void;
-            onBeforeEntityUnmount?: () => void;
-            onUpdate?: () => void;
-            onFixedUpdate?: () => void;
-            onMount?: () => void;
-            onEntityUpdateSync?: (entity: Entity.I_EntityData) => void;
-            onEntityKeyframeSync?: (entity: Entity.I_EntityData) => void;
+            onScriptBeforeUnmount?: () => void;
+            onEntityBeforeUnmount?: () => void;
+            onScriptMount?: () => void;
+            onEngineUpdate?: () => void;
+            onEngineFixedUpdate?: () => void;
+            onEntityUpdate?: (entity: Entity.I_EntityData) => void;
+            onEntityKeyframeUpdate?: (entity: Entity.I_EntityData) => void;
         }
     }
 }

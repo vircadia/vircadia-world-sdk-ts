@@ -28,16 +28,17 @@ export namespace Script {
 
             // Capture hooks without executing them
             const hooks = {
-                onBeforeScriptUnmount:
-                    context.Vircadia?.Hook?.onBeforeScriptUnmount,
-                onBeforeEntityUnmount:
-                    context.Vircadia?.Hook?.onBeforeEntityUnmount,
-                onUpdate: context.Vircadia?.Hook?.onUpdate,
-                onFixedUpdate: context.Vircadia?.Hook?.onFixedUpdate,
-                onMount: context.Vircadia?.Hook?.onMount,
-                onEntityUpdateSync: context.Vircadia?.Hook?.onEntityUpdateSync,
-                onEntityKeyframeSync:
-                    context.Vircadia?.Hook?.onEntityKeyframeSync,
+                onScriptBeforeUnmount:
+                    context.Vircadia?.Hook?.onScriptBeforeUnmount,
+                onEntityBeforeUnmount:
+                    context.Vircadia?.Hook?.onEntityBeforeUnmount,
+                onEngineUpdate: context.Vircadia?.Hook?.onEngineUpdate,
+                onEngineFixedUpdate:
+                    context.Vircadia?.Hook?.onEngineFixedUpdate,
+                onScriptMount: context.Vircadia?.Hook?.onScriptMount,
+                onEntityUpdate: context.Vircadia?.Hook?.onEntityUpdate,
+                onEntityKeyframeUpdate:
+                    context.Vircadia?.Hook?.onEntityKeyframeUpdate,
             };
 
             return {
