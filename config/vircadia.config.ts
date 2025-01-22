@@ -2,7 +2,7 @@ import { z } from "zod";
 import { parseArgs } from "node:util";
 
 // Add CLI argument parsing
-const { positionals, values: args } = parseArgs({
+const { positionals: serverPositionals, values: serverArgs } = parseArgs({
     args: process.argv.slice(2),
     options: {
         debug: { type: "boolean" },
@@ -17,9 +17,6 @@ const { positionals, values: args } = parseArgs({
         "postgres-user": { type: "string" },
         "postgres-password": { type: "string" },
         "postgres-extensions": { type: "string" },
-        "auth-jwt-session-duration": { type: "string" },
-        "auth-jwt-secret": { type: "string" },
-        "auth-admin-token-session-duration": { type: "string" },
         "auth-providers": { type: "string" },
         "pgweb-port": { type: "string" },
     },
@@ -85,52 +82,7 @@ const serverEnvSchema = z.object({
         .string()
         .default("uuid-ossp,hstore,pgcrypto"),
     VRCA_SERVER_PGWEB_PORT: z.string().default("5437"),
-    VRCA_SERVER_AUTH_JWT_SESSION_DURATION: z.string().default("24h"),
-    VRCA_SERVER_AUTH_JWT_SECRET: z.string().default("CHANGE_ME!"),
-    VRCA_SERVER_AUTH_ADMIN_TOKEN_SESSION_DURATION: z.string().default("24h"),
-    VRCA_SERVER_AUTH_PROVIDERS: z.string().default(
-        JSON.stringify({
-            github: {
-                enabled: true,
-                displayName: "GitHub",
-                authorizeUrl: "https://github.com/login/oauth/authorize",
-                tokenUrl: "https://github.com/login/oauth/access_token",
-                userInfoUrl: "https://api.github.com/user",
-                clientId: "Ov23liL9aOwOiwCMqVwQ",
-                clientSecret: "efed36f81b8fd815ed31f20fecaa265bc0aa5136",
-                callbackUrl:
-                    "http://localhost:3000/services/world-auth/auth/github/callback",
-                scope: ["user:email"],
-                userDataMapping: {
-                    endpoint: "https://api.github.com/user",
-                    additionalEndpoints: {
-                        emails: "https://api.github.com/user/emails",
-                    },
-                    fields: {
-                        providerId: '"id":\\s*(\\d+)',
-                        email: '"email":\\s*"([^"]+)"',
-                        username: '"login":\\s*"([^"]+)"',
-                    },
-                },
-            },
-            google: {
-                enabled: false,
-                displayName: "Google",
-                authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
-                tokenUrl: "https://oauth2.googleapis.com/token",
-                userInfoUrl: "https://www.googleapis.com/oauth2/v2/userinfo",
-                scope: ["email", "profile"],
-                userDataMapping: {
-                    endpoint: "https://www.googleapis.com/oauth2/v2/userinfo",
-                    fields: {
-                        providerId: '"id":\\s*"([^"]+)"',
-                        email: '"email":\\s*"([^"]+)"',
-                        username: '"name":\\s*"([^"]+)"',
-                    },
-                },
-            },
-        }),
-    ),
+    VRCA_SERVER_AUTH_PROVIDERS: z.string().default(JSON.stringify({})),
 });
 
 // Parse both environments
@@ -156,26 +108,29 @@ export const VircadiaConfig_Client = {
 
 // Server config
 export const VircadiaConfig_Server = {
-    debug: args.debug ?? serverEnv.VRCA_SERVER_DEBUG,
+    debug: serverArgs.debug ?? serverEnv.VRCA_SERVER_DEBUG,
     serverPort: Number.parseInt(
-        args.port ?? serverEnv.VRCA_SERVER_INTERNAL_SERVER_PORT,
+        serverArgs.port ?? serverEnv.VRCA_SERVER_INTERNAL_SERVER_PORT,
     ),
-    serverHost: args.host ?? serverEnv.VRCA_SERVER_INTERNAL_SERVER_HOST,
-    devMode: args["dev-mode"] ?? serverEnv.VRCA_SERVER_DEV_MODE,
+    serverHost: serverArgs.host ?? serverEnv.VRCA_SERVER_INTERNAL_SERVER_HOST,
+    devMode: serverArgs["dev-mode"] ?? serverEnv.VRCA_SERVER_DEV_MODE,
     containerName:
-        args["container-name"] ?? serverEnv.VRCA_SERVER_CONTAINER_NAME,
+        serverArgs["container-name"] ?? serverEnv.VRCA_SERVER_CONTAINER_NAME,
     postgres: {
-        host: args["postgres-host"] ?? serverEnv.VRCA_SERVER_POSTGRES_HOST,
+        host:
+            serverArgs["postgres-host"] ?? serverEnv.VRCA_SERVER_POSTGRES_HOST,
         port: Number(
-            args["postgres-port"] ?? serverEnv.VRCA_SERVER_POSTGRES_PORT,
+            serverArgs["postgres-port"] ?? serverEnv.VRCA_SERVER_POSTGRES_PORT,
         ),
-        database: args["postgres-db"] ?? serverEnv.VRCA_SERVER_POSTGRES_DB,
-        user: args["postgres-user"] ?? serverEnv.VRCA_SERVER_POSTGRES_USER,
+        database:
+            serverArgs["postgres-db"] ?? serverEnv.VRCA_SERVER_POSTGRES_DB,
+        user:
+            serverArgs["postgres-user"] ?? serverEnv.VRCA_SERVER_POSTGRES_USER,
         password:
-            args["postgres-password"] ??
+            serverArgs["postgres-password"] ??
             serverEnv.VRCA_SERVER_POSTGRES_PASSWORD,
         extensions: (
-            args["postgres-extensions"] ??
+            serverArgs["postgres-extensions"] ??
             serverEnv.VRCA_SERVER_POSTGRES_EXTENSIONS
         )
             .split(",")
@@ -183,23 +138,12 @@ export const VircadiaConfig_Server = {
             .filter((ext) => ext.length > 0),
     },
     pgweb: {
-        port: Number(args["pgweb-port"] ?? serverEnv.VRCA_SERVER_PGWEB_PORT),
+        port: Number(
+            serverArgs["pgweb-port"] ?? serverEnv.VRCA_SERVER_PGWEB_PORT,
+        ),
     },
     auth: {
         providers: JSON.parse(serverEnv.VRCA_SERVER_AUTH_PROVIDERS),
-        jwt: {
-            secret:
-                args["auth-jwt-secret"] ??
-                serverEnv.VRCA_SERVER_AUTH_JWT_SECRET,
-            sessionDuration:
-                args["auth-jwt-session-duration"] ??
-                serverEnv.VRCA_SERVER_AUTH_JWT_SESSION_DURATION,
-        },
-        adminToken: {
-            sessionDuration:
-                args["auth-admin-token-session-duration"] ??
-                serverEnv.VRCA_SERVER_AUTH_ADMIN_TOKEN_SESSION_DURATION,
-        },
     },
 };
 
