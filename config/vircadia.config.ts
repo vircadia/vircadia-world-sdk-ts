@@ -18,8 +18,8 @@ const { positionals, values: args } = parseArgs({
         "postgres-password": { type: "string" },
         "postgres-extensions": { type: "string" },
         "auth-jwt-session-duration": { type: "string" },
-        "auth-jwt-bcrypt-rounds": { type: "string" },
         "auth-jwt-secret": { type: "string" },
+        "auth-admin-token-session-duration": { type: "string" },
         "auth-providers": { type: "string" },
         "pgweb-port": { type: "string" },
     },
@@ -86,8 +86,8 @@ const serverEnvSchema = z.object({
         .default("uuid-ossp,hstore,pgcrypto"),
     VRCA_SERVER_PGWEB_PORT: z.string().default("5437"),
     VRCA_SERVER_AUTH_JWT_SESSION_DURATION: z.string().default("24h"),
-    VRCA_SERVER_AUTH_JWT_BCRYPT_ROUNDS: z.coerce.number().default(10),
     VRCA_SERVER_AUTH_JWT_SECRET: z.string().default("CHANGE_ME!"),
+    VRCA_SERVER_AUTH_ADMIN_TOKEN_SESSION_DURATION: z.string().default("1h"),
     VRCA_SERVER_AUTH_PROVIDERS: z.string().default(
         JSON.stringify({
             github: {
@@ -194,10 +194,11 @@ export const VircadiaConfig_Server = {
             sessionDuration:
                 args["auth-jwt-session-duration"] ??
                 serverEnv.VRCA_SERVER_AUTH_JWT_SESSION_DURATION,
-            bcryptRounds: Number(
-                args["auth-jwt-bcrypt-rounds"] ??
-                    serverEnv.VRCA_SERVER_AUTH_JWT_BCRYPT_ROUNDS,
-            ),
+        },
+        adminToken: {
+            sessionDuration:
+                args["auth-admin-token-session-duration"] ??
+                serverEnv.VRCA_SERVER_AUTH_ADMIN_TOKEN_SESSION_DURATION,
         },
     },
 };
