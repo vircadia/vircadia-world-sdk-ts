@@ -87,7 +87,7 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_PGWEB_PORT: z.string().default("5437"),
     VRCA_SERVER_AUTH_JWT_SESSION_DURATION: z.string().default("24h"),
     VRCA_SERVER_AUTH_JWT_SECRET: z.string().default("CHANGE_ME!"),
-    VRCA_SERVER_AUTH_ADMIN_TOKEN_SESSION_DURATION: z.string().default("1h"),
+    VRCA_SERVER_AUTH_ADMIN_TOKEN_SESSION_DURATION: z.string().default("24h"),
     VRCA_SERVER_AUTH_PROVIDERS: z.string().default(
         JSON.stringify({
             github: {
