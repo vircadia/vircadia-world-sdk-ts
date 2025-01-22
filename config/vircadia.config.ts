@@ -81,7 +81,9 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_POSTGRES_DB: z.string().default("vircadia_world_db"),
     VRCA_SERVER_POSTGRES_USER: z.string().default("vircadia"),
     VRCA_SERVER_POSTGRES_PASSWORD: z.string().default("CHANGE_ME!"),
-    VRCA_SERVER_POSTGRES_EXTENSIONS: z.string().default("uuid-ossp,hstore"),
+    VRCA_SERVER_POSTGRES_EXTENSIONS: z
+        .string()
+        .default("uuid-ossp,hstore,pgcrypto"),
     VRCA_SERVER_PGWEB_PORT: z.string().default("5437"),
     VRCA_SERVER_AUTH_JWT_SESSION_DURATION: z.string().default("24h"),
     VRCA_SERVER_AUTH_JWT_BCRYPT_ROUNDS: z.coerce.number().default(10),
