@@ -117,35 +117,35 @@ export namespace Communication {
     // WebSocket-specific namespace
     export namespace WebSocket {
         export enum MessageType {
-            // System messages
-            HEARTBEAT = "heartbeat",
-            HEARTBEAT_ACK = "heartbeat_ack",
-            CONNECTION_ESTABLISHED = "connection_established",
-            CONNECTION_FAILED = "connection_failed",
-            ERROR = "error",
-            CONFIG_REQUEST = "config_request",
-            CONFIG_RESPONSE = "config_response",
-
-            // Agent messages
-            AGENT_POSITION_UPDATE = "agent_position_update",
-            AGENT_ORIENTATION_UPDATE = "agent_orientation_update",
-            AGENT_STATE_UPDATE = "agent_state_update",
-
-            // Entity messages
-            ENTITY_UPDATE = "entity_update",
-            ENTITY_CREATE = "entity_create",
-            ENTITY_DELETE = "entity_delete",
-
-            // World messages
-            WORLD_STATE_UPDATE = "world_state_update",
+            CONNECTION_ESTABLISHED = "CONNECTION_ESTABLISHED",
+            ERROR = "ERROR",
+            HEARTBEAT = "HEARTBEAT",
+            HEARTBEAT_ACK = "HEARTBEAT_ACK",
+            CONFIG_REQUEST = "CONFIG_REQUEST",
+            CONFIG_RESPONSE = "CONFIG_RESPONSE",
+            QUERY = "QUERY",
+            QUERY_RESPONSE = "QUERY_RESPONSE",
+            SUBSCRIBE = "SUBSCRIBE",
+            SUBSCRIBE_RESPONSE = "SUBSCRIBE_RESPONSE",
+            UNSUBSCRIBE = "UNSUBSCRIBE",
+            UNSUBSCRIBE_RESPONSE = "UNSUBSCRIBE_RESPONSE",
+            NOTIFICATION = "NOTIFICATION",
         }
 
         export interface BaseMessage {
             type: MessageType;
-            timestamp?: number;
         }
 
-        // System Messages
+        export interface ConnectionEstablishedMessage extends BaseMessage {
+            type: MessageType.CONNECTION_ESTABLISHED;
+            agentId: string;
+        }
+
+        export interface ErrorMessage extends BaseMessage {
+            type: MessageType.ERROR;
+            message: string;
+        }
+
         export interface HeartbeatMessage extends BaseMessage {
             type: MessageType.HEARTBEAT;
         }
@@ -154,24 +154,6 @@ export namespace Communication {
             type: MessageType.HEARTBEAT_ACK;
         }
 
-        export interface ConnectionEstablishedMessage extends BaseMessage {
-            type: MessageType.CONNECTION_ESTABLISHED;
-            agentId: string;
-        }
-
-        export interface ConnectionFailedMessage extends BaseMessage {
-            type: MessageType.CONNECTION_FAILED;
-            reason: string;
-            code?: number;
-        }
-
-        export interface ErrorMessage extends BaseMessage {
-            type: MessageType.ERROR;
-            message: string;
-            code?: number;
-        }
-
-        // Configuration Messages
         export interface ConfigRequestMessage extends BaseMessage {
             type: MessageType.CONFIG_REQUEST;
         }
@@ -191,97 +173,74 @@ export namespace Communication {
             };
         }
 
-        // Agent Messages
-        export interface AgentPositionUpdateMessage extends BaseMessage {
-            type: MessageType.AGENT_POSITION_UPDATE;
-            position: {
-                x: number;
-                y: number;
-                z: number;
-            };
+        export interface QueryMessage extends BaseMessage {
+            type: MessageType.QUERY;
+            requestId: string;
+            query: string;
+            parameters?: any[];
         }
 
-        export interface AgentOrientationUpdateMessage extends BaseMessage {
-            type: MessageType.AGENT_ORIENTATION_UPDATE;
-            orientation: {
-                x: number;
-                y: number;
-                z: number;
-                w: number;
-            };
+        export interface QueryResponseMessage extends BaseMessage {
+            type: MessageType.QUERY_RESPONSE;
+            requestId: string;
+            results?: any[];
+            error?: string;
         }
 
-        export interface AgentStateUpdateMessage extends BaseMessage {
-            type: MessageType.AGENT_STATE_UPDATE;
-            state: {
-                position?: {
-                    x: number;
-                    y: number;
-                    z: number;
-                };
-                orientation?: {
-                    x: number;
-                    y: number;
-                    z: number;
-                    w: number;
-                };
-                [key: string]: any;
-            };
+        export interface SubscribeMessage extends BaseMessage {
+            type: MessageType.SUBSCRIBE;
+            channel: string;
         }
 
-        // Entity Messages
-        export interface EntityUpdateMessage extends BaseMessage {
-            type: MessageType.ENTITY_UPDATE;
-            entityId: string;
-            properties: {
-                [key: string]: any;
-            };
+        export interface SubscribeResponseMessage extends BaseMessage {
+            type: MessageType.SUBSCRIBE_RESPONSE;
+            channel: string;
+            success: boolean;
+            error?: string;
         }
 
-        export interface EntityCreateMessage extends BaseMessage {
-            type: MessageType.ENTITY_CREATE;
-            entityId: string;
-            properties: {
-                [key: string]: any;
-            };
+        export interface UnsubscribeMessage extends BaseMessage {
+            type: MessageType.UNSUBSCRIBE;
+            channel: string;
         }
 
-        export interface EntityDeleteMessage extends BaseMessage {
-            type: MessageType.ENTITY_DELETE;
-            entityId: string;
+        export interface UnsubscribeResponseMessage extends BaseMessage {
+            type: MessageType.UNSUBSCRIBE_RESPONSE;
+            channel: string;
+            success: boolean;
+            error?: string;
         }
 
-        // World Messages
-        export interface WorldStateUpdateMessage extends BaseMessage {
-            type: MessageType.WORLD_STATE_UPDATE;
-            state: {
-                [key: string]: any;
-            };
+        export interface NotificationMessage extends BaseMessage {
+            type: MessageType.NOTIFICATION;
+            channel: string;
+            payload: any;
         }
 
-        // Union type of all possible messages
         export type Message =
+            | ConnectionEstablishedMessage
+            | ErrorMessage
             | HeartbeatMessage
             | HeartbeatAckMessage
-            | ConnectionEstablishedMessage
-            | ConnectionFailedMessage
-            | ErrorMessage
             | ConfigRequestMessage
             | ConfigResponseMessage
-            | AgentPositionUpdateMessage
-            | AgentOrientationUpdateMessage
-            | AgentStateUpdateMessage
-            | EntityUpdateMessage
-            | EntityCreateMessage
-            | EntityDeleteMessage
-            | WorldStateUpdateMessage;
+            | QueryMessage
+            | QueryResponseMessage
+            | SubscribeMessage
+            | SubscribeResponseMessage
+            | UnsubscribeMessage
+            | UnsubscribeResponseMessage
+            | NotificationMessage;
 
-        // WebSocket-specific message creators
         export function createMessage<T extends Message>(message: T): T {
-            return {
-                ...message,
-                timestamp: Date.now(),
-            };
+            return message;
+        }
+
+        export function isMessageType<T extends Message>(
+            message: Message,
+            type: MessageType,
+        ): message is T {
+            return message.type === type;
         }
     }
 
