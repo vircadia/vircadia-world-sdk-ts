@@ -110,6 +110,15 @@ export namespace Agent {
 }
 
 export namespace Communication {
+    export const WS_BASE_URL = "/world/ws";
+    export const REST_BASE_URL = "/world/auth";
+
+    export const RESTEndpoint = {
+        AUTH_SESSION: `${REST_BASE_URL}/session`,
+        AUTH_SESSION_VALIDATE: `${REST_BASE_URL}/session/validate`,
+        AUTH_SESSION_LOGOUT: `${REST_BASE_URL}/session/logout`,
+    };
+
     export enum MessageType {
         // System messages
         HEARTBEAT = "heartbeat",
