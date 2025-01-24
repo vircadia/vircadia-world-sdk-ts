@@ -110,172 +110,277 @@ export namespace Agent {
 }
 
 export namespace Communication {
+    // Shared base URLs
     export const WS_BASE_URL = "/world/ws";
     export const REST_BASE_URL = "/world/auth";
 
-    export const RESTEndpoint = {
-        AUTH_SESSION: `${REST_BASE_URL}/session`,
-        AUTH_SESSION_VALIDATE: `${REST_BASE_URL}/session/validate`,
-        AUTH_SESSION_LOGOUT: `${REST_BASE_URL}/session/logout`,
-    };
+    // WebSocket-specific namespace
+    export namespace WebSocket {
+        export enum MessageType {
+            // System messages
+            HEARTBEAT = "heartbeat",
+            HEARTBEAT_ACK = "heartbeat_ack",
+            CONNECTION_ESTABLISHED = "connection_established",
+            CONNECTION_FAILED = "connection_failed",
+            ERROR = "error",
+            CONFIG_REQUEST = "config_request",
+            CONFIG_RESPONSE = "config_response",
 
-    export enum MessageType {
-        // System messages
-        HEARTBEAT = "heartbeat",
-        HEARTBEAT_ACK = "heartbeat_ack",
-        CONNECTION_ESTABLISHED = "connection_established",
-        ERROR = "error",
-        CONFIG_REQUEST = "config_request",
-        CONFIG_RESPONSE = "config_response",
+            // Authentication messages
+            AUTH_REQUEST = "auth_request",
+            AUTH_RESPONSE = "auth_response",
+            AUTH_LOGOUT = "auth_logout",
+            AUTH_LOGOUT_RESPONSE = "auth_logout_response",
 
-        // Agent messages
-        AGENT_POSITION_UPDATE = "agent_position_update",
-        AGENT_ORIENTATION_UPDATE = "agent_orientation_update",
-        AGENT_STATE_UPDATE = "agent_state_update",
+            // Agent messages
+            AGENT_POSITION_UPDATE = "agent_position_update",
+            AGENT_ORIENTATION_UPDATE = "agent_orientation_update",
+            AGENT_STATE_UPDATE = "agent_state_update",
 
-        // Entity messages
-        ENTITY_UPDATE = "entity_update",
-        ENTITY_CREATE = "entity_create",
-        ENTITY_DELETE = "entity_delete",
+            // Entity messages
+            ENTITY_UPDATE = "entity_update",
+            ENTITY_CREATE = "entity_create",
+            ENTITY_DELETE = "entity_delete",
 
-        // World messages
-        WORLD_STATE_UPDATE = "world_state_update",
-    }
+            // World messages
+            WORLD_STATE_UPDATE = "world_state_update",
+        }
 
-    export interface BaseMessage {
-        type: MessageType;
-        timestamp?: number;
-    }
+        export interface BaseMessage {
+            type: MessageType;
+            timestamp?: number;
+        }
 
-    // System Messages
-    export interface HeartbeatMessage extends BaseMessage {
-        type: MessageType.HEARTBEAT;
-    }
+        // System Messages
+        export interface HeartbeatMessage extends BaseMessage {
+            type: MessageType.HEARTBEAT;
+        }
 
-    export interface HeartbeatAckMessage extends BaseMessage {
-        type: MessageType.HEARTBEAT_ACK;
-    }
+        export interface HeartbeatAckMessage extends BaseMessage {
+            type: MessageType.HEARTBEAT_ACK;
+        }
 
-    export interface ConnectionEstablishedMessage extends BaseMessage {
-        type: MessageType.CONNECTION_ESTABLISHED;
-        agentId: string;
-    }
+        export interface ConnectionEstablishedMessage extends BaseMessage {
+            type: MessageType.CONNECTION_ESTABLISHED;
+            agentId: string;
+        }
 
-    export interface ErrorMessage extends BaseMessage {
-        type: MessageType.ERROR;
-        message: string;
-        code?: number;
-    }
+        export interface ConnectionFailedMessage extends BaseMessage {
+            type: MessageType.CONNECTION_FAILED;
+            reason: string;
+            code?: number;
+        }
 
-    // Configuration Messages
-    export interface ConfigRequestMessage extends BaseMessage {
-        type: MessageType.CONFIG_REQUEST;
-    }
+        export interface ErrorMessage extends BaseMessage {
+            type: MessageType.ERROR;
+            message: string;
+            code?: number;
+        }
 
-    export interface ConfigResponseMessage extends BaseMessage {
-        type: MessageType.CONFIG_RESPONSE;
-        config: {
-            heartbeat: {
-                interval: number;
-                timeout: number;
+        // Configuration Messages
+        export interface ConfigRequestMessage extends BaseMessage {
+            type: MessageType.CONFIG_REQUEST;
+        }
+
+        export interface ConfigResponseMessage extends BaseMessage {
+            type: MessageType.CONFIG_RESPONSE;
+            config: {
+                heartbeat: {
+                    interval: number;
+                    timeout: number;
+                };
+                session: {
+                    max_session_age_ms: number;
+                    cleanup_interval_ms: number;
+                    inactive_timeout_ms: number;
+                };
             };
-            session: {
-                max_session_age_ms: number;
-                cleanup_interval_ms: number;
-                inactive_timeout_ms: number;
-            };
-        };
-    }
+        }
 
-    // Agent Messages
-    export interface AgentPositionUpdateMessage extends BaseMessage {
-        type: MessageType.AGENT_POSITION_UPDATE;
-        position: {
-            x: number;
-            y: number;
-            z: number;
-        };
-    }
+        // Authentication Messages
+        export interface AuthRequestMessage extends BaseMessage {
+            type: MessageType.AUTH_REQUEST;
+            token: string;
+        }
 
-    export interface AgentOrientationUpdateMessage extends BaseMessage {
-        type: MessageType.AGENT_ORIENTATION_UPDATE;
-        orientation: {
-            x: number;
-            y: number;
-            z: number;
-            w: number;
-        };
-    }
+        export interface AuthResponseMessage extends BaseMessage {
+            type: MessageType.AUTH_RESPONSE;
+            success: boolean;
+            agentId?: string;
+            error?: string;
+        }
 
-    export interface AgentStateUpdateMessage extends BaseMessage {
-        type: MessageType.AGENT_STATE_UPDATE;
-        state: {
-            position?: {
+        export interface AuthLogoutMessage extends BaseMessage {
+            type: MessageType.AUTH_LOGOUT;
+            agentId: string;
+        }
+
+        export interface AuthLogoutResponseMessage extends BaseMessage {
+            type: MessageType.AUTH_LOGOUT_RESPONSE;
+            success: boolean;
+            error?: string;
+        }
+
+        // Agent Messages
+        export interface AgentPositionUpdateMessage extends BaseMessage {
+            type: MessageType.AGENT_POSITION_UPDATE;
+            position: {
                 x: number;
                 y: number;
                 z: number;
             };
-            orientation?: {
+        }
+
+        export interface AgentOrientationUpdateMessage extends BaseMessage {
+            type: MessageType.AGENT_ORIENTATION_UPDATE;
+            orientation: {
                 x: number;
                 y: number;
                 z: number;
                 w: number;
             };
-            [key: string]: any;
-        };
+        }
+
+        export interface AgentStateUpdateMessage extends BaseMessage {
+            type: MessageType.AGENT_STATE_UPDATE;
+            state: {
+                position?: {
+                    x: number;
+                    y: number;
+                    z: number;
+                };
+                orientation?: {
+                    x: number;
+                    y: number;
+                    z: number;
+                    w: number;
+                };
+                [key: string]: any;
+            };
+        }
+
+        // Entity Messages
+        export interface EntityUpdateMessage extends BaseMessage {
+            type: MessageType.ENTITY_UPDATE;
+            entityId: string;
+            properties: {
+                [key: string]: any;
+            };
+        }
+
+        export interface EntityCreateMessage extends BaseMessage {
+            type: MessageType.ENTITY_CREATE;
+            entityId: string;
+            properties: {
+                [key: string]: any;
+            };
+        }
+
+        export interface EntityDeleteMessage extends BaseMessage {
+            type: MessageType.ENTITY_DELETE;
+            entityId: string;
+        }
+
+        // World Messages
+        export interface WorldStateUpdateMessage extends BaseMessage {
+            type: MessageType.WORLD_STATE_UPDATE;
+            state: {
+                [key: string]: any;
+            };
+        }
+
+        // Union type of all possible messages
+        export type Message =
+            | HeartbeatMessage
+            | HeartbeatAckMessage
+            | ConnectionEstablishedMessage
+            | ConnectionFailedMessage
+            | ErrorMessage
+            | ConfigRequestMessage
+            | ConfigResponseMessage
+            | AuthRequestMessage
+            | AuthResponseMessage
+            | AuthLogoutMessage
+            | AuthLogoutResponseMessage
+            | AgentPositionUpdateMessage
+            | AgentOrientationUpdateMessage
+            | AgentStateUpdateMessage
+            | EntityUpdateMessage
+            | EntityCreateMessage
+            | EntityDeleteMessage
+            | WorldStateUpdateMessage;
+
+        // WebSocket-specific message creators
+        export function createMessage<T extends Message>(message: T): T {
+            return {
+                ...message,
+                timestamp: Date.now(),
+            };
+        }
     }
 
-    // Entity Messages
-    export interface EntityUpdateMessage extends BaseMessage {
-        type: MessageType.ENTITY_UPDATE;
-        entityId: string;
-        properties: {
-            [key: string]: any;
-        };
-    }
+    // REST-specific namespace
+    export namespace REST {
+        // Base interface for all REST responses
+        export interface BaseResponse {
+            success: boolean;
+            timestamp: number;
+            error?: string;
+        }
 
-    export interface EntityCreateMessage extends BaseMessage {
-        type: MessageType.ENTITY_CREATE;
-        entityId: string;
-        properties: {
-            [key: string]: any;
-        };
-    }
+        // Generic response type
+        export interface Response<T = unknown> extends BaseResponse {
+            data?: T;
+        }
 
-    export interface EntityDeleteMessage extends BaseMessage {
-        type: MessageType.ENTITY_DELETE;
-        entityId: string;
-    }
+        // Specific response types
+        export interface SessionResponse extends BaseResponse {
+            data?: {
+                token: string;
+            };
+        }
 
-    // World Messages
-    export interface WorldStateUpdateMessage extends BaseMessage {
-        type: MessageType.WORLD_STATE_UPDATE;
-        state: {
-            [key: string]: any;
-        };
-    }
+        export interface SessionValidationResponse extends BaseResponse {
+            data?: {
+                isValid: boolean;
+                agentId?: string;
+            };
+        }
 
-    // Union type of all possible messages
-    export type Message =
-        | HeartbeatMessage
-        | HeartbeatAckMessage
-        | ConnectionEstablishedMessage
-        | ErrorMessage
-        | ConfigRequestMessage
-        | ConfigResponseMessage
-        | AgentPositionUpdateMessage
-        | AgentOrientationUpdateMessage
-        | AgentStateUpdateMessage
-        | EntityUpdateMessage
-        | EntityCreateMessage
-        | EntityDeleteMessage
-        | WorldStateUpdateMessage;
+        // Endpoint definitions with type safety
+        export const Endpoint = {
+            AUTH_SESSION: {
+                path: `${REST_BASE_URL}/session`,
+                method: "POST",
+                response: {} as SessionResponse,
+            },
+            AUTH_SESSION_VALIDATE: {
+                path: `${REST_BASE_URL}/session/validate`,
+                method: "POST",
+                response: {} as SessionValidationResponse,
+            },
+            AUTH_SESSION_LOGOUT: {
+                path: `${REST_BASE_URL}/session/logout`,
+                method: "POST",
+                response: {} as BaseResponse,
+            },
+        } as const;
 
-    // Helper function to create typed messages
-    export function createMessage<T extends Message>(message: T): T {
-        return {
-            ...message,
-            timestamp: Date.now(),
-        };
+        // REST-specific response creators
+        export function createSuccessResponse<T>(data: T): Response<T> {
+            return {
+                success: true,
+                timestamp: Date.now(),
+                data,
+            };
+        }
+
+        export function createErrorResponse(error: string): BaseResponse {
+            return {
+                success: false,
+                timestamp: Date.now(),
+                error,
+            };
+        }
     }
 }
