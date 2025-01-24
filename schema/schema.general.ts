@@ -126,12 +126,6 @@ export namespace Communication {
             CONFIG_REQUEST = "config_request",
             CONFIG_RESPONSE = "config_response",
 
-            // Authentication messages
-            AUTH_REQUEST = "auth_request",
-            AUTH_RESPONSE = "auth_response",
-            AUTH_LOGOUT = "auth_logout",
-            AUTH_LOGOUT_RESPONSE = "auth_logout_response",
-
             // Agent messages
             AGENT_POSITION_UPDATE = "agent_position_update",
             AGENT_ORIENTATION_UPDATE = "agent_orientation_update",
@@ -195,30 +189,6 @@ export namespace Communication {
                     inactive_timeout_ms: number;
                 };
             };
-        }
-
-        // Authentication Messages
-        export interface AuthRequestMessage extends BaseMessage {
-            type: MessageType.AUTH_REQUEST;
-            token: string;
-        }
-
-        export interface AuthResponseMessage extends BaseMessage {
-            type: MessageType.AUTH_RESPONSE;
-            success: boolean;
-            agentId?: string;
-            error?: string;
-        }
-
-        export interface AuthLogoutMessage extends BaseMessage {
-            type: MessageType.AUTH_LOGOUT;
-            agentId: string;
-        }
-
-        export interface AuthLogoutResponseMessage extends BaseMessage {
-            type: MessageType.AUTH_LOGOUT_RESPONSE;
-            success: boolean;
-            error?: string;
         }
 
         // Agent Messages
@@ -298,10 +268,6 @@ export namespace Communication {
             | ErrorMessage
             | ConfigRequestMessage
             | ConfigResponseMessage
-            | AuthRequestMessage
-            | AuthResponseMessage
-            | AuthLogoutMessage
-            | AuthLogoutResponseMessage
             | AgentPositionUpdateMessage
             | AgentOrientationUpdateMessage
             | AgentStateUpdateMessage
@@ -321,66 +287,85 @@ export namespace Communication {
 
     // REST-specific namespace
     export namespace REST {
-        // Base interface for all REST responses
+        // Base interfaces
         export interface BaseResponse {
             success: boolean;
             timestamp: number;
             error?: string;
         }
 
-        // Generic response type
         export interface Response<T = unknown> extends BaseResponse {
             data?: T;
         }
 
-        // Specific response types
-        export interface SessionResponse extends BaseResponse {
-            data?: {
-                token: string;
-            };
-        }
-
-        export interface SessionValidationResponse extends BaseResponse {
-            data?: {
+        // Session validation endpoint interfaces
+        export interface SessionValidationSuccessResponse extends BaseResponse {
+            success: true;
+            data: {
                 isValid: boolean;
                 agentId?: string;
             };
         }
 
-        // Endpoint definitions with type safety
+        export interface SessionValidationErrorResponse extends BaseResponse {
+            success: false;
+            error: string;
+        }
+
+        export type SessionValidationResponse =
+            | SessionValidationSuccessResponse
+            | SessionValidationErrorResponse;
+
+        // Session logout endpoint interfaces
+        export interface SessionLogoutSuccessResponse extends BaseResponse {
+            success: true;
+        }
+
+        export interface SessionLogoutErrorResponse extends BaseResponse {
+            success: false;
+            error: string;
+        }
+
+        export type SessionLogoutResponse =
+            | SessionLogoutSuccessResponse
+            | SessionLogoutErrorResponse;
+
+        // Endpoint definitions with type safety and response creators
         export const Endpoint = {
-            AUTH_SESSION: {
-                path: `${REST_BASE_URL}/session`,
-                method: "POST",
-                response: {} as SessionResponse,
-            },
             AUTH_SESSION_VALIDATE: {
                 path: `${REST_BASE_URL}/session/validate`,
                 method: "POST",
                 response: {} as SessionValidationResponse,
+                createSuccess: (
+                    isValid: boolean,
+                    agentId?: string,
+                ): SessionValidationSuccessResponse => ({
+                    success: true,
+                    timestamp: Date.now(),
+                    data: { isValid, agentId },
+                }),
+                createError: (
+                    error: string,
+                ): SessionValidationErrorResponse => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
             },
             AUTH_SESSION_LOGOUT: {
                 path: `${REST_BASE_URL}/session/logout`,
                 method: "POST",
-                response: {} as BaseResponse,
+                response: {} as SessionLogoutResponse,
+                createSuccess: (): SessionLogoutSuccessResponse => ({
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (error: string): SessionLogoutErrorResponse => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
             },
         } as const;
-
-        // REST-specific response creators
-        export function createSuccessResponse<T>(data: T): Response<T> {
-            return {
-                success: true,
-                timestamp: Date.now(),
-                data,
-            };
-        }
-
-        export function createErrorResponse(error: string): BaseResponse {
-            return {
-                success: false,
-                timestamp: Date.now(),
-                error,
-            };
-        }
     }
 }
