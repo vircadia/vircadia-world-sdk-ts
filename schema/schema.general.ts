@@ -263,6 +263,7 @@ export namespace Communication {
             data: {
                 isValid: boolean;
                 agentId?: string;
+                sessionId?: string;
             };
         }
 
@@ -298,10 +299,11 @@ export namespace Communication {
                 createSuccess: (
                     isValid: boolean,
                     agentId?: string,
+                    sessionId?: string,
                 ): SessionValidationSuccessResponse => ({
                     success: true,
                     timestamp: Date.now(),
-                    data: { isValid, agentId },
+                    data: { isValid, agentId, sessionId },
                 }),
                 createError: (
                     error: string,
