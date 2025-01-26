@@ -110,9 +110,8 @@ export namespace Agent {
 }
 
 export namespace Communication {
-    // Shared base URLs
-    export const WS_BASE_URL = "/world/ws";
-    export const REST_BASE_URL = "/world/auth";
+    export const WS_PATH = "/world/ws";
+    export const REST_BASE_PATH = "/world/auth";
 
     // WebSocket-specific namespace
     export namespace WebSocket {
@@ -293,7 +292,7 @@ export namespace Communication {
         // Endpoint definitions with type safety and response creators
         export const Endpoint = {
             AUTH_SESSION_VALIDATE: {
-                path: `${REST_BASE_URL}/session/validate`,
+                path: `${REST_BASE_PATH}/session/validate`,
                 method: "POST",
                 response: {} as SessionValidationResponse,
                 createSuccess: (
@@ -314,7 +313,7 @@ export namespace Communication {
                 }),
             },
             AUTH_SESSION_LOGOUT: {
-                path: `${REST_BASE_URL}/session/logout`,
+                path: `${REST_BASE_PATH}/session/logout`,
                 method: "POST",
                 response: {} as SessionLogoutResponse,
                 createSuccess: (): SessionLogoutSuccessResponse => ({
