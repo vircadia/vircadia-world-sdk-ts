@@ -53,8 +53,9 @@ function browserLog(data: Parameters<typeof log>[0]): void {
     }
 
     const formattedMessage = `${prefix}${icon} ${data.message}`;
+    const hasGroup = !!data.data;
 
-    if (data.data) {
+    if (hasGroup) {
         console.group(formattedMessage);
     }
 
@@ -92,7 +93,7 @@ function browserLog(data: Parameters<typeof log>[0]): void {
     }
 
     // Show additional data if present and close group
-    if (data.data) {
+    if (hasGroup) {
         console.log("Additional data:", JSON.stringify(data.data, null, 2));
         console.groupEnd();
     }
@@ -105,22 +106,26 @@ function nodeLog(data: Parameters<typeof log>[0]): void {
     }
 
     const prefix = data.prefix ? `[${data.prefix}]: ` : "";
+    const hasGroup = !!data.data;
 
-    // If there's additional data, start a group with the actual message
-    if (data.data) {
+    if (hasGroup) {
         console.group(`${prefix}${data.message}`);
     }
 
     switch (data.type) {
         case "debug":
-            if (!data.debug) return;
-            // Only show the message without grouping if we're not in a group
-            if (!data.data) {
+            if (!data.debug) {
+                if (hasGroup) {
+                    console.groupEnd();
+                }
+                return;
+            }
+            if (!hasGroup) {
                 console.debug(EC.blue(`${prefix}ℹ ${data.message}`));
             }
             break;
         case "info":
-            if (!data.data) {
+            if (!hasGroup) {
                 console.info(EC.blue(`${prefix}ℹ ${data.message}`));
             }
             break;
@@ -151,7 +156,7 @@ function nodeLog(data: Parameters<typeof log>[0]): void {
     }
 
     // Show additional data if present and close group
-    if (data.data) {
+    if (hasGroup) {
         console.log("Additional data:", JSON.stringify(data.data, null, 2));
         console.groupEnd();
     }
