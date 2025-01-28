@@ -1,5 +1,8 @@
 import { log } from "../general/log";
-import type { Script as ScriptSchema } from "../../schema/schema.general";
+import type {
+    Script as ScriptSchema,
+    Entity as EntitySchema,
+} from "../../schema/schema.general";
 
 export namespace Script {
     export const scriptLogPrefix = "[SCRIPT]";
@@ -32,9 +35,6 @@ export namespace Script {
                     context.Vircadia?.Hook?.onScriptBeforeUnmount,
                 onEntityBeforeUnmount:
                     context.Vircadia?.Hook?.onEntityBeforeUnmount,
-                onEngineUpdate: context.Vircadia?.Hook?.onEngineUpdate,
-                onEngineFixedUpdate:
-                    context.Vircadia?.Hook?.onEngineFixedUpdate,
                 onScriptMount: context.Vircadia?.Hook?.onScriptMount,
                 onEntityUpdate: context.Vircadia?.Hook?.onEntityUpdate,
                 onEntityKeyframeUpdate:
@@ -64,6 +64,55 @@ export namespace Script {
             scriptFunction,
             hooks,
         };
+    }
+
+    export function executeHooks(
+        hooks: ScriptSchema.Base.I_Hook,
+        hookName: keyof ScriptSchema.Base.I_Hook,
+        ...args: any[]
+    ): void {
+        try {
+            const hook = hooks[hookName];
+            if (typeof hook === "function") {
+                (hook as (...args: unknown[]) => void)(...args);
+            }
+        } catch (error) {
+            log({
+                message: `${scriptLogPrefix} Error executing hook ${String(hookName)}: ${error}`,
+                type: "error",
+            });
+        }
+    }
+
+    // Convenience methods for specific hooks
+    export function executeScriptBeforeUnmount(
+        hooks: ScriptSchema.Base.I_Hook,
+    ): void {
+        executeHooks(hooks, "onScriptBeforeUnmount");
+    }
+
+    export function executeEntityBeforeUnmount(
+        hooks: ScriptSchema.Base.I_Hook,
+    ): void {
+        executeHooks(hooks, "onEntityBeforeUnmount");
+    }
+
+    export function executeScriptMount(hooks: ScriptSchema.Base.I_Hook): void {
+        executeHooks(hooks, "onScriptMount");
+    }
+
+    export function executeEntityUpdate(
+        hooks: ScriptSchema.Base.I_Hook,
+        entity: EntitySchema.I_EntityData,
+    ): void {
+        executeHooks(hooks, "onEntityUpdate", entity);
+    }
+
+    export function executeEntityKeyframeUpdate(
+        hooks: ScriptSchema.Base.I_Hook,
+        entity: EntitySchema.I_EntityData,
+    ): void {
+        executeHooks(hooks, "onEntityKeyframeUpdate", entity);
     }
 }
 

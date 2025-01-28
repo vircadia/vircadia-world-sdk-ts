@@ -19,15 +19,7 @@ export namespace Script {
         export interface I_Context {
             Vircadia: {
                 Client: typeof postgres;
-                Meta: {
-                    isRunningOnClient: boolean;
-                    isRunningOnWorld: boolean;
-                };
                 Hook: I_Hook;
-                Performance: {
-                    clientUpdateSyncMs: number;
-                    clientKeyframeSyncMs: number;
-                };
                 [key: string]: any;
             };
         }
@@ -41,8 +33,6 @@ export namespace Script {
             onScriptBeforeUnmount?: () => void;
             onEntityBeforeUnmount?: () => void;
             onScriptMount?: () => void;
-            onEngineUpdate?: () => void;
-            onEngineFixedUpdate?: () => void;
             onEntityUpdate?: (entity: Entity.I_EntityData) => void;
             onEntityKeyframeUpdate?: (entity: Entity.I_EntityData) => void;
         }
