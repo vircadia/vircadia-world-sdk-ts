@@ -24,6 +24,7 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_POSTGRES_EXTENSIONS: z
         .string()
         .default("uuid-ossp,hstore,pgcrypto"),
+    VRCA_SERVER_POSTGRES_SEEDS_PATH: z.string().optional(),
     VRCA_SERVER_PGWEB_PORT: z.string().default("5437"),
     VRCA_SERVER_AUTH_PROVIDERS: z.string().default(JSON.stringify({})),
 });
@@ -91,6 +92,7 @@ export const VircadiaConfig_Server = {
         extensions: serverEnv.VRCA_SERVER_POSTGRES_EXTENSIONS.split(",")
             .map((ext) => ext.trim())
             .filter((ext) => ext.length > 0),
+        seedsPath: serverEnv.VRCA_SERVER_POSTGRES_SEEDS_PATH,
     },
     pgweb: {
         port: Number(serverEnv.VRCA_SERVER_PGWEB_PORT),
