@@ -1,5 +1,10 @@
 import type { Script } from "../../schema/schema.general";
-import * as BABYLON from "@babylonjs/core";
+import {
+    type AbstractMesh,
+    Quaternion,
+    SceneLoader,
+    Vector3,
+} from "@babylonjs/core";
 
 export function scriptFunction(context: Script.Babylon.I_Context) {
     const { Vircadia } = context;
@@ -11,7 +16,7 @@ export function scriptFunction(context: Script.Babylon.I_Context) {
     let scale = JSON.parse(Vircadia.Entity.metadata.scale);
 
     // Reference to hold our mesh
-    let modelMesh: BABYLON.AbstractMesh | null = null;
+    let modelMesh: AbstractMesh | null = null;
 
     // Helper to update transform
     function updateTransform() {
@@ -22,14 +27,14 @@ export function scriptFunction(context: Script.Babylon.I_Context) {
 
         // Update rotation (converting from quaternion)
         if (rotation.w !== undefined) {
-            modelMesh.rotationQuaternion = new BABYLON.Quaternion(
+            modelMesh.rotationQuaternion = new Quaternion(
                 rotation.x,
                 rotation.y,
                 rotation.z,
                 rotation.w,
             );
         } else {
-            modelMesh.rotation = new BABYLON.Vector3(
+            modelMesh.rotation = new Vector3(
                 rotation.x,
                 rotation.y,
                 rotation.z,
@@ -44,7 +49,7 @@ export function scriptFunction(context: Script.Babylon.I_Context) {
     async function setupModel() {
         try {
             // Import the model
-            const result = await BABYLON.SceneLoader.ImportMeshAsync(
+            const result = await SceneLoader.ImportMeshAsync(
                 "",
                 modelUrl,
                 "",
