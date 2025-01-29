@@ -14,6 +14,7 @@ const serverEnvSchema = z.object({
         .default(false),
     VRCA_SERVER_PORT: z.string().default("3020"),
     VRCA_SERVER_HOST: z.string().default("0.0.0.0"),
+    VRCA_SERVER_USING_SSL: z.boolean().default(false),
     VRCA_SERVER_DEV_MODE: z.boolean().default(false),
     VRCA_SERVER_CONTAINER_NAME: z.string().default("vircadia_world"),
     VRCA_SERVER_POSTGRES_HOST: z.string().default("localhost"),
@@ -57,6 +58,7 @@ const clientEnvSchema = z.object({
         .url()
         .default("https://app.vircadia.com"),
     VRCA_CLIENT_DEFAULT_WORLD_SERVER_URI: z.string().default("localhost:3020"),
+    VRCA_CLIENT_DEFAULT_WORLD_SERVER_URI_USING_SSL: z.boolean().default(false),
 });
 
 // Parse environments
@@ -74,6 +76,8 @@ export const VircadiaConfig_Client = {
     defaultOgType: clientEnv.VRCA_CLIENT_DEFAULT_OG_TYPE,
     baseAppUrl: clientEnv.VRCA_CLIENT_BASE_APP_URL,
     defaultWorldServerUri: clientEnv.VRCA_CLIENT_DEFAULT_WORLD_SERVER_URI,
+    defaultWorldServerUriUsingSsl:
+        clientEnv.VRCA_CLIENT_DEFAULT_WORLD_SERVER_URI_USING_SSL,
 };
 
 // Server config
@@ -81,6 +85,7 @@ export const VircadiaConfig_Server = {
     debug: serverEnv.VRCA_SERVER_DEBUG,
     serverPort: Number.parseInt(serverEnv.VRCA_SERVER_PORT),
     serverHost: serverEnv.VRCA_SERVER_HOST,
+    serverUsingSsl: serverEnv.VRCA_SERVER_USING_SSL,
     devMode: serverEnv.VRCA_SERVER_DEV_MODE,
     containerName: serverEnv.VRCA_SERVER_CONTAINER_NAME,
     postgres: {

@@ -118,7 +118,8 @@ export namespace Communication {
             SUBSCRIBE_RESPONSE = "SUBSCRIBE_RESPONSE",
             UNSUBSCRIBE = "UNSUBSCRIBE",
             UNSUBSCRIBE_RESPONSE = "UNSUBSCRIBE_RESPONSE",
-            NOTIFICATION = "NOTIFICATION",
+            NOTIFICATION_ENTITY_UPDATE = "NOTIFICATION_ENTITY_UPDATE",
+            NOTIFICATION_ENTITY_SCRIPT_UPDATE = "NOTIFICATION_ENTITY_SCRIPT_UPDATE",
         }
 
         export interface BaseMessage {
@@ -200,10 +201,23 @@ export namespace Communication {
             error?: string;
         }
 
-        export interface NotificationMessage extends BaseMessage {
-            type: MessageType.NOTIFICATION;
-            channel: string;
-            payload: any;
+        export interface BaseNotificationMessage extends BaseMessage {
+            id: string;
+            operation: string;
+            timestamp: string;
+            syncGroup: string | null;
+            changedColumns?: string[];
+        }
+
+        export interface NotificationEntityUpdateMessage
+            extends BaseNotificationMessage {
+            type: MessageType.NOTIFICATION_ENTITY_UPDATE;
+            syncGroup: string;
+        }
+
+        export interface NotificationEntityScriptUpdateMessage
+            extends BaseNotificationMessage {
+            type: MessageType.NOTIFICATION_ENTITY_SCRIPT_UPDATE;
         }
 
         export type Message =
@@ -219,7 +233,8 @@ export namespace Communication {
             | SubscribeResponseMessage
             | UnsubscribeMessage
             | UnsubscribeResponseMessage
-            | NotificationMessage;
+            | NotificationEntityUpdateMessage
+            | NotificationEntityScriptUpdateMessage;
 
         export function createMessage<T extends Message>(message: T): T {
             return message;
