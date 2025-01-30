@@ -16,10 +16,35 @@ export namespace Script {
     }
 
     export namespace Base {
+        export interface I_TickInfo {
+            tickNumber: number;
+            deltaTime: number; // ms since last tick
+            syncGroup: string; // 'REALTIME', 'NORMAL', 'BACKGROUND'
+            serverTickNumber: number; // current server tick
+            tickLag: number; // how many ticks behind server
+            timeUntilNextTick: number; // ms until next tick
+            timestamp: number; // current tick timestamp
+            tickRate: number; // ms per tick for current sync group
+        }
+
         export interface I_Context {
             Vircadia: {
-                Client: typeof postgres;
+                Version: string;
+                Query: {
+                    execute: (
+                        query: string,
+                        parameters?: any[],
+                    ) => Promise<any[]>;
+                };
                 Hook: I_Hook;
+                Tick: {
+                    getCurrentTick: () => I_TickInfo;
+                };
+                State: {
+                    getCurrentState: () => Entity.I_EntityData;
+                    getLastKnownState: () => Entity.I_EntityData;
+                    getPastStates: (count: number) => Entity.I_EntityData[];
+                };
                 [key: string]: any;
             };
         }
@@ -30,18 +55,87 @@ export namespace Script {
         }
 
         export interface I_Hook {
-            onScriptBeforeUnmount?: () => void;
-            onEntityBeforeUnmount?: () => void;
+            // Lifecycle hooks
             onScriptMount?: () => void;
-            onEntityUpdate?: (entity: Entity.I_EntityData) => void;
-            onEntityKeyframeUpdate?: (entity: Entity.I_EntityData) => void;
+            onScriptBeforeUnmount?: () => void;
+
+            // Entity state hooks
+            onEntityUpdate?: (
+                entity: Entity.I_EntityData,
+                tickInfo: I_TickInfo,
+            ) => void;
+            onEntityBeforeUnmount?: () => void;
         }
+    }
+
+    // Add new types for script changes
+    export interface ScriptCompilationStatus {
+        script?: string;
+        script_sha256?: string;
+        script_status?: "PENDING" | "COMPILED" | "FAILED";
+    }
+
+    export interface ScriptSourceInfo {
+        repo_entry_path?: string;
+        repo_url?: string;
+    }
+
+    export interface ScriptSourceChanges {
+        node?: ScriptSourceInfo;
+        bun?: ScriptSourceInfo;
+        browser?: ScriptSourceInfo;
+    }
+
+    export interface ScriptChanges {
+        script_id: string;
+        changes: {
+            node?: ScriptCompilationStatus;
+            bun?: ScriptCompilationStatus;
+            browser?: ScriptCompilationStatus;
+            source?: ScriptSourceChanges;
+        };
     }
 }
 
 export namespace Entity {
     export interface I_EntityData {
         [key: string]: any;
+    }
+
+    // Add new types for entity changes
+    export type OperationType = "INSERT" | "UPDATE" | "DELETE";
+
+    export interface EntityChanges {
+        general?: {
+            name?: string;
+            semantic_version?: string;
+            created_at?: string;
+            created_by?: string;
+            updated_at?: string;
+            updated_by?: string;
+            load_priority?: number;
+            initialized_at?: string;
+            initialized_by?: string;
+        };
+        meta?: any; // jsonb type from database
+        scripts?: {
+            ids?: string[];
+            validation_log?: any;
+        };
+        permissions?: {
+            roles_view?: string[];
+            roles_full?: string[];
+        };
+        performance?: {
+            sync_group?: string;
+        };
+    }
+
+    export interface EntityChange {
+        entity_id: string;
+        operation: OperationType;
+        changes: EntityChanges | null;
+        session_ids: string[];
     }
 }
 
