@@ -1,141 +1,198 @@
 import { z } from "zod";
-import type postgres from "postgres";
 import type { Scene } from "@babylonjs/core";
 
-export namespace Script {
-    export namespace Babylon {
-        export interface I_Context extends Base.I_Context {
-            Vircadia: Base.I_Context["Vircadia"] & {
-                Babylon: {
-                    Scene: Scene;
+export namespace Entity {
+    export interface I_Entity {
+        general__entity_id: string;
+        general__name: string;
+        general__semantic_version: string;
+        general__created_at?: string;
+        general__created_by?: string;
+        general__updated_at?: string;
+        general__updated_by?: string;
+        general__load_priority?: number;
+        general__initialized_at?: string;
+        general__initialized_by?: string;
+        meta__data: {
+            babylon_js: {
+                model_url: string;
+                position: {
+                    x: number;
+                    y: number;
+                    z: number;
+                };
+                rotation: {
+                    x: number;
+                    y: number;
+                    z: number;
+                    w: number;
+                };
+                scale: {
+                    x: number;
+                    y: number;
+                    z: number;
                 };
             };
-        }
-
-        export interface I_Return extends Base.I_Return {}
-    }
-
-    export namespace Base {
-        export interface I_TickInfo {
-            tickNumber: number;
-            deltaTime: number; // ms since last tick
-            syncGroup: string; // 'REALTIME', 'NORMAL', 'BACKGROUND'
-            serverTickNumber: number; // current server tick
-            tickLag: number; // how many ticks behind server
-            timeUntilNextTick: number; // ms until next tick
-            timestamp: number; // current tick timestamp
-            tickRate: number; // ms per tick for current sync group
-        }
-
-        export interface I_Context {
-            Vircadia: {
-                Version: string;
-                Query: {
-                    execute: (
-                        query: string,
-                        parameters?: any[],
-                    ) => Promise<any[]>;
-                };
-                Hook: I_Hook;
-                Tick: {
-                    getCurrentTick: () => I_TickInfo;
-                };
-                State: {
-                    getCurrentState: () => Entity.I_EntityData;
-                    getLastKnownState: () => Entity.I_EntityData;
-                    getPastStates: (count: number) => Entity.I_EntityData[];
-                };
-                [key: string]: any;
-            };
-        }
-
-        export interface I_Return {
-            scriptFunction: (context: I_Context) => unknown;
-            hooks: I_Hook;
-        }
-
-        export interface I_Hook {
-            // Lifecycle hooks
-            onScriptMount?: () => void;
-            onScriptBeforeUnmount?: () => void;
-
-            // Entity state hooks
-            onEntityUpdate?: (
-                entity: Entity.I_EntityData,
-                tickInfo: I_TickInfo,
-            ) => void;
-            onEntityBeforeUnmount?: () => void;
-        }
-    }
-
-    // Add new types for script changes
-    export interface ScriptCompilationStatus {
-        script?: string;
-        script_sha256?: string;
-        script_status?: "PENDING" | "COMPILED" | "FAILED";
-    }
-
-    export interface ScriptSourceInfo {
-        repo_entry_path?: string;
-        repo_url?: string;
-    }
-
-    export interface ScriptSourceChanges {
-        node?: ScriptSourceInfo;
-        bun?: ScriptSourceInfo;
-        browser?: ScriptSourceInfo;
-    }
-
-    export interface ScriptChanges {
-        script_id: string;
-        changes: {
-            node?: ScriptCompilationStatus;
-            bun?: ScriptCompilationStatus;
-            browser?: ScriptCompilationStatus;
-            source?: ScriptSourceChanges;
         };
+        scripts__ids: string[];
+        validation__log?: Array<{
+            timestamp: string;
+            agent_id: string;
+            entity_script_id: string;
+            query: string;
+        }>;
+        performance__sync_group: string;
+        permissions__roles__view?: string[];
+        permissions__roles__full?: string[];
+    }
+
+    export namespace Script {
+        export interface I_Script {
+            general__script_id: string;
+            general__created_at?: string;
+            general__created_by?: string;
+            general__updated_at?: string;
+            general__updated_by?: string;
+
+            script__source__node__repo__entry_path?: string;
+            script__source__node__repo__url?: string;
+            script__compiled__node__script?: string;
+            script__compiled__node__script_sha256?: string;
+            script__compiled__node__script_status?: E_CompilationStatus;
+            script__compiled__node__updated_at?: string;
+
+            script__source__bun__repo__entry_path?: string;
+            script__source__bun__repo__url?: string;
+            script__compiled__bun__script?: string;
+            script__compiled__bun__script_sha256?: string;
+            script__compiled__bun__script_status?: E_CompilationStatus;
+            script__compiled__bun__updated_at?: string;
+
+            script__source__browser__repo__entry_path?: string;
+            script__source__browser__repo__url?: string;
+            script__compiled__browser__script?: string;
+            script__compiled__browser__script_sha256?: string;
+            script__compiled__browser__script_status?: E_CompilationStatus;
+            script__compiled__browser__updated_at?: string;
+        }
+
+        export enum E_CompilationStatus {
+            PENDING = "PENDING",
+            COMPILED = "COMPILED",
+            FAILED = "FAILED",
+        }
+
+        export interface SourceInfo {
+            repo_entry_path?: string;
+            repo_url?: string;
+        }
+
+        export namespace Babylon {
+            export interface I_Context extends Base.I_Context {
+                Vircadia: Base.I_Context["Vircadia"] & {
+                    Babylon: {
+                        Scene: Scene;
+                    };
+                };
+            }
+
+            export interface I_Return extends Base.I_Return {}
+        }
+
+        export namespace Base {
+            export interface I_Context {
+                Vircadia: {
+                    Version: {
+                        client: string;
+                        server: string;
+                    };
+                    Query: {
+                        executeSqlQuery: (
+                            query: string,
+                            parameters?: any[],
+                        ) => Promise<any[]>;
+                    };
+                    Hook: I_Hook;
+                    Tick: {
+                        getCurrentTick: () => Tick.I_TickData;
+                    };
+                    State: {
+                        getCurrentState: () => Entity.I_Entity;
+                        getLastKnownState: () => Entity.I_Entity;
+                        getPastStates: (count: number) => Entity.I_Entity[];
+                    };
+                    [key: string]: any;
+                };
+            }
+
+            export interface I_Return {
+                scriptFunction: (context: I_Context) => unknown;
+                hooks: I_Hook;
+            }
+
+            export interface I_Hook {
+                onScriptMount?: () => void;
+                onScriptBeforeUnmount?: () => void;
+                onEntityUpdate?: (
+                    entity: Entity.I_Entity,
+                    tickInfo: Tick.I_TickData,
+                ) => void;
+                onEntityBeforeUnmount?: () => void;
+            }
+        }
+    }
+
+    export namespace SyncGroup {
+        export interface I_SyncGroup {
+            server_tick_rate_ms: number;
+            server_tick_buffer: number;
+            client_render_delay_ms: number;
+            client_max_prediction_time_ms: number;
+            network_packet_timing_variance_ms: number;
+        }
     }
 }
 
-export namespace Entity {
-    export interface I_EntityData {
-        [key: string]: any;
+export namespace Tick {
+    export type E_OperationType = "INSERT" | "UPDATE" | "DELETE";
+    export type E_EntityStatus = "ACTIVE" | "AWAITING_SCRIPTS";
+
+    export interface I_TickData {
+        tickNumber: number;
+        tickStartTime: Date;
+        tickEndTime: Date;
+        tickDurationMs: number;
+        isDelayed: boolean;
+        headroomMs: number;
+        deltaTimeMs: number;
+        timeUntilNextTickMs: number;
+        tickLag: number;
+        syncGroup: string;
     }
 
-    // Add new types for entity changes
-    export type OperationType = "INSERT" | "UPDATE" | "DELETE";
-
-    export interface EntityChanges {
-        general?: {
-            name?: string;
-            semantic_version?: string;
-            created_at?: string;
-            created_by?: string;
-            updated_at?: string;
-            updated_by?: string;
-            load_priority?: number;
-            initialized_at?: string;
-            initialized_by?: string;
-        };
-        meta?: any; // jsonb type from database
-        scripts?: {
-            ids?: string[];
-            validation_log?: any;
-        };
-        permissions?: {
-            roles_view?: string[];
-            roles_full?: string[];
-        };
-        performance?: {
-            sync_group?: string;
-        };
+    export interface I_EntityUpdate {
+        entityId: string;
+        operation: E_OperationType;
+        entityChanges: E_OperationType extends "INSERT"
+            ? Entity.I_Entity
+            : DeepPartial<Entity.I_Entity>;
+        sessionIds: string[];
+        entityStatus: E_EntityStatus;
     }
 
-    export interface EntityChange {
-        entity_id: string;
-        operation: OperationType;
-        changes: EntityChanges | null;
-        session_ids: string[];
+    export interface I_ScriptUpdate {
+        scriptId: string;
+        operation: E_OperationType;
+        changes: E_OperationType extends "INSERT"
+            ? Entity.Script.I_Script
+            : DeepPartial<Entity.Script.I_Script>;
+        sessionIds: string[];
+    }
+
+    export interface I_TickState {
+        tickData: I_TickData;
+        entityUpdates: I_EntityUpdate[];
+        scriptUpdates: I_ScriptUpdate[];
     }
 }
 
@@ -197,7 +254,6 @@ export namespace Communication {
     export const WS_PATH = "/world/ws";
     export const REST_BASE_PATH = "/world/auth";
 
-    // WebSocket-specific namespace
     export namespace WebSocket {
         export enum MessageType {
             CONNECTION_ESTABLISHED = "CONNECTION_ESTABLISHED",
@@ -295,23 +351,30 @@ export namespace Communication {
             error?: string;
         }
 
-        export interface BaseNotificationMessage extends BaseMessage {
-            id: string;
-            operation: string;
+        export interface BaseEntityNotificationMessage extends BaseMessage {
             timestamp: string;
-            syncGroup: string | null;
-            changedColumns?: string[];
+            tick: Tick.I_TickData;
         }
 
-        export interface NotificationEntityUpdateMessage
-            extends BaseNotificationMessage {
+        export interface NotificationEntityUpdatesMessage
+            extends BaseEntityNotificationMessage {
             type: MessageType.NOTIFICATION_ENTITY_UPDATE;
-            syncGroup: string;
+            entities: Array<{
+                id: string;
+                operation: Tick.E_OperationType;
+                entityChanges: DeepPartial<Entity.I_Entity>;
+                entityStatus: Tick.E_EntityStatus;
+            }>;
         }
 
-        export interface NotificationEntityScriptUpdateMessage
-            extends BaseNotificationMessage {
+        export interface NotificationEntityScriptUpdatesMessage
+            extends BaseEntityNotificationMessage {
             type: MessageType.NOTIFICATION_ENTITY_SCRIPT_UPDATE;
+            scripts: Array<{
+                id: string;
+                operation: Tick.E_OperationType;
+                scriptChanges: DeepPartial<Entity.Script.I_Script>;
+            }>;
         }
 
         export type Message =
@@ -327,8 +390,8 @@ export namespace Communication {
             | SubscribeResponseMessage
             | UnsubscribeMessage
             | UnsubscribeResponseMessage
-            | NotificationEntityUpdateMessage
-            | NotificationEntityScriptUpdateMessage;
+            | NotificationEntityUpdatesMessage
+            | NotificationEntityScriptUpdatesMessage;
 
         export function createMessage<T extends Message>(message: T): T {
             return message;
@@ -342,9 +405,7 @@ export namespace Communication {
         }
     }
 
-    // REST-specific namespace
     export namespace REST {
-        // Base interfaces
         export interface BaseResponse {
             success: boolean;
             timestamp: number;
@@ -355,7 +416,6 @@ export namespace Communication {
             data?: T;
         }
 
-        // Session validation endpoint interfaces
         export interface SessionValidationSuccessResponse extends BaseResponse {
             success: true;
             data: {
@@ -374,7 +434,6 @@ export namespace Communication {
             | SessionValidationSuccessResponse
             | SessionValidationErrorResponse;
 
-        // Session logout endpoint interfaces
         export interface SessionLogoutSuccessResponse extends BaseResponse {
             success: true;
         }
@@ -388,7 +447,6 @@ export namespace Communication {
             | SessionLogoutSuccessResponse
             | SessionLogoutErrorResponse;
 
-        // Endpoint definitions with type safety and response creators
         export const Endpoint = {
             AUTH_SESSION_VALIDATE: {
                 path: `${REST_BASE_PATH}/session/validate`,
@@ -428,3 +486,8 @@ export namespace Communication {
         } as const;
     }
 }
+
+// Add this type utility at the namespace level
+export type DeepPartial<T> = {
+    [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
