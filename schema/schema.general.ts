@@ -114,7 +114,7 @@ export namespace Entity {
                     };
                     Hook: I_Hook;
                     Tick: {
-                        getCurrentTick: () => Tick.I_TickData;
+                        getCurrentTick: () => Tick.I_TickMetadata;
                     };
                     State: {
                         getCurrentState: () => Entity.I_Entity;
@@ -135,7 +135,7 @@ export namespace Entity {
                 onScriptBeforeUnmount?: () => void;
                 onEntityUpdate?: (
                     entity: Entity.I_Entity,
-                    tickInfo: Tick.I_TickData,
+                    tickInfo: Tick.I_TickMetadata,
                 ) => void;
                 onEntityBeforeUnmount?: () => void;
             }
@@ -157,17 +157,16 @@ export namespace Tick {
     export type E_OperationType = "INSERT" | "UPDATE" | "DELETE";
     export type E_EntityStatus = "ACTIVE" | "AWAITING_SCRIPTS";
 
-    export interface I_TickData {
-        tickNumber: number;
-        tickStartTime: Date;
-        tickEndTime: Date;
-        tickDurationMs: number;
-        isDelayed: boolean;
-        headroomMs: number;
-        deltaTimeMs: number;
-        timeUntilNextTickMs: number;
-        tickLag: number;
-        syncGroup: string;
+    export interface I_TickMetadata {
+        tick_number: number;
+        tick_start_time: string;
+        tick_end_time: string;
+        tick_duration_ms: number;
+        is_delayed: boolean;
+        headroom_ms: number;
+        delta_time_ms: number;
+        time_until_next_tick_ms: number;
+        tick_lag: number;
     }
 
     export interface I_EntityUpdate {
@@ -183,16 +182,16 @@ export namespace Tick {
     export interface I_ScriptUpdate {
         scriptId: string;
         operation: E_OperationType;
-        changes: E_OperationType extends "INSERT"
+        scriptChanges: E_OperationType extends "INSERT"
             ? Entity.Script.I_Script
             : DeepPartial<Entity.Script.I_Script>;
         sessionIds: string[];
     }
 
     export interface I_TickState {
-        tickData: I_TickData;
-        entityUpdates: I_EntityUpdate[];
-        scriptUpdates: I_ScriptUpdate[];
+        tick_data: I_TickMetadata;
+        entity_updates: I_EntityUpdate[];
+        script_updates: I_ScriptUpdate[];
     }
 }
 
@@ -452,7 +451,7 @@ export namespace Communication {
 
         export interface BaseEntityNotificationMessage extends BaseMessage {
             timestamp: string;
-            tick: Tick.I_TickData;
+            tick: Tick.I_TickMetadata;
         }
 
         export interface NotificationEntityUpdatesMessage
