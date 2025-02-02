@@ -196,7 +196,106 @@ export namespace Tick {
     }
 }
 
+export namespace Config {
+    export interface I_Config {
+        general__key: string;
+        general__value: any;
+        general__description?: string;
+        general__created_at?: string;
+        general__updated_at?: string;
+    }
+
+    export interface I_ClientNetworkRequirements {
+        max_latency_ms: number;
+        warning_latency_ms: number;
+        consecutive_warnings_before_kick: number;
+        measurement_window_ticks: number;
+        packet_loss_threshold_percent: number;
+    }
+
+    export interface I_ClientSettings {
+        session: {
+            max_age_ms: number;
+            cleanup_interval_ms: number;
+            inactive_timeout_ms: number;
+            max_sessions_per_agent: number;
+        };
+        auth: {
+            session_duration_jwt: string;
+            session_duration_ms: number;
+            secret_jwt: string;
+            session_duration_admin_jwt: string;
+            session_duration_admin_ms: number;
+            ws_check_interval: number;
+        };
+        heartbeat: {
+            interval_ms: number;
+            timeout_ms: number;
+        };
+    }
+
+    export interface I_DatabaseVersion {
+        major: number;
+        minor: number;
+        patch: number;
+        migration_timestamp: string;
+    }
+
+    export const CONFIG_KEYS = {
+        TICK_BUFFER_DURATION: "tick_buffer_duration_ms",
+        TICK_METRICS_HISTORY: "tick_metrics_history_ms",
+        CLIENT_NETWORK_REQUIREMENTS: "client_network_requirements",
+        CLIENT_SETTINGS: "client_settings",
+        DATABASE_VERSION: "database_version",
+    } as const;
+}
+
 export namespace Agent {
+    export interface I_Profile {
+        general__agent_profile_id: string;
+        profile__username: string;
+        auth__email: string;
+        general__created_at?: string;
+        general__updated_at?: string;
+    }
+
+    export interface I_AuthProvider {
+        auth__agent_id: string;
+        auth__provider_name: string;
+        auth__provider_uid?: string;
+        auth__is_primary: boolean;
+        general__created_at?: string;
+    }
+
+    export interface I_Role {
+        auth__role_name: string;
+        meta__description?: string;
+        auth__is_system: boolean;
+        auth__entity__insert: boolean;
+        general__created_at?: string;
+    }
+
+    export interface I_AgentRole {
+        auth__agent_id: string;
+        auth__role_name: string;
+        auth__is_active: boolean;
+        auth__granted_at?: string;
+        auth__granted_by?: string;
+    }
+
+    export interface I_Session {
+        general__session_id: string;
+        auth__agent_id: string;
+        auth__provider_name: string;
+        session__started_at?: string;
+        session__last_seen_at?: string;
+        session__expires_at: string;
+        session__jwt?: string;
+        session__is_active: boolean;
+        stats__last_subscription_message?: unknown;
+        stats__last_subscription_message_at?: string;
+    }
+
     // TODO: The following will be implemented in scripts in the world directly.
     // export namespace WebRTC {
     // 	export enum E_SignalType {
