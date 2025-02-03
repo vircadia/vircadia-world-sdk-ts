@@ -44,6 +44,7 @@ export namespace Entity {
         performance__sync_group: string;
         permissions__roles__view?: string[];
         permissions__roles__full?: string[];
+        scripts__status?: Record<string, string>;
     }
 
     export namespace Script {
@@ -53,6 +54,7 @@ export namespace Entity {
             general__created_by?: string;
             general__updated_at?: string;
             general__updated_by?: string;
+            performance__sync_group: string;
 
             script__source__node__repo__entry_path?: string;
             script__source__node__repo__url?: string;
@@ -167,6 +169,9 @@ export namespace Tick {
         delta_time_ms: number;
         time_until_next_tick_ms: number;
         tick_lag: number;
+        entity_states_processed: number;
+        script_states_processed: number;
+        rate_limited: boolean;
     }
 
     export interface I_EntityUpdate {
@@ -176,7 +181,6 @@ export namespace Tick {
             ? Entity.I_Entity
             : DeepPartial<Entity.I_Entity>;
         sessionIds: string[];
-        entityStatus: E_EntityStatus;
     }
 
     export interface I_ScriptUpdate {
