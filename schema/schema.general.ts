@@ -146,11 +146,13 @@ export namespace Entity {
 
     export namespace SyncGroup {
         export interface I_SyncGroup {
+            sync_group: string;
             server_tick_rate_ms: number;
             server_tick_buffer: number;
             client_render_delay_ms: number;
             client_max_prediction_time_ms: number;
             network_packet_timing_variance_ms: number;
+            keyframe_interval_ticks: number;
         }
     }
 }
@@ -229,7 +231,7 @@ export namespace Config {
             secret_jwt: string;
             session_duration_admin_jwt: string;
             session_duration_admin_ms: number;
-            ws_check_interval: number;
+            ws_check_interval_ms: number;
         };
         heartbeat: {
             interval_ms: number;
@@ -358,42 +360,44 @@ export namespace Communication {
 
     export namespace WebSocket {
         export enum MessageType {
-            CONNECTION_ESTABLISHED = "CONNECTION_ESTABLISHED",
-            ERROR = "ERROR",
-            HEARTBEAT = "HEARTBEAT",
-            HEARTBEAT_ACK = "HEARTBEAT_ACK",
+            CONNECTION_ESTABLISHED_RESPONSE = "CONNECTION_ESTABLISHED_RESPONSE",
+            ERROR_RESPONSE = "ERROR_RESPONSE",
+            HEARTBEAT_REQUEST = "HEARTBEAT_REQUEST",
+            HEARTBEAT_RESPONSE = "HEARTBEAT_RESPONSE",
             CONFIG_REQUEST = "CONFIG_REQUEST",
             CONFIG_RESPONSE = "CONFIG_RESPONSE",
-            QUERY = "QUERY",
+            QUERY_REQUEST = "QUERY_REQUEST",
             QUERY_RESPONSE = "QUERY_RESPONSE",
-            SUBSCRIBE = "SUBSCRIBE",
-            SUBSCRIBE_RESPONSE = "SUBSCRIBE_RESPONSE",
-            UNSUBSCRIBE = "UNSUBSCRIBE",
-            UNSUBSCRIBE_RESPONSE = "UNSUBSCRIBE_RESPONSE",
             NOTIFICATION_ENTITY_UPDATE = "NOTIFICATION_ENTITY_UPDATE",
             NOTIFICATION_ENTITY_SCRIPT_UPDATE = "NOTIFICATION_ENTITY_SCRIPT_UPDATE",
+            KEYFRAME_ENTITIES_REQUEST = "KEYFRAME_ENTITIES_REQUEST",
+            KEYFRAME_ENTITIES_RESPONSE = "KEYFRAME_ENTITIES_RESPONSE",
+            KEYFRAME_ENTITY_SCRIPTS_REQUEST = "KEYFRAME_ENTITY_SCRIPTS_REQUEST",
+            KEYFRAME_ENTITY_SCRIPTS_RESPONSE = "KEYFRAME_ENTITY_SCRIPTS_RESPONSE",
         }
 
         export interface BaseMessage {
+            timestamp: number;
             type: MessageType;
         }
 
-        export interface ConnectionEstablishedMessage extends BaseMessage {
-            type: MessageType.CONNECTION_ESTABLISHED;
+        export interface ConnectionEstablishedResponseMessage
+            extends BaseMessage {
+            type: MessageType.CONNECTION_ESTABLISHED_RESPONSE;
             agentId: string;
         }
 
-        export interface ErrorMessage extends BaseMessage {
-            type: MessageType.ERROR;
+        export interface ErrorResponseMessage extends BaseMessage {
+            type: MessageType.ERROR_RESPONSE;
             message: string;
         }
 
-        export interface HeartbeatMessage extends BaseMessage {
-            type: MessageType.HEARTBEAT;
+        export interface HeartbeatRequestMessage extends BaseMessage {
+            type: MessageType.HEARTBEAT_REQUEST;
         }
 
-        export interface HeartbeatAckMessage extends BaseMessage {
-            type: MessageType.HEARTBEAT_ACK;
+        export interface HeartbeatResponseMessage extends BaseMessage {
+            type: MessageType.HEARTBEAT_RESPONSE;
         }
 
         export interface ConfigRequestMessage extends BaseMessage {
@@ -402,21 +406,11 @@ export namespace Communication {
 
         export interface ConfigResponseMessage extends BaseMessage {
             type: MessageType.CONFIG_RESPONSE;
-            config: {
-                heartbeat: {
-                    interval: number;
-                    timeout: number;
-                };
-                session: {
-                    max_session_age_ms: number;
-                    cleanup_interval_ms: number;
-                    inactive_timeout_ms: number;
-                };
-            };
+            config: Config.I_ClientSettings;
         }
 
-        export interface QueryMessage extends BaseMessage {
-            type: MessageType.QUERY;
+        export interface QueryRequestMessage extends BaseMessage {
+            type: MessageType.QUERY_REQUEST;
             requestId: string;
             query: string;
             parameters?: any[];
@@ -429,49 +423,20 @@ export namespace Communication {
             error?: string;
         }
 
-        export interface SubscribeMessage extends BaseMessage {
-            type: MessageType.SUBSCRIBE;
-            channel: string;
-        }
-
-        export interface SubscribeResponseMessage extends BaseMessage {
-            type: MessageType.SUBSCRIBE_RESPONSE;
-            channel: string;
-            success: boolean;
-            error?: string;
-        }
-
-        export interface UnsubscribeMessage extends BaseMessage {
-            type: MessageType.UNSUBSCRIBE;
-            channel: string;
-        }
-
-        export interface UnsubscribeResponseMessage extends BaseMessage {
-            type: MessageType.UNSUBSCRIBE_RESPONSE;
-            channel: string;
-            success: boolean;
-            error?: string;
-        }
-
-        export interface BaseEntityNotificationMessage extends BaseMessage {
-            timestamp: string;
-            tick: Tick.I_TickMetadata;
-        }
-
-        export interface NotificationEntityUpdatesMessage
-            extends BaseEntityNotificationMessage {
+        export interface NotificationEntityUpdatesMessage extends BaseMessage {
             type: MessageType.NOTIFICATION_ENTITY_UPDATE;
+            tickMetadata: Tick.I_TickMetadata;
             entities: Array<{
                 id: string;
                 operation: Tick.E_OperationType;
                 entityChanges: DeepPartial<Entity.I_Entity>;
-                entityStatus: Tick.E_EntityStatus;
             }>;
         }
 
         export interface NotificationEntityScriptUpdatesMessage
-            extends BaseEntityNotificationMessage {
+            extends BaseMessage {
             type: MessageType.NOTIFICATION_ENTITY_SCRIPT_UPDATE;
+            tickMetadata: Tick.I_TickMetadata;
             scripts: Array<{
                 id: string;
                 operation: Tick.E_OperationType;
@@ -479,24 +444,56 @@ export namespace Communication {
             }>;
         }
 
+        export interface KeyframeEntitiesRequestMessage extends BaseMessage {
+            type: MessageType.KEYFRAME_ENTITIES_REQUEST;
+            syncGroup: string;
+        }
+
+        export interface KeyframeEntitiesResponseMessage extends BaseMessage {
+            type: MessageType.KEYFRAME_ENTITIES_RESPONSE;
+            entities: Entity.I_Entity[];
+        }
+
+        export interface KeyframeEntityScriptsRequestMessage
+            extends BaseMessage {
+            type: MessageType.KEYFRAME_ENTITY_SCRIPTS_REQUEST;
+            syncGroup: string;
+        }
+
+        export interface KeyframeEntityScriptsResponseMessage
+            extends BaseMessage {
+            type: MessageType.KEYFRAME_ENTITY_SCRIPTS_RESPONSE;
+            scripts: Entity.Script.I_Script[];
+        }
+
         export type Message =
-            | ConnectionEstablishedMessage
-            | ErrorMessage
-            | HeartbeatMessage
-            | HeartbeatAckMessage
+            | ConnectionEstablishedResponseMessage
+            | ErrorResponseMessage
+            | HeartbeatRequestMessage
+            | HeartbeatResponseMessage
             | ConfigRequestMessage
             | ConfigResponseMessage
-            | QueryMessage
+            | QueryRequestMessage
             | QueryResponseMessage
-            | SubscribeMessage
-            | SubscribeResponseMessage
-            | UnsubscribeMessage
-            | UnsubscribeResponseMessage
             | NotificationEntityUpdatesMessage
-            | NotificationEntityScriptUpdatesMessage;
+            | NotificationEntityScriptUpdatesMessage
+            | KeyframeEntitiesRequestMessage
+            | KeyframeEntitiesResponseMessage
+            | KeyframeEntityScriptsRequestMessage
+            | KeyframeEntityScriptsResponseMessage;
 
-        export function createMessage<T extends Message>(message: T): T {
-            return message;
+        export type MessageWithoutTimestamp<T extends Message> = Omit<
+            T,
+            "timestamp"
+        >;
+
+        export function createMessage<T extends Message>(
+            message: MessageWithoutTimestamp<T>,
+        ): T {
+            return {
+                ...message,
+                timestamp: Date.now(),
+            } as T;
         }
 
         export function isMessageType<T extends Message>(
