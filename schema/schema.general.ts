@@ -41,7 +41,7 @@ export namespace Entity {
             entity_script_id: string;
             query: string;
         }>;
-        performance__sync_group: string;
+        group__sync: string;
         permissions__roles__view?: string[];
         permissions__roles__full?: string[];
         scripts__status?: Record<string, string>;
@@ -54,7 +54,7 @@ export namespace Entity {
             general__created_by?: string;
             general__updated_at?: string;
             general__updated_by?: string;
-            performance__sync_group: string;
+            group__sync: string;
 
             script__source__node__repo__entry_path?: string;
             script__source__node__repo__url?: string;
