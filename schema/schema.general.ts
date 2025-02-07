@@ -2,6 +2,8 @@ import { z } from "zod";
 import type { Scene } from "@babylonjs/core";
 
 export namespace Entity {
+    export type E_Status = "ACTIVE" | "AWAITING_SCRIPTS" | "INACTIVE";
+
     export interface I_Entity {
         general__entity_id: string;
         general__name: string;
@@ -35,6 +37,7 @@ export namespace Entity {
             };
         };
         scripts__ids: string[];
+        scripts__status: E_Status;
         validation__log?: Array<{
             timestamp: string;
             agent_id: string;
@@ -44,7 +47,6 @@ export namespace Entity {
         group__sync: string;
         permissions__roles__view?: string[];
         permissions__roles__full?: string[];
-        scripts__status?: Record<string, string>;
     }
 
     export namespace Script {
@@ -143,23 +145,10 @@ export namespace Entity {
             }
         }
     }
-
-    export namespace SyncGroup {
-        export interface I_SyncGroup {
-            sync_group: string;
-            server_tick_rate_ms: number;
-            server_tick_buffer: number;
-            client_render_delay_ms: number;
-            client_max_prediction_time_ms: number;
-            network_packet_timing_variance_ms: number;
-            keyframe_interval_ticks: number;
-        }
-    }
 }
 
 export namespace Tick {
     export type E_OperationType = "INSERT" | "UPDATE" | "DELETE";
-    export type E_EntityStatus = "ACTIVE" | "AWAITING_SCRIPTS";
 
     export interface I_TickMetadata {
         tick_number: number;
@@ -199,6 +188,34 @@ export namespace Tick {
         entity_updates: I_EntityUpdate[];
         script_updates: I_ScriptUpdate[];
     }
+
+    export interface I_WorldTick {
+        general__tick_id: string;
+        tick__number: number;
+        group__sync: string;
+        tick__start_time: string;
+        tick__end_time: string;
+        tick__duration_ms: number;
+        tick__states_processed: number;
+        tick__is_delayed: boolean;
+        tick__headroom_ms: number;
+        tick__rate_limited: boolean;
+        tick__time_since_last_tick_ms: number;
+        general__created_at?: string;
+        general__updated_at?: string;
+        general__created_by?: string;
+        general__updated_by?: string;
+    }
+
+    export interface I_EntityState extends Entity.I_Entity {
+        general__entity_state_id: string;
+        general__tick_id: string;
+    }
+
+    export interface I_ScriptState extends Entity.Script.I_Script {
+        general__script_state_id: string;
+        general__tick_id: string;
+    }
 }
 
 export namespace Config {
@@ -206,86 +223,71 @@ export namespace Config {
         general__key: string;
         general__value: any;
         general__description?: string;
-        general__created_at?: string;
-        general__updated_at?: string;
-    }
-
-    export interface I_ClientNetworkRequirements {
-        max_latency_ms: number;
-        warning_latency_ms: number;
-        consecutive_warnings_before_kick: number;
-        measurement_window_ticks: number;
-        packet_loss_threshold_percent: number;
-    }
-
-    export interface I_ClientSettings {
-        session: {
-            max_age_ms: number;
-            cleanup_interval_ms: number;
-            inactive_timeout_ms: number;
-            max_sessions_per_agent: number;
-        };
-        auth: {
-            session_duration_jwt: string;
-            session_duration_ms: number;
-            secret_jwt: string;
-            session_duration_admin_jwt: string;
-            session_duration_admin_ms: number;
-            ws_check_interval_ms: number;
-        };
-        heartbeat: {
-            interval_ms: number;
-            timeout_ms: number;
-        };
-    }
-
-    export interface I_DatabaseVersion {
-        major: number;
-        minor: number;
-        patch: number;
-        migration_timestamp: string;
     }
 
     export const CONFIG_KEYS = {
-        TICK_BUFFER_DURATION: "tick_buffer_duration_ms",
-        TICK_METRICS_HISTORY: "tick_metrics_history_ms",
-        CLIENT_NETWORK_REQUIREMENTS: "client_network_requirements",
-        CLIENT_SETTINGS: "client_settings",
-        DATABASE_VERSION: "database_version",
+        // General settings
+        TICK_BUFFER_DURATION: "general__tick_buffer_duration_ms",
+        TICK_METRICS_HISTORY: "general__tick_metrics_history_ms",
+
+        // Network settings
+        NETWORK_MAX_LATENCY: "network__max_latency_ms",
+        NETWORK_WARNING_LATENCY: "network__warning_latency_ms",
+        NETWORK_CONSECUTIVE_WARNINGS:
+            "network__consecutive_warnings_before_kick",
+        NETWORK_MEASUREMENT_WINDOW: "network__measurement_window_ticks",
+        NETWORK_PACKET_LOSS_THRESHOLD: "network__packet_loss_threshold_percent",
+
+        // Session settings
+        SESSION_MAX_AGE: "session__max_age_ms",
+        SESSION_CLEANUP_INTERVAL: "session__cleanup_interval_ms",
+        SESSION_INACTIVE_TIMEOUT: "session__inactive_timeout_ms",
+        SESSION_MAX_PER_AGENT: "session__max_sessions_per_agent",
+
+        // Auth settings
+        AUTH_SESSION_DURATION_JWT: "auth__session_duration_jwt",
+        AUTH_SESSION_DURATION_MS: "auth__session_duration_ms",
+        AUTH_SECRET_JWT: "auth__secret_jwt",
+        AUTH_SESSION_DURATION_ADMIN_JWT: "auth__session_duration_admin_jwt",
+        AUTH_SESSION_DURATION_ADMIN_MS: "auth__session_duration_admin_ms",
+        AUTH_WS_CHECK_INTERVAL: "auth__ws_check_interval",
+
+        // Heartbeat settings
+        HEARTBEAT_INTERVAL: "heartbeat__interval_ms",
+        HEARTBEAT_TIMEOUT: "heartbeat__timeout_ms",
+
+        // Database version
+        DATABASE_VERSION_MAJOR: "database__major_version",
+        DATABASE_VERSION_MINOR: "database__minor_version",
+        DATABASE_VERSION_PATCH: "database__patch_version",
+        DATABASE_MIGRATION_TIMESTAMP: "database__migration_timestamp",
     } as const;
 }
 
-export namespace Agent {
+export namespace Auth {
     export interface I_Profile {
         general__agent_profile_id: string;
         profile__username: string;
         auth__email: string;
+        auth__is_admin: boolean;
         general__created_at?: string;
+        general__created_by?: string;
         general__updated_at?: string;
+        general__updated_by?: string;
     }
 
     export interface I_AuthProvider {
         auth__agent_id: string;
         auth__provider_name: string;
-        auth__provider_uid?: string;
+        auth__provider_uid: string;
+        auth__refresh_token?: string;
+        auth__provider_email?: string;
         auth__is_primary: boolean;
+        auth__metadata?: Record<string, any>;
         general__created_at?: string;
-    }
-
-    export interface I_Role {
-        auth__role_name: string;
-        meta__description?: string;
-        auth__is_system: boolean;
-        auth__entity__insert: boolean;
-        general__created_at?: string;
-    }
-
-    export interface I_AgentRole {
-        auth__agent_id: string;
-        auth__role_name: string;
-        auth__is_active: boolean;
-        auth__granted_at?: string;
-        auth__granted_by?: string;
+        general__created_by?: string;
+        general__updated_at?: string;
+        general__updated_by?: string;
     }
 
     export interface I_Session {
@@ -297,61 +299,38 @@ export namespace Agent {
         session__expires_at: string;
         session__jwt?: string;
         session__is_active: boolean;
-        stats__last_subscription_message?: unknown;
-        stats__last_subscription_message_at?: string;
+        general__created_at?: string;
+        general__created_by?: string;
+        general__updated_at?: string;
+        general__updated_by?: string;
     }
 
-    // TODO: The following will be implemented in scripts in the world directly.
-    // export namespace WebRTC {
-    // 	export enum E_SignalType {
-    // 		AGENT_Offer = "agent-agent-offer-packet",
-    // 		AGENT_Answer = "agent-agent-answer-packet",
-    // 		AGENT_ICE_Candidate = "agent-agent-ice-candidate-packet",
-    // 	}
-    // }
-    // export namespace Audio {
-    // 	export const DEFAULT_PANNER_OPTIONS: PannerOptions = {
-    // 		panningModel: "HRTF",
-    // 		distanceModel: "inverse",
-    // 		refDistance: 1,
-    // 		maxDistance: 10000,
-    // 	};
-    // }
-    // const MetadataSchema = z.object({
-    // 	agentId: z.string(),
-    // 	position: Primitive.S_Vector3,
-    // 	orientation: Primitive.S_Vector3,
-    // 	lastUpdated: z.string(),
-    // });
-    // export class C_Presence {
-    // 	agentId: string;
-    // 	position: Primitive.C_Vector3;
-    // 	orientation: Primitive.C_Vector3;
-    // 	lastUpdated: string;
-    // 	constructor(data: z.infer<typeof MetadataSchema>) {
-    // 		this.agentId = data.agentId;
-    // 		this.position = new Primitive.C_Vector3(
-    // 			data.position.x,
-    // 			data.position.y,
-    // 			data.position.z,
-    // 		);
-    // 		this.orientation = new Primitive.C_Vector3(
-    // 			data.orientation.x,
-    // 			data.orientation.y,
-    // 			data.orientation.z,
-    // 		);
-    // 		this.lastUpdated = data.lastUpdated;
-    // 	}
-    // 	static parse(obj: {
-    // 		agentId: string | any;
-    // 		position: { x: number; y: number; z: number } | any;
-    // 		orientation: { x: number; y: number; z: number } | any;
-    // 		lastUpdated: string | any;
-    // 	}): C_Presence {
-    // 		const parsedData = MetadataSchema.parse(obj);
-    // 		return new C_Presence(parsedData);
-    // 	}
-    // }
+    export interface I_SyncGroup {
+        general__sync_group: string;
+        general__description?: string;
+        server__tick__rate_ms: number;
+        server__tick__buffer: number;
+        client__render_delay_ms: number;
+        client__max_prediction_time_ms: number;
+        network__packet_timing_variance_ms: number;
+        server__keyframe__interval_ticks: number;
+        general__created_at?: string;
+        general__created_by?: string;
+        general__updated_at?: string;
+        general__updated_by?: string;
+    }
+
+    export interface I_SyncGroupRole {
+        auth__agent_id: string;
+        group__sync: string;
+        permissions__can_insert: boolean;
+        permissions__can_update: boolean;
+        permissions__can_delete: boolean;
+        general__created_at?: string;
+        general__created_by?: string;
+        general__updated_at?: string;
+        general__updated_by?: string;
+    }
 }
 
 export namespace Communication {
