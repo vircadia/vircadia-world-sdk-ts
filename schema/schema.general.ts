@@ -58,26 +58,27 @@ export namespace Entity {
             general__updated_by?: string;
             group__sync: string;
 
-            script__source__node__repo__entry_path?: string;
-            script__source__node__repo__url?: string;
-            script__compiled__node__script?: string;
-            script__compiled__node__script_sha256?: string;
-            script__compiled__node__script_status?: E_CompilationStatus;
-            script__compiled__node__updated_at?: string;
+            // Source fields
+            source__repo__entry_path?: string;
+            source__repo__url?: string;
 
-            script__source__bun__repo__entry_path?: string;
-            script__source__bun__repo__url?: string;
-            script__compiled__bun__script?: string;
-            script__compiled__bun__script_sha256?: string;
-            script__compiled__bun__script_status?: E_CompilationStatus;
-            script__compiled__bun__updated_at?: string;
+            // Node platform
+            compiled__node__script?: string;
+            compiled__node__script_sha256?: string;
+            compiled__node__status?: E_CompilationStatus;
+            compiled__node__updated_at?: string;
 
-            script__source__browser__repo__entry_path?: string;
-            script__source__browser__repo__url?: string;
-            script__compiled__browser__script?: string;
-            script__compiled__browser__script_sha256?: string;
-            script__compiled__browser__script_status?: E_CompilationStatus;
-            script__compiled__browser__updated_at?: string;
+            // Bun platform
+            compiled__bun__script?: string;
+            compiled__bun__script_sha256?: string;
+            compiled__bun__status?: E_CompilationStatus;
+            compiled__bun__updated_at?: string;
+
+            // Browser platform
+            compiled__browser__script?: string;
+            compiled__browser__script_sha256?: string;
+            compiled__browser__status?: E_CompilationStatus;
+            compiled__browser__updated_at?: string;
         }
 
         export enum E_CompilationStatus {
