@@ -137,14 +137,14 @@ export namespace Tick {
         tick_end_time: string;
         tick_duration_ms: number;
         is_delayed: boolean;
-        headroom_ms: number;
+        headroom_ms: number | null;
         delta_time_ms: number;
         time_until_next_tick_ms: number;
         tick_lag: number;
         entity_states_processed: number;
         script_states_processed: number;
         rate_limited: boolean;
-        time_since_last_tick_ms: number;
+        time_since_last_tick_ms: number | null;
     }
 
     export interface I_EntityUpdate {
@@ -183,9 +183,9 @@ export namespace Tick {
         tick__duration_ms: number;
         tick__states_processed: number;
         tick__is_delayed: boolean;
-        tick__headroom_ms: number;
+        tick__headroom_ms: number | null;
         tick__rate_limited: boolean;
-        tick__time_since_last_tick_ms: number;
+        tick__time_since_last_tick_ms: number | null;
         general__created_at?: string;
         general__updated_at?: string;
         general__created_by?: string;
