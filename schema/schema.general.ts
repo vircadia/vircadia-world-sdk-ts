@@ -15,27 +15,7 @@ export namespace Entity {
         general__load_priority?: number;
         general__initialized_at?: string;
         general__initialized_by?: string;
-        meta__data: {
-            babylon_js: {
-                model_url: string;
-                position: {
-                    x: number;
-                    y: number;
-                    z: number;
-                };
-                rotation: {
-                    x: number;
-                    y: number;
-                    z: number;
-                    w: number;
-                };
-                scale: {
-                    x: number;
-                    y: number;
-                    z: number;
-                };
-            };
-        };
+        meta__data: Record<string, object>;
         scripts__ids: string[];
         scripts__status: E_Status;
         validation__log?: Array<{
