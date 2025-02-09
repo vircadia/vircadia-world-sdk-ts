@@ -163,6 +163,7 @@ export namespace Tick {
         entity_states_processed: number;
         script_states_processed: number;
         rate_limited: boolean;
+        time_since_last_tick_ms: number;
     }
 
     export interface I_EntityUpdate {
@@ -172,6 +173,7 @@ export namespace Tick {
             ? Entity.I_Entity
             : DeepPartial<Entity.I_Entity>;
         sessionIds: string[];
+        timestamp?: string;
     }
 
     export interface I_ScriptUpdate {
@@ -181,12 +183,14 @@ export namespace Tick {
             ? Entity.Script.I_Script
             : DeepPartial<Entity.Script.I_Script>;
         sessionIds: string[];
+        timestamp?: string;
     }
 
     export interface I_TickState {
         tick_data: I_TickMetadata;
         entity_updates: I_EntityUpdate[];
         script_updates: I_ScriptUpdate[];
+        timestamp?: string;
     }
 
     export interface I_WorldTick {
@@ -308,12 +312,15 @@ export namespace Auth {
     export interface I_SyncGroup {
         general__sync_group: string;
         general__description?: string;
+
         server__tick__rate_ms: number;
         server__tick__buffer: number;
+
         client__render_delay_ms: number;
         client__max_prediction_time_ms: number;
+
         network__packet_timing_variance_ms: number;
-        server__keyframe__interval_ticks: number;
+
         general__created_at?: string;
         general__created_by?: string;
         general__updated_at?: string;
@@ -353,6 +360,8 @@ export namespace Communication {
             KEYFRAME_ENTITIES_RESPONSE = "KEYFRAME_ENTITIES_RESPONSE",
             KEYFRAME_ENTITY_SCRIPTS_REQUEST = "KEYFRAME_ENTITY_SCRIPTS_REQUEST",
             KEYFRAME_ENTITY_SCRIPTS_RESPONSE = "KEYFRAME_ENTITY_SCRIPTS_RESPONSE",
+            CLIENT_CONFIG_REQUEST = "CLIENT_CONFIG_REQUEST",
+            CLIENT_CONFIG_RESPONSE = "CLIENT_CONFIG_RESPONSE",
         }
 
         export interface BaseMessage {
@@ -385,7 +394,21 @@ export namespace Communication {
 
         export interface ConfigResponseMessage extends BaseMessage {
             type: MessageType.CONFIG_RESPONSE;
-            config: Config.I_ClientSettings;
+            config: {
+                [Config.CONFIG_KEYS.TICK_BUFFER_DURATION]: number;
+                [Config.CONFIG_KEYS.TICK_METRICS_HISTORY]: number;
+                [Config.CONFIG_KEYS.NETWORK_MAX_LATENCY]: number;
+                [Config.CONFIG_KEYS.NETWORK_WARNING_LATENCY]: number;
+                [Config.CONFIG_KEYS.NETWORK_CONSECUTIVE_WARNINGS]: number;
+                [Config.CONFIG_KEYS.NETWORK_MEASUREMENT_WINDOW]: number;
+                [Config.CONFIG_KEYS.NETWORK_PACKET_LOSS_THRESHOLD]: number;
+                [Config.CONFIG_KEYS.SESSION_MAX_AGE]: number;
+                [Config.CONFIG_KEYS.SESSION_CLEANUP_INTERVAL]: number;
+                [Config.CONFIG_KEYS.SESSION_INACTIVE_TIMEOUT]: number;
+                [Config.CONFIG_KEYS.SESSION_MAX_PER_AGENT]: number;
+                [Config.CONFIG_KEYS.HEARTBEAT_INTERVAL]: number;
+                [Config.CONFIG_KEYS.HEARTBEAT_TIMEOUT]: number;
+            };
         }
 
         export interface QueryRequestMessage extends BaseMessage {
@@ -445,6 +468,16 @@ export namespace Communication {
             scripts: Entity.Script.I_Script[];
         }
 
+        export interface ClientConfigRequestMessage extends BaseMessage {
+            type: MessageType.CLIENT_CONFIG_REQUEST;
+        }
+
+        export interface ClientConfigResponseMessage extends BaseMessage {
+            type: MessageType.CLIENT_CONFIG_RESPONSE;
+            // TODO: Figure out what we need on the client.
+            config: any;
+        }
+
         export type Message =
             | ConnectionEstablishedResponseMessage
             | ErrorResponseMessage
@@ -459,7 +492,9 @@ export namespace Communication {
             | KeyframeEntitiesRequestMessage
             | KeyframeEntitiesResponseMessage
             | KeyframeEntityScriptsRequestMessage
-            | KeyframeEntityScriptsResponseMessage;
+            | KeyframeEntityScriptsResponseMessage
+            | ClientConfigRequestMessage
+            | ClientConfigResponseMessage;
 
         export type MessageWithoutTimestamp<T extends Message> = Omit<
             T,
