@@ -99,7 +99,7 @@ export namespace Entity {
                     };
                     Hook: I_Hook;
                     Tick: {
-                        getCurrentTick: () => Tick.I_TickMetadata;
+                        getCurrentTick: () => Tick.I_Tick;
                     };
                     State: {
                         getCurrentState: () => Entity.I_Entity;
@@ -120,7 +120,7 @@ export namespace Entity {
                 onScriptBeforeUnmount?: () => void;
                 onEntityUpdate?: (
                     entity: Entity.I_Entity,
-                    tickInfo: Tick.I_TickMetadata,
+                    tickInfo: Tick.I_Tick,
                 ) => void;
                 onEntityBeforeUnmount?: () => void;
             }
@@ -131,65 +131,40 @@ export namespace Entity {
 export namespace Tick {
     export type E_OperationType = "INSERT" | "UPDATE" | "DELETE";
 
-    export interface I_TickMetadata {
-        tick_number: number;
-        tick_start_time: string;
-        tick_end_time: string;
-        tick_duration_ms: number;
-        is_delayed: boolean;
-        headroom_ms: number | null;
-        delta_time_ms: number;
-        time_until_next_tick_ms: number;
-        tick_lag: number;
-        entity_states_processed: number;
-        script_states_processed: number;
-        rate_limited: boolean;
-        time_since_last_tick_ms: number | null;
-    }
-
-    export interface I_EntityUpdate {
-        entityId: string;
-        operation: E_OperationType;
-        entityChanges: E_OperationType extends "INSERT"
-            ? Entity.I_Entity
-            : DeepPartial<Entity.I_Entity>;
-        sessionIds: string[];
-        timestamp?: string;
-    }
-
-    export interface I_ScriptUpdate {
-        scriptId: string;
-        operation: E_OperationType;
-        scriptChanges: E_OperationType extends "INSERT"
-            ? Entity.Script.I_Script
-            : DeepPartial<Entity.Script.I_Script>;
-        sessionIds: string[];
-        timestamp?: string;
-    }
-
-    export interface I_TickState {
-        tick_data: I_TickMetadata;
-        entity_updates: I_EntityUpdate[];
-        script_updates: I_ScriptUpdate[];
-        timestamp?: string;
-    }
-
-    export interface I_WorldTick {
+    export interface I_Tick {
+        // General fields
         general__tick_id: string;
+
+        // Tick specific fields
         tick__number: number;
         group__sync: string;
         tick__start_time: string;
         tick__end_time: string;
         tick__duration_ms: number;
-        tick__states_processed: number;
+        tick__entity_states_processed: number;
+        tick__script_states_processed: number;
         tick__is_delayed: boolean;
-        tick__headroom_ms: number | null;
+        tick__headroom_ms?: number;
         tick__rate_limited: boolean;
-        tick__time_since_last_tick_ms: number | null;
-        general__created_at?: string;
-        general__updated_at?: string;
-        general__created_by?: string;
-        general__updated_by?: string;
+        tick__time_since_last_tick_ms?: number;
+    }
+
+    export interface I_EntityUpdate {
+        general__entity_id: string;
+        operation: E_OperationType;
+        changes: E_OperationType extends "INSERT"
+            ? Entity.I_Entity
+            : DeepPartial<Entity.I_Entity>;
+        session_ids: string[];
+    }
+
+    export interface I_ScriptUpdate {
+        general__script_id: string;
+        operation: E_OperationType;
+        changes: E_OperationType extends "INSERT"
+            ? Entity.Script.I_Script
+            : DeepPartial<Entity.Script.I_Script>;
+        session_ids: string[];
     }
 
     export interface I_EntityState extends Entity.I_Entity {
@@ -212,8 +187,7 @@ export namespace Config {
 
     export const CONFIG_KEYS = {
         // General settings
-        TICK_BUFFER_DURATION: "general__tick_buffer_duration_ms",
-        TICK_METRICS_HISTORY: "general__tick_metrics_history_ms",
+        TICK_BUFFER_DURATION: "tick__buffer_duration_ms",
 
         // Network settings
         NETWORK_MAX_LATENCY: "network__max_latency_ms",
@@ -290,34 +264,36 @@ export namespace Auth {
         general__updated_by?: string;
     }
 
-    export interface I_SyncGroup {
-        general__sync_group: string;
-        general__description?: string;
+    export namespace SyncGroup {
+        export interface I_SyncGroup {
+            general__sync_group: string;
+            general__description?: string;
 
-        server__tick__rate_ms: number;
-        server__tick__buffer: number;
+            server__tick__rate_ms: number;
+            server__tick__buffer: number;
 
-        client__render_delay_ms: number;
-        client__max_prediction_time_ms: number;
+            client__render_delay_ms: number;
+            client__max_prediction_time_ms: number;
 
-        network__packet_timing_variance_ms: number;
+            network__packet_timing_variance_ms: number;
 
-        general__created_at?: string;
-        general__created_by?: string;
-        general__updated_at?: string;
-        general__updated_by?: string;
-    }
+            general__created_at?: string;
+            general__created_by?: string;
+            general__updated_at?: string;
+            general__updated_by?: string;
+        }
 
-    export interface I_SyncGroupRole {
-        auth__agent_id: string;
-        group__sync: string;
-        permissions__can_insert: boolean;
-        permissions__can_update: boolean;
-        permissions__can_delete: boolean;
-        general__created_at?: string;
-        general__created_by?: string;
-        general__updated_at?: string;
-        general__updated_by?: string;
+        export interface I_Role {
+            auth__agent_id: string;
+            group__sync: string;
+            permissions__can_insert: boolean;
+            permissions__can_update: boolean;
+            permissions__can_delete: boolean;
+            general__created_at?: string;
+            general__created_by?: string;
+            general__updated_at?: string;
+            general__updated_by?: string;
+        }
     }
 }
 
@@ -377,7 +353,6 @@ export namespace Communication {
             type: MessageType.CONFIG_RESPONSE;
             config: {
                 [Config.CONFIG_KEYS.TICK_BUFFER_DURATION]: number;
-                [Config.CONFIG_KEYS.TICK_METRICS_HISTORY]: number;
                 [Config.CONFIG_KEYS.NETWORK_MAX_LATENCY]: number;
                 [Config.CONFIG_KEYS.NETWORK_WARNING_LATENCY]: number;
                 [Config.CONFIG_KEYS.NETWORK_CONSECUTIVE_WARNINGS]: number;
@@ -408,7 +383,7 @@ export namespace Communication {
 
         export interface NotificationEntityUpdatesMessage extends BaseMessage {
             type: MessageType.NOTIFICATION_ENTITY_UPDATE;
-            tickMetadata: Tick.I_TickMetadata;
+            tickMetadata: Tick.I_Tick;
             entities: Array<{
                 id: string;
                 operation: Tick.E_OperationType;
@@ -419,7 +394,7 @@ export namespace Communication {
         export interface NotificationEntityScriptUpdatesMessage
             extends BaseMessage {
             type: MessageType.NOTIFICATION_ENTITY_SCRIPT_UPDATE;
-            tickMetadata: Tick.I_TickMetadata;
+            tickMetadata: Tick.I_Tick;
             scripts: Array<{
                 id: string;
                 operation: Tick.E_OperationType;
