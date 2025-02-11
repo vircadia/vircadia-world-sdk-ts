@@ -61,8 +61,15 @@ export namespace Entity {
             compiled__browser__updated_at?: string;
         }
 
+        export enum E_Platform {
+            NODE = "node",
+            BUN = "bun",
+            BROWSER = "browser",
+        }
+
         export enum E_CompilationStatus {
             PENDING = "PENDING",
+            COMPILING = "COMPILING",
             COMPILED = "COMPILED",
             FAILED = "FAILED",
         }
