@@ -12,7 +12,10 @@ const serverEnvSchema = z.object({
                 ),
         ])
         .default(false),
-    VRCA_SERVER_PORT: z.string().default("3020"),
+    VRCA_SERVER_PORT: z
+        .string()
+        .transform((val) => Number.parseInt(val))
+        .default("3020"),
     VRCA_SERVER_HOST: z.string().default("0.0.0.0"),
     VRCA_SERVER_USING_SSL: z.boolean().default(false),
     VRCA_SERVER_DEV_MODE: z.boolean().default(false),
@@ -24,10 +27,22 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_POSTGRES_PASSWORD: z.string().default("CHANGE_ME!"),
     VRCA_SERVER_POSTGRES_EXTENSIONS: z
         .string()
+        .transform((val) =>
+            val
+                .split(",")
+                .map((ext) => ext.trim())
+                .filter((ext) => ext.length > 0),
+        )
         .default("uuid-ossp,hstore,pgcrypto"),
     VRCA_SERVER_POSTGRES_SEEDS_PATH: z.string().optional(),
-    VRCA_SERVER_PGWEB_PORT: z.string().default("5437"),
-    VRCA_SERVER_AUTH_PROVIDERS: z.string().default(JSON.stringify({})),
+    VRCA_SERVER_PGWEB_PORT: z
+        .string()
+        .transform((val) => Number(val))
+        .default("5437"),
+    VRCA_SERVER_AUTH_PROVIDERS: z
+        .string()
+        .transform((val) => JSON.parse(val))
+        .default(JSON.stringify({})),
 });
 
 // Client environment schema
@@ -83,7 +98,7 @@ export const VircadiaConfig_Client = {
 // Server config
 export const VircadiaConfig_Server = {
     debug: serverEnv.VRCA_SERVER_DEBUG,
-    serverPort: Number.parseInt(serverEnv.VRCA_SERVER_PORT),
+    serverPort: serverEnv.VRCA_SERVER_PORT,
     serverHost: serverEnv.VRCA_SERVER_HOST,
     serverUsingSsl: serverEnv.VRCA_SERVER_USING_SSL,
     devMode: serverEnv.VRCA_SERVER_DEV_MODE,
@@ -94,16 +109,14 @@ export const VircadiaConfig_Server = {
         database: serverEnv.VRCA_SERVER_POSTGRES_DB,
         user: serverEnv.VRCA_SERVER_POSTGRES_USER,
         password: serverEnv.VRCA_SERVER_POSTGRES_PASSWORD,
-        extensions: serverEnv.VRCA_SERVER_POSTGRES_EXTENSIONS.split(",")
-            .map((ext) => ext.trim())
-            .filter((ext) => ext.length > 0),
+        extensions: serverEnv.VRCA_SERVER_POSTGRES_EXTENSIONS,
         seedsPath: serverEnv.VRCA_SERVER_POSTGRES_SEEDS_PATH,
     },
     pgweb: {
-        port: Number(serverEnv.VRCA_SERVER_PGWEB_PORT),
+        port: serverEnv.VRCA_SERVER_PGWEB_PORT,
     },
     auth: {
-        providers: JSON.parse(serverEnv.VRCA_SERVER_AUTH_PROVIDERS),
+        providers: serverEnv.VRCA_SERVER_AUTH_PROVIDERS,
     },
 };
 
