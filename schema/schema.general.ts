@@ -162,7 +162,7 @@ export namespace Tick {
         changes: E_OperationType extends "INSERT"
             ? Entity.I_Entity
             : DeepPartial<Entity.I_Entity>;
-        session_ids: string[];
+        sync_group_session_ids: string[];
     }
 
     export interface I_ScriptUpdate {
@@ -171,7 +171,7 @@ export namespace Tick {
         changes: E_OperationType extends "INSERT"
             ? Entity.Script.I_Script
             : DeepPartial<Entity.Script.I_Script>;
-        session_ids: string[];
+        sync_group_session_ids: string[];
     }
 
     export interface I_EntityState extends Entity.I_Entity {
@@ -188,46 +188,56 @@ export namespace Tick {
 export namespace Config {
     export interface I_Config {
         general__key: string;
-        general__value: any;
+        general__value: I_ConfigValue;
         general__description?: string;
     }
 
+    export interface I_ConfigValue {
+        entity?: {
+            script_compilation_timeout_ms: number;
+        };
+        network?: {
+            max_latency_ms: number;
+            warning_latency_ms: number;
+            consecutive_warnings_before_kick: number;
+            measurement_window_ticks: number;
+            packet_loss_threshold_percent: number;
+        };
+        auth?: {
+            session_duration_jwt: string;
+            session_duration_ms: number;
+            secret_jwt: string;
+            session_duration_admin_jwt: string;
+            session_duration_admin_ms: number;
+            ws_check_interval: number;
+            max_age_ms: number;
+            cleanup_interval_ms: number;
+            inactive_timeout_ms: number;
+            max_sessions_per_agent: number;
+        };
+        heartbeat?: {
+            interval_ms: number;
+            timeout_ms: number;
+        };
+        database?: {
+            major_version: number;
+            minor_version: number;
+            patch_version: number;
+            migration_timestamp: string;
+        };
+    }
+
     export const CONFIG_KEYS = {
-        // General settings
-        TICK_BUFFER_DURATION: "tick__buffer_duration_ms",
-
-        // Network settings
-        NETWORK_MAX_LATENCY: "network__max_latency_ms",
-        NETWORK_WARNING_LATENCY: "network__warning_latency_ms",
-        NETWORK_CONSECUTIVE_WARNINGS:
-            "network__consecutive_warnings_before_kick",
-        NETWORK_MEASUREMENT_WINDOW: "network__measurement_window_ticks",
-        NETWORK_PACKET_LOSS_THRESHOLD: "network__packet_loss_threshold_percent",
-
-        // Session settings
-        SESSION_MAX_AGE: "session__max_age_ms",
-        SESSION_CLEANUP_INTERVAL: "session__cleanup_interval_ms",
-        SESSION_INACTIVE_TIMEOUT: "session__inactive_timeout_ms",
-        SESSION_MAX_PER_AGENT: "session__max_sessions_per_agent",
-
-        // Auth settings
-        AUTH_SESSION_DURATION_JWT: "auth__session_duration_jwt",
-        AUTH_SESSION_DURATION_MS: "auth__session_duration_ms",
-        AUTH_SECRET_JWT: "auth__secret_jwt",
-        AUTH_SESSION_DURATION_ADMIN_JWT: "auth__session_duration_admin_jwt",
-        AUTH_SESSION_DURATION_ADMIN_MS: "auth__session_duration_admin_ms",
-        AUTH_WS_CHECK_INTERVAL: "auth__ws_check_interval",
-
-        // Heartbeat settings
-        HEARTBEAT_INTERVAL: "heartbeat__interval_ms",
-        HEARTBEAT_TIMEOUT: "heartbeat__timeout_ms",
-
-        // Database version
-        DATABASE_VERSION_MAJOR: "database__major_version",
-        DATABASE_VERSION_MINOR: "database__minor_version",
-        DATABASE_VERSION_PATCH: "database__patch_version",
-        DATABASE_MIGRATION_TIMESTAMP: "database__migration_timestamp",
+        ENTITY: "entity",
+        NETWORK: "network",
+        SESSION: "session",
+        AUTH: "auth",
+        HEARTBEAT: "heartbeat",
+        DATABASE: "database",
     } as const;
+
+    // Helper type to access nested config values
+    export type ConfigPath<T extends keyof I_ConfigValue> = I_ConfigValue[T];
 }
 
 export namespace Auth {
@@ -352,28 +362,6 @@ export namespace Communication {
             type: MessageType.HEARTBEAT_RESPONSE;
         }
 
-        export interface ConfigRequestMessage extends BaseMessage {
-            type: MessageType.CONFIG_REQUEST;
-        }
-
-        export interface ConfigResponseMessage extends BaseMessage {
-            type: MessageType.CONFIG_RESPONSE;
-            config: {
-                [Config.CONFIG_KEYS.TICK_BUFFER_DURATION]: number;
-                [Config.CONFIG_KEYS.NETWORK_MAX_LATENCY]: number;
-                [Config.CONFIG_KEYS.NETWORK_WARNING_LATENCY]: number;
-                [Config.CONFIG_KEYS.NETWORK_CONSECUTIVE_WARNINGS]: number;
-                [Config.CONFIG_KEYS.NETWORK_MEASUREMENT_WINDOW]: number;
-                [Config.CONFIG_KEYS.NETWORK_PACKET_LOSS_THRESHOLD]: number;
-                [Config.CONFIG_KEYS.SESSION_MAX_AGE]: number;
-                [Config.CONFIG_KEYS.SESSION_CLEANUP_INTERVAL]: number;
-                [Config.CONFIG_KEYS.SESSION_INACTIVE_TIMEOUT]: number;
-                [Config.CONFIG_KEYS.SESSION_MAX_PER_AGENT]: number;
-                [Config.CONFIG_KEYS.HEARTBEAT_INTERVAL]: number;
-                [Config.CONFIG_KEYS.HEARTBEAT_TIMEOUT]: number;
-            };
-        }
-
         export interface QueryRequestMessage extends BaseMessage {
             type: MessageType.QUERY_REQUEST;
             requestId: string;
@@ -446,8 +434,6 @@ export namespace Communication {
             | ErrorResponseMessage
             | HeartbeatRequestMessage
             | HeartbeatResponseMessage
-            | ConfigRequestMessage
-            | ConfigResponseMessage
             | QueryRequestMessage
             | QueryResponseMessage
             | NotificationEntityUpdatesMessage
