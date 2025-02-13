@@ -209,7 +209,7 @@ export namespace Config {
             secret_jwt: string;
             session_duration_admin_jwt: string;
             session_duration_admin_ms: number;
-            ws_check_interval: number;
+            ws_check_interval_ms: number;
             max_age_ms: number;
             cleanup_interval_ms: number;
             inactive_timeout_ms: number;
