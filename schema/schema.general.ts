@@ -152,7 +152,6 @@ export namespace Tick {
         tick__script_states_processed: number;
         tick__is_delayed: boolean;
         tick__headroom_ms?: number;
-        tick__rate_limited: boolean;
         tick__time_since_last_tick_ms?: number;
     }
 
