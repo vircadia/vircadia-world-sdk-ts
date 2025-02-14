@@ -288,7 +288,7 @@ export namespace Auth {
             general__description?: string;
 
             server__tick__rate_ms: number;
-            server__tick__buffer: number;
+            server__tick__max_ticks_buffer: number;
 
             client__render_delay_ms: number;
             client__max_prediction_time_ms: number;
