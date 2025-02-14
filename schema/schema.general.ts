@@ -98,12 +98,13 @@ export namespace Entity {
                         client: string;
                         server: string;
                     };
-                    Query: {
-                        executeSqlQuery: (
-                            query: string,
-                            parameters?: any[],
-                        ) => Promise<any[]>;
-                    };
+                    // TODO: Determine if we need to give scripts SQL access, maybe safer not to, or only with elevated scripts.
+                    // Query: {
+                    //     executeSqlQuery: (
+                    //         query: string,
+                    //         parameters?: any[],
+                    //     ) => Promise<any[]>;
+                    // };
                     Hook: I_Hook;
                     Tick: {
                         getCurrentTick: () => Tick.I_Tick;
@@ -113,6 +114,7 @@ export namespace Entity {
                         getLastKnownState: () => Entity.I_Entity;
                         getPastStates: (count: number) => Entity.I_Entity[];
                     };
+                    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
                     [key: string]: any;
                 };
             }
@@ -185,58 +187,51 @@ export namespace Tick {
 }
 
 export namespace Config {
-    export interface I_Config {
-        general__key: string;
-        general__value: I_ConfigValue;
+    export type ConfigKey = "auth" | "entity" | "network" | "database";
+
+    export interface ConfigValueMap {
+        auth: I_Auth;
+        entity: I_Entity;
+        network: I_Network;
+        database: I_Database;
+    }
+
+    export interface I_Config<K extends ConfigKey = ConfigKey> {
+        general__key: K;
+        general__value: ConfigValueMap[K];
         general__description?: string;
     }
 
-    export interface I_ConfigValue {
-        entity?: {
-            script_compilation_timeout_ms: number;
-        };
-        network?: {
-            max_latency_ms: number;
-            warning_latency_ms: number;
-            consecutive_warnings_before_kick: number;
-            measurement_window_ticks: number;
-            packet_loss_threshold_percent: number;
-        };
-        auth?: {
-            session_duration_jwt: string;
-            session_duration_ms: number;
-            secret_jwt: string;
-            session_duration_admin_jwt: string;
-            session_duration_admin_ms: number;
-            ws_check_interval_ms: number;
-            max_age_ms: number;
-            cleanup_interval_ms: number;
-            inactive_timeout_ms: number;
-            max_sessions_per_agent: number;
-        };
-        heartbeat?: {
-            interval_ms: number;
-            timeout_ms: number;
-        };
-        database?: {
-            major_version: number;
-            minor_version: number;
-            patch_version: number;
-            migration_timestamp: string;
-        };
+    interface I_Entity {
+        script_compilation_timeout_ms: number;
     }
 
-    export const CONFIG_KEYS = {
-        ENTITY: "entity",
-        NETWORK: "network",
-        SESSION: "session",
-        AUTH: "auth",
-        HEARTBEAT: "heartbeat",
-        DATABASE: "database",
-    } as const;
+    interface I_Network {
+        max_latency_ms: number;
+        warning_latency_ms: number;
+        consecutive_warnings_before_kick: number;
+        measurement_window_ticks: number;
+        packet_loss_threshold_percent: number;
+    }
 
-    // Helper type to access nested config values
-    export type ConfigPath<T extends keyof I_ConfigValue> = I_ConfigValue[T];
+    interface I_Auth {
+        default_session_duration_jwt_string: string;
+        default_session_duration_ms: number;
+        default_session_max_age_ms: number;
+        jwt_secret: string;
+        session_cleanup_interval: number;
+        session_inactive_expiry_ms: number;
+        session_max_per_agent: number;
+        heartbeat_interval_ms: number;
+        heartbeat_inactive_expiry_ms: number;
+    }
+
+    interface I_Database {
+        major_version: number;
+        minor_version: number;
+        patch_version: number;
+        migration_timestamp: string;
+    }
 }
 
 export namespace Auth {
@@ -258,6 +253,7 @@ export namespace Auth {
         auth__refresh_token?: string;
         auth__provider_email?: string;
         auth__is_primary: boolean;
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
         auth__metadata?: Record<string, any>;
         general__created_at?: string;
         general__created_by?: string;
