@@ -2,7 +2,10 @@ import { z } from "zod";
 import type { Scene } from "@babylonjs/core";
 
 export namespace Entity {
-    export type E_Status = "ACTIVE" | "AWAITING_SCRIPTS" | "INACTIVE";
+    export type T_EntityScriptStatus =
+        | "ACTIVE"
+        | "AWAITING_SCRIPTS"
+        | "INACTIVE";
 
     export interface I_Entity {
         general__entity_id: string;
@@ -17,7 +20,8 @@ export namespace Entity {
         general__initialized_by?: string;
         meta__data: Record<string, object>;
         scripts__ids: string[];
-        scripts__status: E_Status;
+        scripts__status: T_EntityScriptStatus;
+        assets__ids: string[];
         validation__log?: Array<{
             timestamp: string;
             agent_id: string;
