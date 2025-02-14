@@ -8,10 +8,13 @@ export function log(data: {
     message: string;
     type?: "info" | "success" | "error" | "warning" | "warn" | "debug";
     debug?: boolean;
+    suppress?: boolean;
     prefix?: string;
     error?: Error | unknown;
     data?: Record<string, unknown>;
 }): void {
+    if (data.suppress) return;
+
     if (isBrowser) {
         browserLog(data);
     } else {

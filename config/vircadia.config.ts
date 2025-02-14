@@ -12,6 +12,16 @@ const serverEnvSchema = z.object({
                 ),
         ])
         .default(false),
+    VRCA_SERVER_SUPPRESS: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
     VRCA_SERVER_PORT: z
         .string()
         .transform((val) => Number.parseInt(val))
@@ -98,6 +108,7 @@ export const VircadiaConfig_Client = {
 // Server config
 export const VircadiaConfig_Server = {
     debug: serverEnv.VRCA_SERVER_DEBUG,
+    suppress: serverEnv.VRCA_SERVER_SUPPRESS,
     serverPort: serverEnv.VRCA_SERVER_PORT,
     serverHost: serverEnv.VRCA_SERVER_HOST,
     serverUsingSsl: serverEnv.VRCA_SERVER_USING_SSL,
