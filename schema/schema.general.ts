@@ -6,7 +6,7 @@ export namespace Entity {
 
     export interface I_Entity {
         general__entity_id: string;
-        general__name: string;
+        general__entity_name: string;
         general__semantic_version: string;
         general__created_at?: string;
         general__created_by?: string;
@@ -25,13 +25,28 @@ export namespace Entity {
             query: string;
         }>;
         group__sync: string;
-        permissions__roles__view?: string[];
-        permissions__roles__full?: string[];
+    }
+
+    export namespace Asset {
+        export interface I_Asset {
+            general__asset_name: string;
+            general__asset_id: string;
+            general__created_at?: string;
+            general__created_by?: string;
+            general__updated_at?: string;
+            general__updated_by?: string;
+            group__sync: string;
+
+            // Asset fields
+            asset__data: string;
+            meta__data: Record<string, object>;
+        }
     }
 
     export namespace Script {
         export interface I_Script {
             general__script_id: string;
+            general__script_name: string;
             general__created_at?: string;
             general__created_by?: string;
             general__updated_at?: string;
@@ -152,6 +167,7 @@ export namespace Tick {
         tick__duration_ms: number;
         tick__entity_states_processed: number;
         tick__script_states_processed: number;
+        tick__asset_states_processed: number;
         tick__is_delayed: boolean;
         tick__headroom_ms?: number;
         tick__time_since_last_tick_ms?: number;
@@ -172,6 +188,15 @@ export namespace Tick {
         changes: E_OperationType extends "INSERT"
             ? Entity.Script.I_Script
             : DeepPartial<Entity.Script.I_Script>;
+        sync_group_session_ids: string[];
+    }
+
+    export interface I_AssetUpdate {
+        general__asset_id: string;
+        operation: E_OperationType;
+        changes: E_OperationType extends "INSERT"
+            ? Entity.Asset.I_Asset
+            : DeepPartial<Entity.Asset.I_Asset>;
         sync_group_session_ids: string[];
     }
 
