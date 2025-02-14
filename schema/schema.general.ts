@@ -187,7 +187,13 @@ export namespace Tick {
 }
 
 export namespace Config {
-    export type ConfigKey = "auth" | "entity" | "network" | "database";
+    export type T_ConfigKey = "auth" | "entity" | "network" | "database";
+    export enum E_ConfigKey {
+        AUTH = "auth",
+        ENTITY = "entity",
+        NETWORK = "network",
+        DATABASE = "database",
+    }
 
     export interface ConfigValueMap {
         auth: I_Auth;
@@ -196,7 +202,7 @@ export namespace Config {
         database: I_Database;
     }
 
-    export interface I_Config<K extends ConfigKey = ConfigKey> {
+    export interface I_Config<K extends T_ConfigKey = T_ConfigKey> {
         general__key: K;
         general__value: ConfigValueMap[K];
         general__description?: string;
