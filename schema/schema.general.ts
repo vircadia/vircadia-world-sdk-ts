@@ -351,19 +351,35 @@ export namespace Communication {
     export namespace WebSocket {
         export enum MessageType {
             CONNECTION_ESTABLISHED_RESPONSE = "CONNECTION_ESTABLISHED_RESPONSE",
-            ERROR_RESPONSE = "ERROR_RESPONSE",
+
             HEARTBEAT_REQUEST = "HEARTBEAT_REQUEST",
             HEARTBEAT_RESPONSE = "HEARTBEAT_RESPONSE",
-            CONFIG_REQUEST = "CONFIG_REQUEST",
-            CONFIG_RESPONSE = "CONFIG_RESPONSE",
-            QUERY_REQUEST = "QUERY_REQUEST",
-            QUERY_RESPONSE = "QUERY_RESPONSE",
-            NOTIFICATION_ENTITY_UPDATE = "NOTIFICATION_ENTITY_UPDATE",
-            NOTIFICATION_ENTITY_SCRIPT_UPDATE = "NOTIFICATION_ENTITY_SCRIPT_UPDATE",
-            KEYFRAME_ENTITIES_REQUEST = "KEYFRAME_ENTITIES_REQUEST",
-            KEYFRAME_ENTITIES_RESPONSE = "KEYFRAME_ENTITIES_RESPONSE",
-            KEYFRAME_ENTITY_SCRIPTS_REQUEST = "KEYFRAME_ENTITY_SCRIPTS_REQUEST",
-            KEYFRAME_ENTITY_SCRIPTS_RESPONSE = "KEYFRAME_ENTITY_SCRIPTS_RESPONSE",
+
+            UPDATE_ENTITY_REQUEST = "UPDATE_ENTITY_REQUEST",
+            UPDATE_ENTITY_RESPONSE = "UPDATE_ENTITY_RESPONSE",
+            UPDATE_ENTITY_SCRIPT_REQUEST = "UPDATE_ENTITY_SCRIPT_REQUEST",
+            UPDATE_ENTITY_SCRIPT_RESPONSE = "UPDATE_ENTITY_SCRIPT_RESPONSE",
+            UPDATE_ENTITY_ASSET_REQUEST = "UPDATE_ENTITY_ASSET_REQUEST",
+            UPDATE_ENTITY_ASSET_RESPONSE = "UPDATE_ENTITY_ASSET_RESPONSE",
+
+            CHANGE_ENTITY_RESPONSE = "CHANGE_ENTITY_RESPONSE",
+            CHANGE_ENTITY_SCRIPT_RESPONSE = "CHANGE_ENTITY_SCRIPT_RESPONSE",
+            CHANGE_ENTITY_ASSET_RESPONSE = "CHANGE_ENTITY_ASSET_RESPONSE",
+
+            GET_ENTITY_REQUEST = "GET_ENTITY_REQUEST",
+            GET_ENTITY_RESPONSE = "GET_ENTITY_RESPONSE,",
+            GET_ENTITY_SCRIPT_REQUEST = "GET_ENTITY_SCRIPT_REQUEST",
+            GET_ENTITY_SCRIPT_RESPONSE = "GET_ENTITY_SCRIPT_RESPONSE",
+            GET_ENTITY_ASSET_REQUEST = "GET_ENTITY_ASSET_REQUEST",
+            GET_ENTITY_ASSET_RESPONSE = "GET_ENTITY_ASSET_RESPONSE",
+
+            GET_ALL_ENTITIES_REQUEST = "GET_ALL_ENTITIES_REQUEST",
+            GET_ALL_ENTITIES_RESPONSE = "GET_ALL_ENTITIES_RESPONSE",
+            GET_ALL_ENTITY_SCRIPTS_REQUEST = "GET_ALL_ENTITY_SCRIPTS_REQUEST",
+            GET_ALL_ENTITY_SCRIPTS_RESPONSE = "GET_ALL_ENTITY_SCRIPTS_RESPONSE",
+            GET_ALL_ENTITY_ASSETS_REQUEST = "GET_ALL_ENTITY_ASSETS_REQUEST",
+            GET_ALL_ENTITY_ASSETS_RESPONSE = "GET_ALL_ENTITY_ASSETS_RESPONSE",
+
             CLIENT_CONFIG_REQUEST = "CLIENT_CONFIG_REQUEST",
             CLIENT_CONFIG_RESPONSE = "CLIENT_CONFIG_RESPONSE",
         }
@@ -373,107 +389,108 @@ export namespace Communication {
             type: MessageType;
         }
 
-        export interface ConnectionEstablishedResponseMessage
-            extends BaseMessage {
-            type: MessageType.CONNECTION_ESTABLISHED_RESPONSE;
-            agentId: string;
-        }
-
-        export interface ErrorResponseMessage extends BaseMessage {
-            type: MessageType.ERROR_RESPONSE;
-            message: string;
-        }
-
-        export interface HeartbeatRequestMessage extends BaseMessage {
-            type: MessageType.HEARTBEAT_REQUEST;
-        }
-
-        export interface HeartbeatResponseMessage extends BaseMessage {
-            type: MessageType.HEARTBEAT_RESPONSE;
-        }
-
-        export interface QueryRequestMessage extends BaseMessage {
-            type: MessageType.QUERY_REQUEST;
-            requestId: string;
-            query: string;
-            parameters?: any[];
-        }
-
-        export interface QueryResponseMessage extends BaseMessage {
-            type: MessageType.QUERY_RESPONSE;
-            requestId: string;
-            results?: any[];
-            error?: string;
-        }
-
-        export interface NotificationEntityUpdatesMessage extends BaseMessage {
-            type: MessageType.NOTIFICATION_ENTITY_UPDATE;
-            tickMetadata: Tick.I_Tick;
-            entities: Array<{
-                id: string;
-                operation: Tick.E_OperationType;
+        interface MessagePayloads {
+            [MessageType.CONNECTION_ESTABLISHED_RESPONSE]: {
+                agentId: string;
+            };
+            [MessageType.HEARTBEAT_REQUEST]: Record<string, never>;
+            [MessageType.HEARTBEAT_RESPONSE]: Record<string, never>;
+            [MessageType.UPDATE_ENTITY_REQUEST]: {
+                entityId: string;
                 entityChanges: DeepPartial<Entity.I_Entity>;
-            }>;
-        }
-
-        export interface NotificationEntityScriptUpdatesMessage
-            extends BaseMessage {
-            type: MessageType.NOTIFICATION_ENTITY_SCRIPT_UPDATE;
-            tickMetadata: Tick.I_Tick;
-            scripts: Array<{
-                id: string;
-                operation: Tick.E_OperationType;
+            };
+            [MessageType.UPDATE_ENTITY_RESPONSE]: {
+                entityId: string;
+                success: boolean;
+            };
+            [MessageType.UPDATE_ENTITY_SCRIPT_REQUEST]: {
+                scriptId: string;
                 scriptChanges: DeepPartial<Entity.Script.I_Script>;
-            }>;
+            };
+            [MessageType.UPDATE_ENTITY_SCRIPT_RESPONSE]: {
+                scriptId: string;
+                success: boolean;
+            };
+            [MessageType.UPDATE_ENTITY_ASSET_REQUEST]: {
+                assetId: string;
+                assetChanges: DeepPartial<Entity.Asset.I_Asset>;
+            };
+            [MessageType.UPDATE_ENTITY_ASSET_RESPONSE]: {
+                assetId: string;
+                success: boolean;
+            };
+            [MessageType.CHANGE_ENTITY_RESPONSE]: {
+                tickMetadata: Tick.I_Tick;
+                entities: Array<{
+                    id: string;
+                    operation: Tick.E_OperationType;
+                    entityChanges: DeepPartial<Entity.I_Entity>;
+                }>;
+            };
+            [MessageType.CHANGE_ENTITY_SCRIPT_RESPONSE]: {
+                tickMetadata: Tick.I_Tick;
+                scripts: Array<{
+                    id: string;
+                    operation: Tick.E_OperationType;
+                    scriptChanges: DeepPartial<Entity.Script.I_Script>;
+                }>;
+            };
+            [MessageType.CHANGE_ENTITY_ASSET_RESPONSE]: {
+                tickMetadata: Tick.I_Tick;
+                assets: Array<{
+                    id: string;
+                    operation: Tick.E_OperationType;
+                    assetChanges: DeepPartial<Entity.Asset.I_Asset>;
+                }>;
+            };
+            [MessageType.GET_ENTITY_REQUEST]: {
+                entityId: string;
+            };
+            [MessageType.GET_ENTITY_RESPONSE]: {
+                entity?: Entity.I_Entity;
+            };
+            [MessageType.GET_ENTITY_SCRIPT_REQUEST]: {
+                scriptId: string;
+            };
+            [MessageType.GET_ENTITY_SCRIPT_RESPONSE]: {
+                script?: Entity.Script.I_Script;
+            };
+            [MessageType.GET_ENTITY_ASSET_REQUEST]: {
+                assetId: string;
+            };
+            [MessageType.GET_ENTITY_ASSET_RESPONSE]: {
+                asset?: Entity.Asset.I_Asset;
+            };
+            [MessageType.GET_ALL_ENTITIES_REQUEST]: {
+                syncGroup: string;
+            };
+            [MessageType.GET_ALL_ENTITIES_RESPONSE]: {
+                entities: Entity.I_Entity[];
+            };
+            [MessageType.GET_ALL_ENTITY_SCRIPTS_REQUEST]: {
+                syncGroup: string;
+            };
+            [MessageType.GET_ALL_ENTITY_SCRIPTS_RESPONSE]: {
+                scripts: Entity.Script.I_Script[];
+            };
+            [MessageType.GET_ALL_ENTITY_ASSETS_REQUEST]: {
+                syncGroup: string;
+            };
+            [MessageType.GET_ALL_ENTITY_ASSETS_RESPONSE]: {
+                assets: Entity.Asset.I_Asset[];
+            };
+            [MessageType.CLIENT_CONFIG_REQUEST]: Record<string, never>;
+            [MessageType.CLIENT_CONFIG_RESPONSE]: {
+                config: Config.ConfigValueMap;
+            };
         }
 
-        export interface KeyframeEntitiesRequestMessage extends BaseMessage {
-            type: MessageType.KEYFRAME_ENTITIES_REQUEST;
-            syncGroup: string;
-        }
-
-        export interface KeyframeEntitiesResponseMessage extends BaseMessage {
-            type: MessageType.KEYFRAME_ENTITIES_RESPONSE;
-            entities: Entity.I_Entity[];
-        }
-
-        export interface KeyframeEntityScriptsRequestMessage
-            extends BaseMessage {
-            type: MessageType.KEYFRAME_ENTITY_SCRIPTS_REQUEST;
-            syncGroup: string;
-        }
-
-        export interface KeyframeEntityScriptsResponseMessage
-            extends BaseMessage {
-            type: MessageType.KEYFRAME_ENTITY_SCRIPTS_RESPONSE;
-            scripts: Entity.Script.I_Script[];
-        }
-
-        export interface ClientConfigRequestMessage extends BaseMessage {
-            type: MessageType.CLIENT_CONFIG_REQUEST;
-        }
-
-        export interface ClientConfigResponseMessage extends BaseMessage {
-            type: MessageType.CLIENT_CONFIG_RESPONSE;
-            // TODO: Figure out what we need on the client.
-            config: any;
-        }
-
-        export type Message =
-            | ConnectionEstablishedResponseMessage
-            | ErrorResponseMessage
-            | HeartbeatRequestMessage
-            | HeartbeatResponseMessage
-            | QueryRequestMessage
-            | QueryResponseMessage
-            | NotificationEntityUpdatesMessage
-            | NotificationEntityScriptUpdatesMessage
-            | KeyframeEntitiesRequestMessage
-            | KeyframeEntitiesResponseMessage
-            | KeyframeEntityScriptsRequestMessage
-            | KeyframeEntityScriptsResponseMessage
-            | ClientConfigRequestMessage
-            | ClientConfigResponseMessage;
+        export type Message = {
+            [K in MessageType]: BaseMessage & {
+                type: K;
+                error: string | null;
+            } & MessagePayloads[K];
+        }[MessageType];
 
         export type MessageWithoutTimestamp<T extends Message> = Omit<
             T,
@@ -579,7 +596,6 @@ export namespace Communication {
     }
 }
 
-// Add this type utility at the namespace level
 export type DeepPartial<T> = {
     [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
