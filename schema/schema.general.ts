@@ -343,7 +343,7 @@ export namespace Auth {
 
 export namespace Communication {
     export const WS_PATH = "/world/ws";
-    export const REST_BASE_PATH = "/world/auth";
+    export const REST_BASE_PATH = "/world/rest";
 
     export namespace WebSocket {
         export enum MessageType {
