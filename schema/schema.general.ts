@@ -48,6 +48,13 @@ export namespace Entity {
     }
 
     export namespace Script {
+        export enum E_CompilationStatus {
+            PENDING = "PENDING",
+            COMPILING = "COMPILING",
+            COMPILED = "COMPILED",
+            FAILED = "FAILED",
+        }
+
         export interface I_Script {
             general__script_id: string;
             general__script_name: string;
@@ -84,13 +91,6 @@ export namespace Entity {
             NODE = "node",
             BUN = "bun",
             BROWSER = "browser",
-        }
-
-        export enum E_CompilationStatus {
-            PENDING = "PENDING",
-            COMPILING = "COMPILING",
-            COMPILED = "COMPILED",
-            FAILED = "FAILED",
         }
 
         export interface SourceInfo {
@@ -157,8 +157,6 @@ export namespace Entity {
 }
 
 export namespace Tick {
-    export type E_OperationType = "INSERT" | "UPDATE" | "DELETE";
-
     export interface I_Tick {
         // General fields
         general__tick_id: string;
@@ -179,29 +177,26 @@ export namespace Tick {
 
     export interface I_EntityUpdate {
         general__entity_id: string;
-        operation: E_OperationType;
-        changes: E_OperationType extends "INSERT"
+        operation: Config.E_OperationType;
+        changes: Config.E_OperationType extends "INSERT"
             ? Entity.I_Entity
             : DeepPartial<Entity.I_Entity>;
-        sync_group_session_ids: string[];
     }
 
     export interface I_ScriptUpdate {
         general__script_id: string;
-        operation: E_OperationType;
-        changes: E_OperationType extends "INSERT"
+        operation: Config.E_OperationType;
+        changes: Config.E_OperationType extends "INSERT"
             ? Entity.Script.I_Script
             : DeepPartial<Entity.Script.I_Script>;
-        sync_group_session_ids: string[];
     }
 
     export interface I_AssetUpdate {
         general__asset_id: string;
-        operation: E_OperationType;
-        changes: E_OperationType extends "INSERT"
+        operation: Config.E_OperationType;
+        changes: Config.E_OperationType extends "INSERT"
             ? Entity.Asset.I_Asset
             : DeepPartial<Entity.Asset.I_Asset>;
-        sync_group_session_ids: string[];
     }
 
     export interface I_EntityState extends Entity.I_Entity {
@@ -216,6 +211,8 @@ export namespace Tick {
 }
 
 export namespace Config {
+    export type E_OperationType = "INSERT" | "UPDATE" | "DELETE";
+
     export type T_ConfigKey = "auth" | "entity" | "network" | "database";
     export enum E_ConfigKey {
         AUTH = "auth",
@@ -350,161 +347,136 @@ export namespace Communication {
 
     export namespace WebSocket {
         export enum MessageType {
+            GENERAL_ERROR_RESPONSE = "GENERAL_ERROR_RESPONSE",
             CONNECTION_ESTABLISHED_RESPONSE = "CONNECTION_ESTABLISHED_RESPONSE",
-
             HEARTBEAT_REQUEST = "HEARTBEAT_REQUEST",
             HEARTBEAT_RESPONSE = "HEARTBEAT_RESPONSE",
-
-            UPDATE_ENTITY_REQUEST = "UPDATE_ENTITY_REQUEST",
-            UPDATE_ENTITY_RESPONSE = "UPDATE_ENTITY_RESPONSE",
-            UPDATE_ENTITY_SCRIPT_REQUEST = "UPDATE_ENTITY_SCRIPT_REQUEST",
-            UPDATE_ENTITY_SCRIPT_RESPONSE = "UPDATE_ENTITY_SCRIPT_RESPONSE",
-            UPDATE_ENTITY_ASSET_REQUEST = "UPDATE_ENTITY_ASSET_REQUEST",
-            UPDATE_ENTITY_ASSET_RESPONSE = "UPDATE_ENTITY_ASSET_RESPONSE",
-
-            CHANGE_ENTITY_RESPONSE = "CHANGE_ENTITY_RESPONSE",
-            CHANGE_ENTITY_SCRIPT_RESPONSE = "CHANGE_ENTITY_SCRIPT_RESPONSE",
-            CHANGE_ENTITY_ASSET_RESPONSE = "CHANGE_ENTITY_ASSET_RESPONSE",
-
-            GET_ENTITY_REQUEST = "GET_ENTITY_REQUEST",
-            GET_ENTITY_RESPONSE = "GET_ENTITY_RESPONSE,",
-            GET_ENTITY_SCRIPT_REQUEST = "GET_ENTITY_SCRIPT_REQUEST",
-            GET_ENTITY_SCRIPT_RESPONSE = "GET_ENTITY_SCRIPT_RESPONSE",
-            GET_ENTITY_ASSET_REQUEST = "GET_ENTITY_ASSET_REQUEST",
-            GET_ENTITY_ASSET_RESPONSE = "GET_ENTITY_ASSET_RESPONSE",
-
-            GET_ALL_ENTITIES_REQUEST = "GET_ALL_ENTITIES_REQUEST",
-            GET_ALL_ENTITIES_RESPONSE = "GET_ALL_ENTITIES_RESPONSE",
-            GET_ALL_ENTITY_SCRIPTS_REQUEST = "GET_ALL_ENTITY_SCRIPTS_REQUEST",
-            GET_ALL_ENTITY_SCRIPTS_RESPONSE = "GET_ALL_ENTITY_SCRIPTS_RESPONSE",
-            GET_ALL_ENTITY_ASSETS_REQUEST = "GET_ALL_ENTITY_ASSETS_REQUEST",
-            GET_ALL_ENTITY_ASSETS_RESPONSE = "GET_ALL_ENTITY_ASSETS_RESPONSE",
-
+            QUERY_REQUEST = "QUERY_REQUEST",
+            QUERY_RESPONSE = "QUERY_RESPONSE",
+            SYNC_GROUP_UPDATES_RESPONSE = "SYNC_GROUP_UPDATES_RESPONSE",
             CLIENT_CONFIG_REQUEST = "CLIENT_CONFIG_REQUEST",
             CLIENT_CONFIG_RESPONSE = "CLIENT_CONFIG_RESPONSE",
         }
 
-        export interface BaseMessage {
-            timestamp: number;
-            type: MessageType;
+        export abstract class BaseMessage {
+            public readonly timestamp: number;
+            public readonly transactionId: string;
+            public readonly error: string | null;
+            public abstract readonly type: MessageType;
+
+            constructor() {
+                this.timestamp = Date.now();
+                this.transactionId = crypto.randomUUID();
+                this.error = null;
+            }
         }
 
-        interface MessagePayloads {
-            [MessageType.CONNECTION_ESTABLISHED_RESPONSE]: {
-                agentId: string;
-            };
-            [MessageType.HEARTBEAT_REQUEST]: Record<string, never>;
-            [MessageType.HEARTBEAT_RESPONSE]: Record<string, never>;
-            [MessageType.UPDATE_ENTITY_REQUEST]: {
-                entityId: string;
-                entityChanges: DeepPartial<Entity.I_Entity>;
-            };
-            [MessageType.UPDATE_ENTITY_RESPONSE]: {
-                entityId: string;
-                success: boolean;
-            };
-            [MessageType.UPDATE_ENTITY_SCRIPT_REQUEST]: {
-                scriptId: string;
-                scriptChanges: DeepPartial<Entity.Script.I_Script>;
-            };
-            [MessageType.UPDATE_ENTITY_SCRIPT_RESPONSE]: {
-                scriptId: string;
-                success: boolean;
-            };
-            [MessageType.UPDATE_ENTITY_ASSET_REQUEST]: {
-                assetId: string;
-                assetChanges: DeepPartial<Entity.Asset.I_Asset>;
-            };
-            [MessageType.UPDATE_ENTITY_ASSET_RESPONSE]: {
-                assetId: string;
-                success: boolean;
-            };
-            [MessageType.CHANGE_ENTITY_RESPONSE]: {
-                tickMetadata: Tick.I_Tick;
-                entities: Array<{
-                    id: string;
-                    operation: Tick.E_OperationType;
-                    entityChanges: DeepPartial<Entity.I_Entity>;
-                }>;
-            };
-            [MessageType.CHANGE_ENTITY_SCRIPT_RESPONSE]: {
-                tickMetadata: Tick.I_Tick;
-                scripts: Array<{
-                    id: string;
-                    operation: Tick.E_OperationType;
-                    scriptChanges: DeepPartial<Entity.Script.I_Script>;
-                }>;
-            };
-            [MessageType.CHANGE_ENTITY_ASSET_RESPONSE]: {
-                tickMetadata: Tick.I_Tick;
-                assets: Array<{
-                    id: string;
-                    operation: Tick.E_OperationType;
-                    assetChanges: DeepPartial<Entity.Asset.I_Asset>;
-                }>;
-            };
-            [MessageType.GET_ENTITY_REQUEST]: {
-                entityId: string;
-            };
-            [MessageType.GET_ENTITY_RESPONSE]: {
-                entity?: Entity.I_Entity;
-            };
-            [MessageType.GET_ENTITY_SCRIPT_REQUEST]: {
-                scriptId: string;
-            };
-            [MessageType.GET_ENTITY_SCRIPT_RESPONSE]: {
-                script?: Entity.Script.I_Script;
-            };
-            [MessageType.GET_ENTITY_ASSET_REQUEST]: {
-                assetId: string;
-            };
-            [MessageType.GET_ENTITY_ASSET_RESPONSE]: {
-                asset?: Entity.Asset.I_Asset;
-            };
-            [MessageType.GET_ALL_ENTITIES_REQUEST]: {
-                syncGroup: string;
-            };
-            [MessageType.GET_ALL_ENTITIES_RESPONSE]: {
-                entities: Entity.I_Entity[];
-            };
-            [MessageType.GET_ALL_ENTITY_SCRIPTS_REQUEST]: {
-                syncGroup: string;
-            };
-            [MessageType.GET_ALL_ENTITY_SCRIPTS_RESPONSE]: {
-                scripts: Entity.Script.I_Script[];
-            };
-            [MessageType.GET_ALL_ENTITY_ASSETS_REQUEST]: {
-                syncGroup: string;
-            };
-            [MessageType.GET_ALL_ENTITY_ASSETS_RESPONSE]: {
-                assets: Entity.Asset.I_Asset[];
-            };
-            [MessageType.CLIENT_CONFIG_REQUEST]: Record<string, never>;
-            [MessageType.CLIENT_CONFIG_RESPONSE]: {
-                config: Config.ConfigValueMap;
-            };
+        export class GeneralErrorResponseMessage extends BaseMessage {
+            public readonly type = MessageType.GENERAL_ERROR_RESPONSE;
+
+            constructor(public readonly error: string) {
+                super();
+            }
         }
 
-        export type Message = {
-            [K in MessageType]: BaseMessage & {
-                type: K;
-                error: string | null;
-            } & MessagePayloads[K];
-        }[MessageType];
+        export class ConnectionEstablishedResponseMessage extends BaseMessage {
+            public readonly type = MessageType.CONNECTION_ESTABLISHED_RESPONSE;
 
-        export type MessageWithoutTimestamp<T extends Message> = Omit<
-            T,
-            "timestamp"
-        >;
-
-        export function createMessage<T extends Message>(
-            message: MessageWithoutTimestamp<T>,
-        ): T {
-            return {
-                ...message,
-                timestamp: Date.now(),
-            } as T;
+            constructor(public readonly agentId: string) {
+                super();
+            }
         }
+
+        export class HeartbeatRequestMessage extends BaseMessage {
+            public readonly type = MessageType.HEARTBEAT_REQUEST;
+
+            constructor(public readonly agentId: string) {
+                super();
+            }
+        }
+
+        export class HeartbeatResponseMessage extends BaseMessage {
+            public readonly type = MessageType.HEARTBEAT_RESPONSE;
+
+            constructor(public readonly agentId: string) {
+                super();
+            }
+        }
+
+        export class QueryRequestMessage extends BaseMessage {
+            public readonly type = MessageType.QUERY_REQUEST;
+
+            constructor(
+                public readonly query: string,
+                public readonly parameters?: any[],
+            ) {
+                super();
+            }
+        }
+
+        export class QueryResponseMessage extends BaseMessage {
+            public readonly type = MessageType.QUERY_RESPONSE;
+
+            constructor(
+                public readonly result?: any[],
+                public readonly error: string | null = null,
+            ) {
+                super();
+            }
+        }
+
+        export class SyncGroupUpdatesResponseMessage extends BaseMessage {
+            public readonly type = MessageType.SYNC_GROUP_UPDATES_RESPONSE;
+
+            constructor(
+                public entities: Array<{
+                    entityId: string;
+                    changes: DeepPartial<Entity.I_Entity>;
+                    operation: Config.E_OperationType;
+                    error?: string | null;
+                }>,
+                public scripts: Array<{
+                    scriptId: string;
+                    changes: DeepPartial<Entity.Script.I_Script>;
+                    operation: Config.E_OperationType;
+                    error?: string | null;
+                }>,
+                public assets: Array<{
+                    assetId: string;
+                    changes: DeepPartial<Entity.Asset.I_Asset>;
+                    operation: Config.E_OperationType;
+                    error?: string | null;
+                }>,
+            ) {
+                super();
+            }
+        }
+
+        export class ClientConfigRequestMessage extends BaseMessage {
+            public readonly type = MessageType.CLIENT_CONFIG_REQUEST;
+
+            constructor(public readonly agentId: string) {
+                super();
+            }
+        }
+
+        export class ClientConfigResponseMessage extends BaseMessage {
+            public readonly type = MessageType.CLIENT_CONFIG_RESPONSE;
+
+            constructor(public readonly config: {}) {
+                super();
+            }
+        }
+
+        export type Message =
+            | ConnectionEstablishedResponseMessage
+            | HeartbeatRequestMessage
+            | HeartbeatResponseMessage
+            | QueryRequestMessage
+            | QueryResponseMessage
+            | SyncGroupUpdatesResponseMessage
+            | ClientConfigRequestMessage
+            | ClientConfigResponseMessage;
 
         export function isMessageType<T extends Message>(
             message: Message,
