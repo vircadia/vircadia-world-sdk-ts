@@ -27,13 +27,14 @@ const serverEnvSchema = z.object({
         .transform((val) => Number.parseInt(val))
         .default("3020"),
     VRCA_SERVER_HOST: z.string().default("0.0.0.0"),
-    VRCA_SERVER_DEV_MODE: z.boolean().default(false),
     VRCA_SERVER_CONTAINER_NAME: z.string().default("vircadia_world"),
     VRCA_SERVER_POSTGRES_HOST: z.string().default("localhost"),
     VRCA_SERVER_POSTGRES_PORT: z.coerce.number().default(5432),
     VRCA_SERVER_POSTGRES_DB: z.string().default("vircadia_world_db"),
     VRCA_SERVER_POSTGRES_USER: z.string().default("vircadia"),
     VRCA_SERVER_POSTGRES_PASSWORD: z.string().default("CHANGE_ME!"),
+    VRCA_SERVER_POSTGRES_AGENT_PROXY_USER: z.string().default("vircadia_agent"),
+    VRCA_SERVER_POSTGRES_AGENT_PROXY_PASSWORD: z.string().default("CHANGE_ME!"),
     VRCA_SERVER_POSTGRES_EXTENSIONS: z
         .string()
         .transform((val) =>
@@ -57,26 +58,28 @@ const serverEnv = serverEnvSchema.parse(import.meta.env);
 
 // Server config
 export const VircadiaConfig_Server = {
-    debug: serverEnv.VRCA_SERVER_DEBUG,
-    suppress: serverEnv.VRCA_SERVER_SUPPRESS,
-    serverPort: serverEnv.VRCA_SERVER_PORT,
-    serverHost: serverEnv.VRCA_SERVER_HOST,
-    devMode: serverEnv.VRCA_SERVER_DEV_MODE,
-    containerName: serverEnv.VRCA_SERVER_CONTAINER_NAME,
-    postgres: {
-        host: serverEnv.VRCA_SERVER_POSTGRES_HOST,
-        port: serverEnv.VRCA_SERVER_POSTGRES_PORT,
-        database: serverEnv.VRCA_SERVER_POSTGRES_DB,
-        user: serverEnv.VRCA_SERVER_POSTGRES_USER,
-        password: serverEnv.VRCA_SERVER_POSTGRES_PASSWORD,
-        extensions: serverEnv.VRCA_SERVER_POSTGRES_EXTENSIONS,
-        seedsPath: serverEnv.VRCA_SERVER_POSTGRES_SEEDS_PATH,
+    DEBUG: serverEnv.VRCA_SERVER_DEBUG,
+    SUPPRESS: serverEnv.VRCA_SERVER_SUPPRESS,
+    SERVER_PORT: serverEnv.VRCA_SERVER_PORT,
+    SERVER_HOST: serverEnv.VRCA_SERVER_HOST,
+    CONTAINER_NAME: serverEnv.VRCA_SERVER_CONTAINER_NAME,
+    POSTGRES: {
+        HOST: serverEnv.VRCA_SERVER_POSTGRES_HOST,
+        PORT: serverEnv.VRCA_SERVER_POSTGRES_PORT,
+        DATABASE: serverEnv.VRCA_SERVER_POSTGRES_DB,
+        USER: serverEnv.VRCA_SERVER_POSTGRES_USER,
+        PASSWORD: serverEnv.VRCA_SERVER_POSTGRES_PASSWORD,
+        AGENT_PROXY_USER: serverEnv.VRCA_SERVER_POSTGRES_AGENT_PROXY_USER,
+        AGENT_PROXY_PASSWORD:
+            serverEnv.VRCA_SERVER_POSTGRES_AGENT_PROXY_PASSWORD,
+        EXTENSIONS: serverEnv.VRCA_SERVER_POSTGRES_EXTENSIONS,
+        SEED_PATH: serverEnv.VRCA_SERVER_POSTGRES_SEEDS_PATH,
     },
-    pgweb: {
-        port: serverEnv.VRCA_SERVER_PGWEB_PORT,
+    PGWEB: {
+        PORT: serverEnv.VRCA_SERVER_PGWEB_PORT,
     },
-    auth: {
-        providers: serverEnv.VRCA_SERVER_AUTH_PROVIDERS,
+    AUTH: {
+        PROVIDERS: serverEnv.VRCA_SERVER_AUTH_PROVIDERS,
     },
 };
 
