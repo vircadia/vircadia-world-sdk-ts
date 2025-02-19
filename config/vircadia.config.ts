@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+const VircadiaConfig_GlobalConsts = {
+    DB_AGENT_PROXY_USER: "vircadia_agent_proxy",
+};
+
 // Server environment schema
 const serverEnvSchema = z.object({
     VRCA_SERVER_DEBUG: z
@@ -33,8 +37,10 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_POSTGRES_DB: z.string().default("vircadia_world_db"),
     VRCA_SERVER_POSTGRES_USER: z.string().default("vircadia"),
     VRCA_SERVER_POSTGRES_PASSWORD: z.string().default("CHANGE_ME!"),
-    VRCA_SERVER_POSTGRES_AGENT_PROXY_USER: z.string().default("vircadia_agent"),
-    VRCA_SERVER_POSTGRES_AGENT_PROXY_PASSWORD: z.string().default("CHANGE_ME!"),
+    VRCA_SERVER_POSTGRES_SQL_ENV_PREFIX: z.string().default("VRCA_SERVER"),
+    VRCA_SERVER_POSTGRES_SQL_ENV_AGENT_PROXY_PASSWORD: z
+        .string()
+        .default("CHANGE_ME!"),
     VRCA_SERVER_POSTGRES_EXTENSIONS: z
         .string()
         .transform((val) =>
@@ -57,7 +63,7 @@ const serverEnvSchema = z.object({
 const serverEnv = serverEnvSchema.parse(import.meta.env);
 
 // Server config
-export const VircadiaConfig_Server = {
+const VircadiaConfig_Server = {
     DEBUG: serverEnv.VRCA_SERVER_DEBUG,
     SUPPRESS: serverEnv.VRCA_SERVER_SUPPRESS,
     SERVER_PORT: serverEnv.VRCA_SERVER_PORT,
@@ -69,11 +75,13 @@ export const VircadiaConfig_Server = {
         DATABASE: serverEnv.VRCA_SERVER_POSTGRES_DB,
         USER: serverEnv.VRCA_SERVER_POSTGRES_USER,
         PASSWORD: serverEnv.VRCA_SERVER_POSTGRES_PASSWORD,
-        AGENT_PROXY_USER: serverEnv.VRCA_SERVER_POSTGRES_AGENT_PROXY_USER,
-        AGENT_PROXY_PASSWORD:
-            serverEnv.VRCA_SERVER_POSTGRES_AGENT_PROXY_PASSWORD,
         EXTENSIONS: serverEnv.VRCA_SERVER_POSTGRES_EXTENSIONS,
         SEED_PATH: serverEnv.VRCA_SERVER_POSTGRES_SEEDS_PATH,
+        SQL_ENV_PREFIX: serverEnv.VRCA_SERVER_POSTGRES_SQL_ENV_PREFIX,
+        SQL_ENV: {
+            AGENT_PROXY_PASSWORD:
+                serverEnv.VRCA_SERVER_POSTGRES_SQL_ENV_AGENT_PROXY_PASSWORD,
+        },
     },
     PGWEB: {
         PORT: serverEnv.VRCA_SERVER_PGWEB_PORT,
@@ -118,7 +126,7 @@ const clientEnvSchema = z.object({
 const clientEnv = clientEnvSchema.parse(import.meta.env);
 
 // Client config
-export const VircadiaConfig_Client = {
+const VircadiaConfig_Client = {
     debug: clientEnv.VRCA_CLIENT_DEBUG,
     defaultTitle: clientEnv.VRCA_CLIENT_DEFAULT_TITLE,
     defaultDescription: clientEnv.VRCA_CLIENT_DEFAULT_DESCRIPTION,
@@ -134,6 +142,7 @@ export const VircadiaConfig_Client = {
 
 // Combined config object
 export const VircadiaConfig = {
-    client: VircadiaConfig_Client,
-    server: VircadiaConfig_Server,
+    CLIENT: VircadiaConfig_Client,
+    SERVER: VircadiaConfig_Server,
+    GLOBAL_CONSTS: VircadiaConfig_GlobalConsts,
 };
