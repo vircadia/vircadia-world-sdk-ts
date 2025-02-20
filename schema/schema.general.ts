@@ -1,6 +1,10 @@
 import { z } from "zod";
 import type { Scene } from "@babylonjs/core";
 
+export namespace Base {
+    export type E_OperationType = "INSERT" | "UPDATE" | "DELETE";
+}
+
 export namespace Entity {
     export type T_EntityScriptStatus =
         | "ACTIVE"
@@ -177,24 +181,24 @@ export namespace Tick {
 
     export interface I_EntityUpdate {
         general__entity_id: string;
-        operation: Config.E_OperationType;
-        changes: Config.E_OperationType extends "INSERT"
+        operation: Base.E_OperationType;
+        changes: Base.E_OperationType extends "INSERT"
             ? Entity.I_Entity
             : DeepPartial<Entity.I_Entity>;
     }
 
     export interface I_ScriptUpdate {
         general__script_id: string;
-        operation: Config.E_OperationType;
-        changes: Config.E_OperationType extends "INSERT"
+        operation: Base.E_OperationType;
+        changes: Base.E_OperationType extends "INSERT"
             ? Entity.Script.I_Script
             : DeepPartial<Entity.Script.I_Script>;
     }
 
     export interface I_AssetUpdate {
         general__asset_id: string;
-        operation: Config.E_OperationType;
-        changes: Config.E_OperationType extends "INSERT"
+        operation: Base.E_OperationType;
+        changes: Base.E_OperationType extends "INSERT"
             ? Entity.Asset.I_Asset
             : DeepPartial<Entity.Asset.I_Asset>;
     }
@@ -207,62 +211,6 @@ export namespace Tick {
     export interface I_ScriptState extends Entity.Script.I_Script {
         general__script_state_id: string;
         general__tick_id: string;
-    }
-}
-
-export namespace Config {
-    export type E_OperationType = "INSERT" | "UPDATE" | "DELETE";
-
-    export type T_ConfigKey = "auth" | "entity" | "network" | "database";
-    export enum E_ConfigKey {
-        AUTH = "auth",
-        ENTITY = "entity",
-        NETWORK = "network",
-        DATABASE = "database",
-    }
-
-    export interface ConfigValueMap {
-        auth: I_Auth;
-        entity: I_Entity;
-        network: I_Network;
-        database: I_Database;
-    }
-
-    export interface I_Config<K extends T_ConfigKey = T_ConfigKey> {
-        general__key: K;
-        general__value: ConfigValueMap[K];
-        general__description?: string;
-    }
-
-    interface I_Entity {
-        script_compilation_timeout_ms: number;
-    }
-
-    interface I_Network {
-        max_latency_ms: number;
-        warning_latency_ms: number;
-        consecutive_warnings_before_kick: number;
-        measurement_window_ticks: number;
-        packet_loss_threshold_percent: number;
-    }
-
-    interface I_Auth {
-        default_session_duration_jwt_string: string;
-        default_session_duration_ms: number;
-        default_session_max_age_ms: number;
-        jwt_secret: string;
-        session_cleanup_interval: number;
-        session_inactive_expiry_ms: number;
-        session_max_per_agent: number;
-        heartbeat_interval_ms: number;
-        heartbeat_inactive_expiry_ms: number;
-    }
-
-    interface I_Database {
-        major_version: number;
-        minor_version: number;
-        patch_version: number;
-        migration_timestamp: string;
     }
 }
 
@@ -432,19 +380,19 @@ export namespace Communication {
                 public entities: Array<{
                     entityId: string;
                     changes: DeepPartial<Entity.I_Entity>;
-                    operation: Config.E_OperationType;
+                    operation: Base.E_OperationType;
                     error?: string | null;
                 }>,
                 public scripts: Array<{
                     scriptId: string;
                     changes: DeepPartial<Entity.Script.I_Script>;
-                    operation: Config.E_OperationType;
+                    operation: Base.E_OperationType;
                     error?: string | null;
                 }>,
                 public assets: Array<{
                     assetId: string;
                     changes: DeepPartial<Entity.Asset.I_Asset>;
-                    operation: Config.E_OperationType;
+                    operation: Base.E_OperationType;
                     error?: string | null;
                 }>,
             ) {
