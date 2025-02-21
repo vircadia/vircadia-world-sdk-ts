@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Scene } from "@babylonjs/core";
 
-export namespace Base {
+export namespace Config {
     export type E_OperationType = "INSERT" | "UPDATE" | "DELETE";
 }
 
@@ -181,24 +181,24 @@ export namespace Tick {
 
     export interface I_EntityUpdate {
         general__entity_id: string;
-        operation: Base.E_OperationType;
-        changes: Base.E_OperationType extends "INSERT"
+        operation: Config.E_OperationType;
+        changes: Config.E_OperationType extends "INSERT"
             ? Entity.I_Entity
             : DeepPartial<Entity.I_Entity>;
     }
 
     export interface I_ScriptUpdate {
         general__script_id: string;
-        operation: Base.E_OperationType;
-        changes: Base.E_OperationType extends "INSERT"
+        operation: Config.E_OperationType;
+        changes: Config.E_OperationType extends "INSERT"
             ? Entity.Script.I_Script
             : DeepPartial<Entity.Script.I_Script>;
     }
 
     export interface I_AssetUpdate {
         general__asset_id: string;
-        operation: Base.E_OperationType;
-        changes: Base.E_OperationType extends "INSERT"
+        operation: Config.E_OperationType;
+        changes: Config.E_OperationType extends "INSERT"
             ? Entity.Asset.I_Asset
             : DeepPartial<Entity.Asset.I_Asset>;
     }
@@ -380,19 +380,19 @@ export namespace Communication {
                 public entities: Array<{
                     entityId: string;
                     changes: DeepPartial<Entity.I_Entity>;
-                    operation: Base.E_OperationType;
+                    operation: Config.E_OperationType;
                     error?: string | null;
                 }>,
                 public scripts: Array<{
                     scriptId: string;
                     changes: DeepPartial<Entity.Script.I_Script>;
-                    operation: Base.E_OperationType;
+                    operation: Config.E_OperationType;
                     error?: string | null;
                 }>,
                 public assets: Array<{
                     assetId: string;
                     changes: DeepPartial<Entity.Asset.I_Asset>;
-                    operation: Base.E_OperationType;
+                    operation: Config.E_OperationType;
                     error?: string | null;
                 }>,
             ) {
