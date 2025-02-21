@@ -38,9 +38,7 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_POSTGRES_USER: z.string().default("vircadia"),
     VRCA_SERVER_POSTGRES_PASSWORD: z.string().default("CHANGE_ME!"),
     VRCA_SERVER_POSTGRES_SQL_ENV_PREFIX: z.string().default("VRCA_SERVER"),
-    VRCA_SERVER_POSTGRES_SQL_ENV_AGENT_PROXY_PASSWORD: z
-        .string()
-        .default("CHANGE_ME!"),
+    VRCA_SERVER_POSTGRES_AGENT_PROXY_PASSWORD: z.string().default("CHANGE_ME!"),
     VRCA_SERVER_POSTGRES_EXTENSIONS: z
         .string()
         .transform((val) =>
@@ -78,10 +76,9 @@ const VircadiaConfig_Server = {
         EXTENSIONS: serverEnv.VRCA_SERVER_POSTGRES_EXTENSIONS,
         SEED_PATH: serverEnv.VRCA_SERVER_POSTGRES_SEEDS_PATH,
         SQL_ENV_PREFIX: serverEnv.VRCA_SERVER_POSTGRES_SQL_ENV_PREFIX,
-        SQL_ENV: {
-            AGENT_PROXY_PASSWORD:
-                serverEnv.VRCA_SERVER_POSTGRES_SQL_ENV_AGENT_PROXY_PASSWORD,
-        },
+        SQL_ENV: {},
+        AGENT_PROXY_PASSWORD:
+            serverEnv.VRCA_SERVER_POSTGRES_AGENT_PROXY_PASSWORD,
     },
     PGWEB: {
         PORT: serverEnv.VRCA_SERVER_PGWEB_PORT,
