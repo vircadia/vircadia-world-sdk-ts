@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const VircadiaConfig_GlobalConsts = {
+    DB_SUPER_USER: "vircadia",
     DB_AGENT_PROXY_USER: "vircadia_agent_proxy",
 };
 
@@ -35,7 +36,6 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_POSTGRES_HOST: z.string().default("localhost"),
     VRCA_SERVER_POSTGRES_PORT: z.coerce.number().default(5432),
     VRCA_SERVER_POSTGRES_DB: z.string().default("vircadia_world_db"),
-    VRCA_SERVER_POSTGRES_USER: z.string().default("vircadia"),
     VRCA_SERVER_POSTGRES_PASSWORD: z.string().default("CHANGE_ME!"),
     VRCA_SERVER_POSTGRES_SQL_ENV_PREFIX: z.string().default("VRCA_SERVER"),
     VRCA_SERVER_POSTGRES_AGENT_PROXY_PASSWORD: z.string().default("CHANGE_ME!"),
@@ -71,7 +71,6 @@ const VircadiaConfig_Server = {
         HOST: serverEnv.VRCA_SERVER_POSTGRES_HOST,
         PORT: serverEnv.VRCA_SERVER_POSTGRES_PORT,
         DATABASE: serverEnv.VRCA_SERVER_POSTGRES_DB,
-        USER: serverEnv.VRCA_SERVER_POSTGRES_USER,
         PASSWORD: serverEnv.VRCA_SERVER_POSTGRES_PASSWORD,
         EXTENSIONS: serverEnv.VRCA_SERVER_POSTGRES_EXTENSIONS,
         SEED_PATH: serverEnv.VRCA_SERVER_POSTGRES_SEEDS_PATH,
