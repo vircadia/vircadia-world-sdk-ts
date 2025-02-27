@@ -301,9 +301,9 @@ export namespace Communication {
             HEARTBEAT_RESPONSE = "HEARTBEAT_RESPONSE",
             QUERY_REQUEST = "QUERY_REQUEST",
             QUERY_RESPONSE = "QUERY_RESPONSE",
+            SESSION_INVALIDATION_REQUEST = "SESSION_INVALIDATION_REQUEST",
+            SESSION_INVALIDATION_RESPONSE = "SESSION_INVALIDATION_RESPONSE",
             SYNC_GROUP_UPDATES_RESPONSE = "SYNC_GROUP_UPDATES_RESPONSE",
-            CLIENT_CONFIG_REQUEST = "CLIENT_CONFIG_REQUEST",
-            CLIENT_CONFIG_RESPONSE = "CLIENT_CONFIG_RESPONSE",
         }
 
         export abstract class BaseMessage {
@@ -373,6 +373,22 @@ export namespace Communication {
             }
         }
 
+        export class SessionInvalidationRequestMessage extends BaseMessage {
+            public readonly type = MessageType.SESSION_INVALIDATION_REQUEST;
+
+            constructor(public readonly sessionId: string) {
+                super();
+            }
+        }
+
+        export class SessionInvalidationResponseMessage extends BaseMessage {
+            public readonly type = MessageType.SESSION_INVALIDATION_RESPONSE;
+
+            constructor(public readonly sessionId: string) {
+                super();
+            }
+        }
+
         export class SyncGroupUpdatesResponseMessage extends BaseMessage {
             public readonly type = MessageType.SYNC_GROUP_UPDATES_RESPONSE;
 
@@ -400,31 +416,15 @@ export namespace Communication {
             }
         }
 
-        export class ClientConfigRequestMessage extends BaseMessage {
-            public readonly type = MessageType.CLIENT_CONFIG_REQUEST;
-
-            constructor(public readonly agentId: string) {
-                super();
-            }
-        }
-
-        export class ClientConfigResponseMessage extends BaseMessage {
-            public readonly type = MessageType.CLIENT_CONFIG_RESPONSE;
-
-            constructor(public readonly config: {}) {
-                super();
-            }
-        }
-
         export type Message =
             | ConnectionEstablishedResponseMessage
             | HeartbeatRequestMessage
             | HeartbeatResponseMessage
             | QueryRequestMessage
             | QueryResponseMessage
-            | SyncGroupUpdatesResponseMessage
-            | ClientConfigRequestMessage
-            | ClientConfigResponseMessage;
+            | SessionInvalidationRequestMessage
+            | SessionInvalidationResponseMessage
+            | SyncGroupUpdatesResponseMessage;
 
         export function isMessageType<T extends Message>(
             message: Message,
@@ -463,19 +463,6 @@ export namespace Communication {
             | SessionValidationSuccessResponse
             | SessionValidationErrorResponse;
 
-        export interface SessionLogoutSuccessResponse extends BaseResponse {
-            success: true;
-        }
-
-        export interface SessionLogoutErrorResponse extends BaseResponse {
-            success: false;
-            error: string;
-        }
-
-        export type SessionLogoutResponse =
-            | SessionLogoutSuccessResponse
-            | SessionLogoutErrorResponse;
-
         export const Endpoint = {
             AUTH_SESSION_VALIDATE: {
                 path: `${REST_BASE_PATH}/session/validate`,
@@ -493,20 +480,6 @@ export namespace Communication {
                 createError: (
                     error: string,
                 ): SessionValidationErrorResponse => ({
-                    success: false,
-                    timestamp: Date.now(),
-                    error,
-                }),
-            },
-            AUTH_SESSION_LOGOUT: {
-                path: `${REST_BASE_PATH}/session/logout`,
-                method: "POST",
-                response: {} as SessionLogoutResponse,
-                createSuccess: (): SessionLogoutSuccessResponse => ({
-                    success: true,
-                    timestamp: Date.now(),
-                }),
-                createError: (error: string): SessionLogoutErrorResponse => ({
                     success: false,
                     timestamp: Date.now(),
                     error,
