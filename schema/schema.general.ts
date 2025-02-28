@@ -290,7 +290,7 @@ export namespace Auth {
 }
 
 export namespace Communication {
-    export const WS_PATH = "/world/ws";
+    export const WS_UPGRADE_PATH = "/world/ws";
     export const REST_BASE_PATH = "/world/rest";
 
     export namespace WebSocket {
@@ -435,51 +435,32 @@ export namespace Communication {
     }
 
     export namespace REST {
-        export interface BaseResponse {
-            success: boolean;
-            timestamp: number;
-            error?: string;
-        }
-
-        export interface Response<T = unknown> extends BaseResponse {
-            data?: T;
-        }
-
-        export interface SessionValidationSuccessResponse extends BaseResponse {
-            success: true;
-            data: {
-                isValid: boolean;
-                agentId?: string;
-                sessionId?: string;
-            };
-        }
-
-        export interface SessionValidationErrorResponse extends BaseResponse {
-            success: false;
-            error: string;
-        }
-
-        export type SessionValidationResponse =
-            | SessionValidationSuccessResponse
-            | SessionValidationErrorResponse;
-
         export const Endpoint = {
             AUTH_SESSION_VALIDATE: {
                 path: `${REST_BASE_PATH}/session/validate`,
                 method: "POST",
-                response: {} as SessionValidationResponse,
+                createRequest: (token: string, provider: string): string =>
+                    JSON.stringify({
+                        token,
+                        provider,
+                    }),
                 createSuccess: (
-                    isValid: boolean,
-                    agentId?: string,
-                    sessionId?: string,
-                ): SessionValidationSuccessResponse => ({
+                    _agentId: string,
+                    _sessionId: string,
+                ): {
+                    success: true;
+                    timestamp: number;
+                } => ({
                     success: true,
                     timestamp: Date.now(),
-                    data: { isValid, agentId, sessionId },
                 }),
                 createError: (
                     error: string,
-                ): SessionValidationErrorResponse => ({
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
                     success: false,
                     timestamp: Date.now(),
                     error,
