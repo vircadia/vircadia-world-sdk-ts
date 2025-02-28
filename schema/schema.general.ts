@@ -439,10 +439,13 @@ export namespace Communication {
             AUTH_SESSION_VALIDATE: {
                 path: `${REST_BASE_PATH}/session/validate`,
                 method: "POST",
-                createRequest: (token: string, provider: string): string =>
+                createRequest: (data: {
+                    token: string;
+                    provider: string;
+                }): string =>
                     JSON.stringify({
-                        token,
-                        provider,
+                        token: data.token,
+                        provider: data.provider,
                     }),
                 createSuccess: (
                     _agentId: string,
