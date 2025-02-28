@@ -335,22 +335,6 @@ export namespace Communication {
             }
         }
 
-        export class HeartbeatRequestMessage extends BaseMessage {
-            public readonly type = MessageType.HEARTBEAT_REQUEST;
-
-            constructor(public readonly agentId: string) {
-                super();
-            }
-        }
-
-        export class HeartbeatResponseMessage extends BaseMessage {
-            public readonly type = MessageType.HEARTBEAT_RESPONSE;
-
-            constructor(public readonly agentId: string) {
-                super();
-            }
-        }
-
         export class QueryRequestMessage extends BaseMessage {
             public readonly type = MessageType.QUERY_REQUEST;
 
@@ -369,22 +353,6 @@ export namespace Communication {
                 public readonly result?: any[],
                 public readonly error: string | null = null,
             ) {
-                super();
-            }
-        }
-
-        export class SessionInvalidationRequestMessage extends BaseMessage {
-            public readonly type = MessageType.SESSION_INVALIDATION_REQUEST;
-
-            constructor(public readonly sessionId: string) {
-                super();
-            }
-        }
-
-        export class SessionInvalidationResponseMessage extends BaseMessage {
-            public readonly type = MessageType.SESSION_INVALIDATION_RESPONSE;
-
-            constructor(public readonly sessionId: string) {
                 super();
             }
         }
@@ -418,12 +386,8 @@ export namespace Communication {
 
         export type Message =
             | ConnectionEstablishedResponseMessage
-            | HeartbeatRequestMessage
-            | HeartbeatResponseMessage
             | QueryRequestMessage
             | QueryResponseMessage
-            | SessionInvalidationRequestMessage
-            | SessionInvalidationResponseMessage
             | SyncGroupUpdatesResponseMessage;
 
         export function isMessageType<T extends Message>(
