@@ -327,14 +327,6 @@ export namespace Communication {
             }
         }
 
-        export class ConnectionEstablishedResponseMessage extends BaseMessage {
-            public readonly type = MessageType.CONNECTION_ESTABLISHED_RESPONSE;
-
-            constructor(public readonly agentId: string) {
-                super();
-            }
-        }
-
         export class QueryRequestMessage extends BaseMessage {
             public readonly type = MessageType.QUERY_REQUEST;
 
@@ -385,7 +377,6 @@ export namespace Communication {
         }
 
         export type Message =
-            | ConnectionEstablishedResponseMessage
             | QueryRequestMessage
             | QueryResponseMessage
             | SyncGroupUpdatesResponseMessage;
