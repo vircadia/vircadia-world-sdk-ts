@@ -27,9 +27,12 @@ function browserLog(data: Parameters<typeof log>[0]): void {
     let icon = "";
     let style = "";
 
+    if (data.type === "debug" && !data.debug) {
+        return;
+    }
+
     switch (data.type) {
         case "debug":
-            if (!data.debug) return;
             icon = "🔍";
             style = "color: #4a9eff";
             break;
@@ -65,7 +68,6 @@ function browserLog(data: Parameters<typeof log>[0]): void {
     // Single switch statement to handle all cases
     switch (data.type) {
         case "debug":
-            if (!data.debug) return;
             console.debug(`%c${formattedMessage}`, style);
             break;
         case "error":
@@ -108,6 +110,11 @@ function nodeLog(data: Parameters<typeof log>[0]): void {
         return;
     }
 
+    // Early return for debug messages when debug is false
+    if (data.type === "debug" && !data.debug) {
+        return;
+    }
+
     const prefix = data.prefix ? `[${data.prefix}]: ` : "";
     const hasGroup = !!data.data;
 
@@ -117,12 +124,6 @@ function nodeLog(data: Parameters<typeof log>[0]): void {
 
     switch (data.type) {
         case "debug":
-            if (!data.debug) {
-                if (hasGroup) {
-                    console.groupEnd();
-                }
-                return;
-            }
             if (!hasGroup) {
                 console.debug(EC.blue(`${prefix}ℹ ${data.message}`));
             }
