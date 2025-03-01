@@ -7,6 +7,7 @@ const VircadiaConfig_GlobalConsts = {
 
 // Server environment schema
 const serverEnvSchema = z.object({
+    VRCA_SERVER_CONTAINER_NAME: z.string().default("vircadia_world"),
     VRCA_SERVER_DEBUG: z
         .union([
             z.boolean(),
@@ -27,19 +28,22 @@ const serverEnvSchema = z.object({
                 ),
         ])
         .default(false),
-    VRCA_SERVER_PORT: z
+    VRCA_SERVER_SERVICE_API_PORT: z
         .string()
         .transform((val) => Number.parseInt(val))
         .default("3020"),
-    VRCA_SERVER_HOST: z.string().default("0.0.0.0"),
-    VRCA_SERVER_CONTAINER_NAME: z.string().default("vircadia_world"),
-    VRCA_SERVER_POSTGRES_HOST: z.string().default("localhost"),
-    VRCA_SERVER_POSTGRES_PORT: z.coerce.number().default(5432),
-    VRCA_SERVER_POSTGRES_DB: z.string().default("vircadia_world_db"),
-    VRCA_SERVER_POSTGRES_PASSWORD: z.string().default("CHANGE_ME!"),
-    VRCA_SERVER_POSTGRES_SQL_ENV_PREFIX: z.string().default("VRCA_SERVER"),
-    VRCA_SERVER_POSTGRES_AGENT_PROXY_PASSWORD: z.string().default("CHANGE_ME!"),
-    VRCA_SERVER_POSTGRES_EXTENSIONS: z
+    VRCA_SERVER_SERVICE_API_HOST: z.string().default("0.0.0.0"),
+    VRCA_SERVER_SERVICE_POSTGRES_HOST: z.string().default("localhost"),
+    VRCA_SERVER_SERVICE_POSTGRES_PORT: z.coerce.number().default(5432),
+    VRCA_SERVER_SERVICE_POSTGRES_DB: z.string().default("vircadia_world_db"),
+    VRCA_SERVER_SERVICE_POSTGRES_PASSWORD: z.string().default("CHANGE_ME!"),
+    VRCA_SERVER_SERVICE_POSTGRES_SQL_ENV_PREFIX: z
+        .string()
+        .default("VRCA_SERVER"),
+    VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_PASSWORD: z
+        .string()
+        .default("CHANGE_ME!"),
+    VRCA_SERVER_SERVICE_POSTGRES_EXTENSIONS: z
         .string()
         .transform((val) =>
             val
@@ -48,15 +52,11 @@ const serverEnvSchema = z.object({
                 .filter((ext) => ext.length > 0),
         )
         .default("uuid-ossp,hstore,pgcrypto"),
-    VRCA_SERVER_POSTGRES_SEEDS_PATH: z.string().optional(),
-    VRCA_SERVER_PGWEB_PORT: z
+    VRCA_SERVER_SERVICE_POSTGRES_SEEDS_PATH: z.string().optional(),
+    VRCA_SERVER_SERVICE_PGWEB_PORT: z
         .string()
         .transform((val) => Number(val))
         .default("5437"),
-    VRCA_SERVER_AUTH_PROVIDERS: z
-        .string()
-        .transform((val) => JSON.parse(val))
-        .default(JSON.stringify({})),
 });
 const serverEnv = serverEnvSchema.parse(import.meta.env);
 
@@ -64,26 +64,30 @@ const serverEnv = serverEnvSchema.parse(import.meta.env);
 const VircadiaConfig_Server = {
     DEBUG: serverEnv.VRCA_SERVER_DEBUG,
     SUPPRESS: serverEnv.VRCA_SERVER_SUPPRESS,
-    SERVER_PORT: serverEnv.VRCA_SERVER_PORT,
-    SERVER_HOST: serverEnv.VRCA_SERVER_HOST,
     CONTAINER_NAME: serverEnv.VRCA_SERVER_CONTAINER_NAME,
-    POSTGRES: {
-        HOST: serverEnv.VRCA_SERVER_POSTGRES_HOST,
-        PORT: serverEnv.VRCA_SERVER_POSTGRES_PORT,
-        DATABASE: serverEnv.VRCA_SERVER_POSTGRES_DB,
-        PASSWORD: serverEnv.VRCA_SERVER_POSTGRES_PASSWORD,
-        EXTENSIONS: serverEnv.VRCA_SERVER_POSTGRES_EXTENSIONS,
-        SEED_PATH: serverEnv.VRCA_SERVER_POSTGRES_SEEDS_PATH,
-        SQL_ENV_PREFIX: serverEnv.VRCA_SERVER_POSTGRES_SQL_ENV_PREFIX,
-        SQL_ENV: {},
-        AGENT_PROXY_PASSWORD:
-            serverEnv.VRCA_SERVER_POSTGRES_AGENT_PROXY_PASSWORD,
-    },
-    PGWEB: {
-        PORT: serverEnv.VRCA_SERVER_PGWEB_PORT,
-    },
-    AUTH: {
-        PROVIDERS: serverEnv.VRCA_SERVER_AUTH_PROVIDERS,
+    SERVICE: {
+        API: {
+            HOST: serverEnv.VRCA_SERVER_SERVICE_API_HOST,
+            PORT: serverEnv.VRCA_SERVER_SERVICE_API_PORT,
+        },
+        SCRIPT_WEB: {},
+        TICK: {},
+        POSTGRES: {
+            HOST: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST,
+            PORT: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT,
+            DATABASE: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_DB,
+            PASSWORD: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PASSWORD,
+            EXTENSIONS: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_EXTENSIONS,
+            SEED_PATH: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_SEEDS_PATH,
+            SQL_ENV_PREFIX:
+                serverEnv.VRCA_SERVER_SERVICE_POSTGRES_SQL_ENV_PREFIX,
+            SQL_ENV: {},
+            AGENT_PROXY_PASSWORD:
+                serverEnv.VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_PASSWORD,
+        },
+        PGWEB: {
+            PORT: serverEnv.VRCA_SERVER_SERVICE_PGWEB_PORT,
+        },
     },
 };
 

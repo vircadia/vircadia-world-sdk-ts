@@ -18,11 +18,11 @@ export class PostgresClient {
         if (!this.superSql) {
             // Create super user connection using config
             this.superSql = postgres({
-                host: VircadiaConfig.SERVER.POSTGRES.HOST,
-                port: VircadiaConfig.SERVER.POSTGRES.PORT,
-                database: VircadiaConfig.SERVER.POSTGRES.DATABASE,
+                host: VircadiaConfig.SERVER.SERVICE.POSTGRES.HOST,
+                port: VircadiaConfig.SERVER.SERVICE.POSTGRES.PORT,
+                database: VircadiaConfig.SERVER.SERVICE.POSTGRES.DATABASE,
                 username: VircadiaConfig.GLOBAL_CONSTS.DB_SUPER_USER,
-                password: VircadiaConfig.SERVER.POSTGRES.PASSWORD,
+                password: VircadiaConfig.SERVER.SERVICE.POSTGRES.PASSWORD,
                 onnotice: VircadiaConfig.SERVER.SUPPRESS ? () => {} : undefined,
                 onclose: VircadiaConfig.SERVER.SUPPRESS ? () => {} : undefined,
             });
@@ -52,11 +52,12 @@ export class PostgresClient {
             });
 
             this.proxySql = postgres({
-                host: VircadiaConfig.SERVER.POSTGRES.HOST,
-                port: VircadiaConfig.SERVER.POSTGRES.PORT,
-                database: VircadiaConfig.SERVER.POSTGRES.DATABASE,
+                host: VircadiaConfig.SERVER.SERVICE.POSTGRES.HOST,
+                port: VircadiaConfig.SERVER.SERVICE.POSTGRES.PORT,
+                database: VircadiaConfig.SERVER.SERVICE.POSTGRES.DATABASE,
                 username: VircadiaConfig.GLOBAL_CONSTS.DB_AGENT_PROXY_USER,
-                password: VircadiaConfig.SERVER.POSTGRES.AGENT_PROXY_PASSWORD,
+                password:
+                    VircadiaConfig.SERVER.SERVICE.POSTGRES.AGENT_PROXY_PASSWORD,
                 onnotice: VircadiaConfig.SERVER.SUPPRESS ? () => {} : undefined,
                 onclose: VircadiaConfig.SERVER.SUPPRESS ? () => {} : undefined,
             });
