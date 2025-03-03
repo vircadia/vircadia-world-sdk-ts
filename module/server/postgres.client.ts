@@ -14,7 +14,16 @@ export class PostgresClient {
         return PostgresClient.instance;
     }
 
-    private static logConfig(): void {
+    private static logIssue(error: unknown, host: string, port: number): void {
+        log({
+            message: `PostgreSQL connection issue, using
+            host: [${host}],
+            port: [${port}]`,
+            type: "error",
+            suppress: VircadiaConfig.SERVER.SUPPRESS,
+            debug: VircadiaConfig.SERVER.DEBUG,
+            error,
+        });
         log({
             message: "PostgreSQL connection env variables:",
             type: "info",
@@ -63,7 +72,11 @@ export class PostgresClient {
             }
             return this.superSql;
         } catch (error) {
-            PostgresClient.logConfig();
+            PostgresClient.logIssue(
+                error,
+                data.postgres.host,
+                data.postgres.port,
+            );
             throw error;
         }
     }
@@ -114,7 +127,11 @@ export class PostgresClient {
             }
             return this.proxySql;
         } catch (error) {
-            PostgresClient.logConfig();
+            PostgresClient.logIssue(
+                error,
+                data.postgres.host,
+                data.postgres.port,
+            );
             throw error;
         }
     }
