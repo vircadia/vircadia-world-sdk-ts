@@ -31,19 +31,17 @@ const serverEnvSchema = z.object({
         ])
         .default(false),
 
-    VRCA_SERVER_SERVICE_API_HOST_INTERNAL: z.string().default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_API_PORT_INTERNAL: z.coerce.number().default(3020),
+    VRCA_SERVER_SERVICE_API_HOST_BIND: z.string().default("0.0.0.0"),
+    VRCA_SERVER_SERVICE_API_PORT_BIND: z.coerce.number().default(3020),
     VRCA_SERVER_SERVICE_API_HOST_CLUSTER: z.string().default("api"),
     VRCA_SERVER_SERVICE_API_PORT_CLUSTER: z.coerce.number().default(3020),
     VRCA_SERVER_SERVICE_API_HOST_PUBLIC: z.string().default("localhost"),
     VRCA_SERVER_SERVICE_API_PORT_PUBLIC: z.coerce.number().default(3020),
 
-    VRCA_SERVER_SERVICE_POSTGRES_HOST_INTERNAL: z.string().default("localhost"),
-    VRCA_SERVER_SERVICE_POSTGRES_PORT_INTERNAL: z.coerce.number().default(5432),
+    VRCA_SERVER_SERVICE_POSTGRES_HOST_EXTERNAL: z.string().default("localhost"),
+    VRCA_SERVER_SERVICE_POSTGRES_PORT_EXTERNAL: z.coerce.number().default(5432),
     VRCA_SERVER_SERVICE_POSTGRES_HOST_CLUSTER: z.string().default("postgres"),
     VRCA_SERVER_SERVICE_POSTGRES_PORT_CLUSTER: z.coerce.number().default(5432),
-    VRCA_SERVER_SERVICE_POSTGRES_HOST_PUBLIC: z.string().default("localhost"),
-    VRCA_SERVER_SERVICE_POSTGRES_PORT_PUBLIC: z.coerce.number().default(5432),
     VRCA_SERVER_SERVICE_POSTGRES_DATABASE: z
         .string()
         .default("vircadia_world_db"),
@@ -65,10 +63,8 @@ const serverEnvSchema = z.object({
         .default("uuid-ossp,hstore,pgcrypto"),
     VRCA_SERVER_SERVICE_POSTGRES_SEEDS_PATH: z.string().optional(),
 
-    VRCA_SERVER_SERVICE_PGWEB_PORT: z
-        .string()
-        .transform((val) => Number(val))
-        .default("5437"),
+    VRCA_SERVER_SERVICE_PGWEB_HOST_EXTERNAL: z.string().default("localhost"),
+    VRCA_SERVER_SERVICE_PGWEB_PORT_EXTERNAL: z.coerce.number().default(5437),
 });
 const serverEnv = serverEnvSchema.parse(import.meta.env);
 
@@ -79,8 +75,8 @@ const VircadiaConfig_Server = {
     CONTAINER_NAME: serverEnv.VRCA_SERVER_CONTAINER_NAME,
     SERVICE: {
         API: {
-            HOST_INTERNAL: serverEnv.VRCA_SERVER_SERVICE_API_HOST_INTERNAL,
-            PORT_INTERNAL: serverEnv.VRCA_SERVER_SERVICE_API_PORT_INTERNAL,
+            HOST_BIND: serverEnv.VRCA_SERVER_SERVICE_API_HOST_BIND,
+            PORT_BIND: serverEnv.VRCA_SERVER_SERVICE_API_PORT_BIND,
             HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_API_HOST_CLUSTER,
             PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_API_PORT_CLUSTER,
             HOST_PUBLIC: serverEnv.VRCA_SERVER_SERVICE_API_HOST_PUBLIC,
@@ -89,12 +85,10 @@ const VircadiaConfig_Server = {
         SCRIPT_WEB: {},
         TICK: {},
         POSTGRES: {
-            HOST_INTERNAL: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_INTERNAL,
-            PORT_INTERNAL: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_INTERNAL,
+            HOST_EXTERNAL: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_EXTERNAL,
+            PORT_EXTERNAL: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_EXTERNAL,
             HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_CLUSTER,
             PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_CLUSTER,
-            HOST_PUBLIC: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_PUBLIC,
-            PORT_PUBLIC: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_PUBLIC,
             DATABASE: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_DATABASE,
             PASSWORD: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PASSWORD,
             EXTENSIONS: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_EXTENSIONS,
@@ -106,7 +100,8 @@ const VircadiaConfig_Server = {
                 serverEnv.VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_PASSWORD,
         },
         PGWEB: {
-            PORT: serverEnv.VRCA_SERVER_SERVICE_PGWEB_PORT,
+            HOST_EXTERNAL: serverEnv.VRCA_SERVER_SERVICE_PGWEB_HOST_EXTERNAL,
+            PORT_EXTERNAL: serverEnv.VRCA_SERVER_SERVICE_PGWEB_PORT_EXTERNAL,
         },
     },
 };
@@ -182,6 +177,12 @@ const cliEnvSchema = z.object({
                 ),
         ])
         .default(false),
+    VRCA_CLI_POSTGRES_HOST: z
+        .string()
+        .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_EXTERNAL),
+    VRCA_CLI_POSTGRES_PORT: z
+        .number()
+        .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_EXTERNAL),
     VRCA_CLI_POSTGRES_MIGRATION_DIR: z
         .string()
         .default(
@@ -218,6 +219,8 @@ const VircadiaConfig_CLI = {
         MIGRATION_DIR: cliEnv.VRCA_CLI_POSTGRES_MIGRATION_DIR,
         SEED_DIR: cliEnv.VRCA_CLI_POSTGRES_SEED_DIR,
         RESET_DIR: cliEnv.VRCA_CLI_POSTGRES_RESET_DIR,
+        HOST: cliEnv.VRCA_CLI_POSTGRES_HOST,
+        PORT: cliEnv.VRCA_CLI_POSTGRES_PORT,
     },
 };
 

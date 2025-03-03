@@ -21,16 +21,14 @@ export class PostgresClient {
             debug: VircadiaConfig.SERVER.DEBUG,
             suppress: VircadiaConfig.SERVER.SUPPRESS,
             data: {
-                host_internal:
-                    VircadiaConfig.SERVER.SERVICE.POSTGRES.HOST_INTERNAL,
-                port_internal:
-                    VircadiaConfig.SERVER.SERVICE.POSTGRES.PORT_INTERNAL,
+                HOST_EXTERNAL:
+                    VircadiaConfig.SERVER.SERVICE.POSTGRES.HOST_EXTERNAL,
+                PORT_EXTERNAL:
+                    VircadiaConfig.SERVER.SERVICE.POSTGRES.PORT_EXTERNAL,
                 host_cluster:
                     VircadiaConfig.SERVER.SERVICE.POSTGRES.HOST_CLUSTER,
                 port_cluster:
                     VircadiaConfig.SERVER.SERVICE.POSTGRES.PORT_CLUSTER,
-                host_public: VircadiaConfig.SERVER.SERVICE.POSTGRES.HOST_PUBLIC,
-                port_public: VircadiaConfig.SERVER.SERVICE.POSTGRES.PORT_PUBLIC,
                 database: VircadiaConfig.SERVER.SERVICE.POSTGRES.DATABASE,
                 superUser: VircadiaConfig.GLOBAL_CONSTS.DB_SUPER_USER,
                 agentProxyUser:
@@ -42,30 +40,17 @@ export class PostgresClient {
     }
 
     public async getSuperClient(data: {
-        environment: "internal" | "cluster" | "public";
+        postgres: {
+            host: string;
+            port: number;
+        };
     }): Promise<postgres.Sql> {
         try {
             if (!this.superSql) {
                 // Create super user connection using config
                 this.superSql = postgres({
-                    host:
-                        data.environment === "internal"
-                            ? VircadiaConfig.SERVER.SERVICE.POSTGRES
-                                  .HOST_INTERNAL
-                            : data.environment === "cluster"
-                              ? VircadiaConfig.SERVER.SERVICE.POSTGRES
-                                    .HOST_CLUSTER
-                              : VircadiaConfig.SERVER.SERVICE.POSTGRES
-                                    .HOST_PUBLIC,
-                    port:
-                        data.environment === "internal"
-                            ? VircadiaConfig.SERVER.SERVICE.POSTGRES
-                                  .PORT_INTERNAL
-                            : data.environment === "cluster"
-                              ? VircadiaConfig.SERVER.SERVICE.POSTGRES
-                                    .PORT_CLUSTER
-                              : VircadiaConfig.SERVER.SERVICE.POSTGRES
-                                    .PORT_PUBLIC,
+                    host: data.postgres.host,
+                    port: data.postgres.port,
                     database: VircadiaConfig.SERVER.SERVICE.POSTGRES.DATABASE,
                     username: VircadiaConfig.GLOBAL_CONSTS.DB_SUPER_USER,
                     password: VircadiaConfig.SERVER.SERVICE.POSTGRES.PASSWORD,
@@ -96,7 +81,10 @@ export class PostgresClient {
     }
 
     public async getProxyClient(data: {
-        environment: "internal" | "cluster" | "public";
+        postgres: {
+            host: string;
+            port: number;
+        };
     }): Promise<postgres.Sql> {
         try {
             if (!this.proxySql) {
@@ -110,24 +98,8 @@ export class PostgresClient {
                 });
 
                 this.proxySql = postgres({
-                    host:
-                        data.environment === "internal"
-                            ? VircadiaConfig.SERVER.SERVICE.POSTGRES
-                                  .HOST_INTERNAL
-                            : data.environment === "cluster"
-                              ? VircadiaConfig.SERVER.SERVICE.POSTGRES
-                                    .HOST_CLUSTER
-                              : VircadiaConfig.SERVER.SERVICE.POSTGRES
-                                    .HOST_PUBLIC,
-                    port:
-                        data.environment === "internal"
-                            ? VircadiaConfig.SERVER.SERVICE.POSTGRES
-                                  .PORT_INTERNAL
-                            : data.environment === "cluster"
-                              ? VircadiaConfig.SERVER.SERVICE.POSTGRES
-                                    .PORT_CLUSTER
-                              : VircadiaConfig.SERVER.SERVICE.POSTGRES
-                                    .PORT_PUBLIC,
+                    host: data.postgres.host,
+                    port: data.postgres.port,
                     database: VircadiaConfig.SERVER.SERVICE.POSTGRES.DATABASE,
                     username: VircadiaConfig.GLOBAL_CONSTS.DB_AGENT_PROXY_USER,
                     password:
