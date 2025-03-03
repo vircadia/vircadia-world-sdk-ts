@@ -214,7 +214,7 @@ const cliEnvSchema = z.object({
         .default(
             path.join(
                 dirname(fileURLToPath(import.meta.url)),
-                "../database/migration",
+                "../../../server/cli/database/migration",
             ),
         ),
     VRCA_CLI_POSTGRES_SEED_DIR: z
@@ -222,7 +222,7 @@ const cliEnvSchema = z.object({
         .default(
             path.join(
                 dirname(fileURLToPath(import.meta.url)),
-                "../database/seed",
+                "../../../server/cli/database/seed",
             ),
         ),
     VRCA_CLI_POSTGRES_RESET_DIR: z
@@ -230,7 +230,7 @@ const cliEnvSchema = z.object({
         .default(
             path.join(
                 dirname(fileURLToPath(import.meta.url)),
-                "../database/reset",
+                "../../../server/cli/database/reset",
             ),
         ),
     // TODO: Need to add DB connection info, need to add access to containers info (remote/local)
