@@ -31,13 +31,11 @@ const serverEnvSchema = z.object({
         ])
         .default(false),
 
-    VRCA_SERVER_SERVICE_API_HOST_BIND: z.string().default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_API_PORT_BIND: z.coerce.number().default(3020),
     VRCA_SERVER_SERVICE_API_HOST_CLUSTER: z.string().default("api"),
     VRCA_SERVER_SERVICE_API_PORT_CLUSTER: z.coerce.number().default(3020),
     VRCA_SERVER_SERVICE_API_HOST_CONTAINER_EXTERNAL: z
         .string()
-        .default("127.0.0.1"),
+        .default("0.0.0.0"),
     VRCA_SERVER_SERVICE_API_PORT_CONTAINER_EXTERNAL: z.coerce
         .number()
         .default(3020),
@@ -89,8 +87,6 @@ const VircadiaConfig_Server = {
     CONTAINER_NAME: serverEnv.VRCA_SERVER_CONTAINER_NAME,
     SERVICE: {
         API: {
-            HOST_BIND: serverEnv.VRCA_SERVER_SERVICE_API_HOST_BIND,
-            PORT_BIND: serverEnv.VRCA_SERVER_SERVICE_API_PORT_BIND,
             HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_API_HOST_CLUSTER,
             PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_API_PORT_CLUSTER,
             HOST_CONTAINER_EXTERNAL:
@@ -103,12 +99,12 @@ const VircadiaConfig_Server = {
         SCRIPT_WEB: {},
         TICK: {},
         POSTGRES: {
+            HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_CLUSTER,
+            PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_CLUSTER,
             HOST_CONTAINER_EXTERNAL:
                 serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_EXTERNAL,
             PORT_CONTAINER_EXTERNAL:
                 serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_EXTERNAL,
-            HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_CLUSTER,
-            PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_CLUSTER,
             DATABASE: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_DATABASE,
             PASSWORD: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PASSWORD,
             EXTENSIONS: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_EXTENSIONS,
