@@ -386,6 +386,53 @@ export namespace Communication {
 
     export namespace REST {
         export const Endpoint = {
+            STATS: {
+                path: `${REST_BASE_PATH}/stats`,
+                method: "POST",
+                createRequest: (): string => "",
+                createSuccess: (data: {
+                    uptime: number;
+                    connections: {
+                        active: number;
+                    };
+                    database: {
+                        connected: boolean;
+                    };
+                    memory: any;
+                    cpu: any;
+                }): {
+                    uptime: number;
+                    connections: {
+                        active: number;
+                    };
+                    database: {
+                        connected: boolean;
+                    };
+                    memory: any;
+                    cpu: any;
+                    success: true;
+                    timestamp: number;
+                } => ({
+                    uptime: data.uptime,
+                    connections: data.connections,
+                    database: data.database,
+                    memory: data.memory,
+                    cpu: data.cpu,
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (
+                    error: string,
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+            },
             AUTH_SESSION_VALIDATE: {
                 path: `${REST_BASE_PATH}/session/validate`,
                 method: "POST",
