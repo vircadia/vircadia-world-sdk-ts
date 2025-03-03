@@ -28,14 +28,23 @@ const serverEnvSchema = z.object({
                 ),
         ])
         .default(false),
-    VRCA_SERVER_SERVICE_API_PORT: z
+
+    VRCA_SERVER_SERVICE_API_HOST_INTERNAL: z.string().default("0.0.0.0"),
+    VRCA_SERVER_SERVICE_API_PORT_INTERNAL: z.coerce.number().default(3020),
+    VRCA_SERVER_SERVICE_API_HOST_CLUSTER: z.string().default("api"),
+    VRCA_SERVER_SERVICE_API_PORT_CLUSTER: z.coerce.number().default(3020),
+    VRCA_SERVER_SERVICE_API_HOST_PUBLIC: z.string().default("localhost"),
+    VRCA_SERVER_SERVICE_API_PORT_PUBLIC: z.coerce.number().default(3020),
+
+    VRCA_SERVER_SERVICE_POSTGRES_HOST_INTERNAL: z.string().default("localhost"),
+    VRCA_SERVER_SERVICE_POSTGRES_PORT_INTERNAL: z.coerce.number().default(5432),
+    VRCA_SERVER_SERVICE_POSTGRES_HOST_CLUSTER: z.string().default("postgres"),
+    VRCA_SERVER_SERVICE_POSTGRES_PORT_CLUSTER: z.coerce.number().default(5432),
+    VRCA_SERVER_SERVICE_POSTGRES_HOST_PUBLIC: z.string().default("localhost"),
+    VRCA_SERVER_SERVICE_POSTGRES_PORT_PUBLIC: z.coerce.number().default(5432),
+    VRCA_SERVER_SERVICE_POSTGRES_DATABASE: z
         .string()
-        .transform((val) => Number.parseInt(val))
-        .default("3020"),
-    VRCA_SERVER_SERVICE_API_HOST: z.string().default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_POSTGRES_HOST: z.string().default("localhost"),
-    VRCA_SERVER_SERVICE_POSTGRES_PORT: z.coerce.number().default(5432),
-    VRCA_SERVER_SERVICE_POSTGRES_DB: z.string().default("vircadia_world_db"),
+        .default("vircadia_world_db"),
     VRCA_SERVER_SERVICE_POSTGRES_PASSWORD: z.string().default("CHANGE_ME!"),
     VRCA_SERVER_SERVICE_POSTGRES_SQL_ENV_PREFIX: z
         .string()
@@ -53,6 +62,7 @@ const serverEnvSchema = z.object({
         )
         .default("uuid-ossp,hstore,pgcrypto"),
     VRCA_SERVER_SERVICE_POSTGRES_SEEDS_PATH: z.string().optional(),
+
     VRCA_SERVER_SERVICE_PGWEB_PORT: z
         .string()
         .transform((val) => Number(val))
@@ -67,15 +77,23 @@ const VircadiaConfig_Server = {
     CONTAINER_NAME: serverEnv.VRCA_SERVER_CONTAINER_NAME,
     SERVICE: {
         API: {
-            HOST: serverEnv.VRCA_SERVER_SERVICE_API_HOST,
-            PORT: serverEnv.VRCA_SERVER_SERVICE_API_PORT,
+            HOST_INTERNAL: serverEnv.VRCA_SERVER_SERVICE_API_HOST_INTERNAL,
+            PORT_INTERNAL: serverEnv.VRCA_SERVER_SERVICE_API_PORT_INTERNAL,
+            HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_API_HOST_CLUSTER,
+            PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_API_PORT_CLUSTER,
+            HOST_PUBLIC: serverEnv.VRCA_SERVER_SERVICE_API_HOST_PUBLIC,
+            PORT_PUBLIC: serverEnv.VRCA_SERVER_SERVICE_API_PORT_PUBLIC,
         },
         SCRIPT_WEB: {},
         TICK: {},
         POSTGRES: {
-            HOST: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST,
-            PORT: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT,
-            DATABASE: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_DB,
+            HOST_INTERNAL: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_INTERNAL,
+            PORT_INTERNAL: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_INTERNAL,
+            HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_CLUSTER,
+            PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_CLUSTER,
+            HOST_PUBLIC: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_PUBLIC,
+            PORT_PUBLIC: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_PUBLIC,
+            DATABASE: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_DATABASE,
             PASSWORD: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PASSWORD,
             EXTENSIONS: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_EXTENSIONS,
             SEED_PATH: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_SEEDS_PATH,
