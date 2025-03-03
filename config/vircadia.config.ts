@@ -73,8 +73,12 @@ const serverEnvSchema = z.object({
         .default("uuid-ossp,hstore,pgcrypto"),
     VRCA_SERVER_SERVICE_POSTGRES_SEEDS_PATH: z.string().optional(),
 
-    VRCA_SERVER_SERVICE_PGWEB_HOST_EXTERNAL: z.string().default("localhost"),
-    VRCA_SERVER_SERVICE_PGWEB_PORT_EXTERNAL: z.coerce.number().default(5437),
+    VRCA_SERVER_SERVICE_PGWEB_HOST_CONTAINER_EXTERNAL: z
+        .string()
+        .default("127.0.0.1"),
+    VRCA_SERVER_SERVICE_PGWEB_PORT_CONTAINER_EXTERNAL: z.coerce
+        .number()
+        .default(5437),
 });
 const serverEnv = serverEnvSchema.parse(import.meta.env);
 
@@ -116,8 +120,10 @@ const VircadiaConfig_Server = {
                 serverEnv.VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_PASSWORD,
         },
         PGWEB: {
-            HOST_EXTERNAL: serverEnv.VRCA_SERVER_SERVICE_PGWEB_HOST_EXTERNAL,
-            PORT_EXTERNAL: serverEnv.VRCA_SERVER_SERVICE_PGWEB_PORT_EXTERNAL,
+            HOST_CONTAINER_EXTERNAL:
+                serverEnv.VRCA_SERVER_SERVICE_PGWEB_HOST_CONTAINER_EXTERNAL,
+            PORT_CONTAINER_EXTERNAL:
+                serverEnv.VRCA_SERVER_SERVICE_PGWEB_PORT_CONTAINER_EXTERNAL,
         },
     },
 };
