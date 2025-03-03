@@ -1,21 +1,23 @@
 {
-	"name": "vircadia-world-sdk-ts",
-	"type": "module",
-	"dependencies": {
-		"@babylonjs/core": "^7.37.0",
-		"postgres": "latest",
-		"console-log-colors": "latest",
-		"eight-colors": "latest",
-		"mobx": "latest",
-		"typescript": "latest",
-		"zod": "latest"
-	},
-	"devDependencies": {
-		"@types/node": "latest",
-		"bun-types": "latest"
-	},
-	"scripts": {
-		"format": "prettier --write './**/*.{ts,tsx,js,jsx,json}'",
-		"lint": "eslint './**/*.{ts,tsx,js,jsx}'"
-	}
+    "name": "vircadia-world-sdk-ts",
+    "type": "module",
+    "dependencies": {
+        "@babylonjs/core": "^7.37.0",
+        "console-log-colors": "latest",
+        "eight-colors": "latest",
+        "jsonwebtoken": "^9.0.2",
+        "mobx": "latest",
+        "postgres": "latest",
+        "typescript": "latest",
+        "zod": "latest"
+    },
+    "devDependencies": {
+        "@types/node": "latest",
+        "@types/jsonwebtoken": "latest",
+        "bun-types": "latest"
+    },
+    "scripts": {
+        "format": "prettier --write './**/*.{ts,tsx,js,jsx,json}'",
+        "lint": "eslint './**/*.{ts,tsx,js,jsx}'"
+    }
 }

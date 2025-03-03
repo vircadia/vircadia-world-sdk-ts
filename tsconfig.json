@@ -8,7 +8,7 @@
         "lib": ["DOM", "ESNext"],
         "jsx": "react",
         "outDir": "dist",
-        "types": ["bun-types"]
+        "types": ["bun-types", "@types/node", "@types/jsonwebtoken"]
     },
     "include": [
         "./**/*.ts",

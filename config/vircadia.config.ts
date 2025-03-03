@@ -1,3 +1,5 @@
+import path, { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
 const VircadiaConfig_GlobalConsts = {
@@ -158,9 +160,74 @@ const VircadiaConfig_Client = {
         clientEnv.VRCA_CLIENT_DEFAULT_WORLD_SERVER_URI_USING_SSL,
 };
 
+// CLI environment schema
+const cliEnvSchema = z.object({
+    VRCA_CLI_DEBUG: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
+    VRCA_CLI_SUPPRESS: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
+    VRCA_CLI_POSTGRES_MIGRATION_DIR: z
+        .string()
+        .default(
+            path.join(
+                dirname(fileURLToPath(import.meta.url)),
+                "../database/migration",
+            ),
+        ),
+    VRCA_CLI_POSTGRES_SEED_DIR: z
+        .string()
+        .default(
+            path.join(
+                dirname(fileURLToPath(import.meta.url)),
+                "../database/seed",
+            ),
+        ),
+    VRCA_CLI_POSTGRES_RESET_DIR: z
+        .string()
+        .default(
+            path.join(
+                dirname(fileURLToPath(import.meta.url)),
+                "../database/reset",
+            ),
+        ),
+    // TODO: Need to add DB connection info, need to add access to containers info (remote/local)
+});
+const cliEnv = cliEnvSchema.parse(import.meta.env);
+
+// CLI Config
+const VircadiaConfig_CLI = {
+    DEBUG: cliEnv.VRCA_CLI_DEBUG,
+    SUPPRESS: cliEnv.VRCA_CLI_SUPPRESS,
+    POSTGRES: {
+        MIGRATION_DIR: cliEnv.VRCA_CLI_POSTGRES_MIGRATION_DIR,
+        SEED_DIR: cliEnv.VRCA_CLI_POSTGRES_SEED_DIR,
+        RESET_DIR: cliEnv.VRCA_CLI_POSTGRES_RESET_DIR,
+    },
+};
+
 // Combined config object
 export const VircadiaConfig = {
     CLIENT: VircadiaConfig_Client,
+    CLIENT_ENV: clientEnv,
     SERVER: VircadiaConfig_Server,
+    SERVER_ENV: serverEnv,
+    CLI: VircadiaConfig_CLI,
+    CLI_ENV: cliEnv,
     GLOBAL_CONSTS: VircadiaConfig_GlobalConsts,
 };
