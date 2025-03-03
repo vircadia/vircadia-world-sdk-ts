@@ -19,14 +19,14 @@ export class PostgresClient {
             message: `PostgreSQL connection issue, using
             host: [${host}],
             port: [${port}]`,
-            type: "error",
+            type: "debug",
             suppress: VircadiaConfig.SERVER.SUPPRESS,
             debug: VircadiaConfig.SERVER.DEBUG,
             error,
         });
         log({
             message: "PostgreSQL connection env variables:",
-            type: "info",
+            type: "debug",
             debug: VircadiaConfig.SERVER.DEBUG,
             suppress: VircadiaConfig.SERVER.SUPPRESS,
             data: {
