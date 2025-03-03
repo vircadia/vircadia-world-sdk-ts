@@ -289,6 +289,16 @@ export namespace Auth {
     }
 }
 
+interface REST_ENDPOINTS {
+    [key: string]: {
+        path: string;
+        method: "POST" | "GET" | "PUT" | "DELETE";
+        createRequest: (...args: any[]) => string;
+        createSuccess: (...args: any[]) => any;
+        createError: (...args: any[]) => any;
+    };
+}
+
 export namespace Communication {
     export const WS_UPGRADE_PATH = "/world/ws";
     export const REST_BASE_PATH = "/world/rest";
@@ -385,9 +395,57 @@ export namespace Communication {
     }
 
     export namespace REST {
-        export const Endpoint = {
+        export const Endpoint: REST_ENDPOINTS = {
+            AUTH_SESSION_VALIDATE: {
+                path: `${REST_BASE_PATH}/session/validate`,
+                method: "POST",
+                createRequest: (data: {
+                    token: string;
+                    provider: string;
+                }): string =>
+                    JSON.stringify({
+                        token: data.token,
+                        provider: data.provider,
+                    }),
+                createSuccess: (
+                    _agentId: string,
+                    _sessionId: string,
+                ): {
+                    success: true;
+                    timestamp: number;
+                } => ({
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (
+                    error: string,
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+            },
+        } as const;
+    }
+}
+
+export namespace Service {
+    export enum E_Service {
+        API = "api",
+        POSTGRES = "postgres",
+        PGWEB = "pgweb",
+        SCRIPT_WEB = "script_web",
+        TICK = "tick",
+    }
+
+    export namespace API {
+        export const Stats_Endpoint: REST_ENDPOINTS = {
             STATS: {
-                path: `${REST_BASE_PATH}/stats`,
+                path: "/stats",
                 method: "POST",
                 createRequest: (): string => "",
                 createSuccess: (data: {
@@ -398,8 +456,8 @@ export namespace Communication {
                     database: {
                         connected: boolean;
                     };
-                    memory: any;
-                    cpu: any;
+                    memory: typeof process.cpuUsage;
+                    cpu: typeof process.cpuUsage;
                 }): {
                     uptime: number;
                     connections: {
@@ -408,8 +466,8 @@ export namespace Communication {
                     database: {
                         connected: boolean;
                     };
-                    memory: any;
-                    cpu: any;
+                    memory: typeof process.cpuUsage;
+                    cpu: typeof process.cpuUsage;
                     success: true;
                     timestamp: number;
                 } => ({
@@ -433,24 +491,85 @@ export namespace Communication {
                     error,
                 }),
             },
-            AUTH_SESSION_VALIDATE: {
-                path: `${REST_BASE_PATH}/session/validate`,
+        } as const;
+    }
+
+    export namespace Postgres {}
+
+    export namespace PGWeb {}
+
+    export namespace Script_Web {
+        export const Stats_Endpoint: REST_ENDPOINTS = {
+            STATS: {
+                path: "/stats",
                 method: "POST",
-                createRequest: (data: {
-                    token: string;
-                    provider: string;
-                }): string =>
-                    JSON.stringify({
-                        token: data.token,
-                        provider: data.provider,
-                    }),
-                createSuccess: (
-                    _agentId: string,
-                    _sessionId: string,
-                ): {
+                createRequest: (): string => "",
+                createSuccess: (data: {
+                    uptime: number;
+                    database: {
+                        connected: boolean;
+                    };
+                    memory: typeof process.cpuUsage;
+                    cpu: typeof process.cpuUsage;
+                }): {
+                    uptime: number;
+                    database: {
+                        connected: boolean;
+                    };
+                    memory: typeof process.cpuUsage;
+                    cpu: typeof process.cpuUsage;
                     success: true;
                     timestamp: number;
                 } => ({
+                    uptime: data.uptime,
+                    database: data.database,
+                    memory: data.memory,
+                    cpu: data.cpu,
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (
+                    error: string,
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+            },
+        } as const;
+    }
+
+    export namespace Tick {
+        export const Stats_Endpoint: REST_ENDPOINTS = {
+            STATS: {
+                method: "POST",
+                path: "/stats",
+                createRequest: (): string => "",
+                createSuccess: (data: {
+                    uptime: number;
+                    database: {
+                        connected: boolean;
+                    };
+                    memory: typeof process.cpuUsage;
+                    cpu: typeof process.cpuUsage;
+                }): {
+                    uptime: number;
+                    database: {
+                        connected: boolean;
+                    };
+                    memory: typeof process.cpuUsage;
+                    cpu: typeof process.cpuUsage;
+                    success: true;
+                    timestamp: number;
+                } => ({
+                    uptime: data.uptime,
+                    database: data.database,
+                    memory: data.memory,
+                    cpu: data.cpu,
                     success: true,
                     timestamp: Date.now(),
                 }),

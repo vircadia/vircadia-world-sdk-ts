@@ -42,6 +42,26 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_API_HOST_PUBLIC: z.string().default("127.0.0.1"),
     VRCA_SERVER_SERVICE_API_PORT_PUBLIC: z.coerce.number().default(3020),
 
+    VRCA_SERVER_SERVICE_SCRIPT_WEB_HOST_CLUSTER: z.string().default("script"),
+    VRCA_SERVER_SERVICE_SCRIPT_WEB_PORT_CLUSTER: z.coerce
+        .number()
+        .default(3021),
+    VRCA_SERVER_SERVICE_SCRIPT_WEB_HOST_CONTAINER_EXTERNAL: z
+        .string()
+        .default("127.0.0.1"),
+    VRCA_SERVER_SERVICE_SCRIPT_WEB_PORT_CONTAINER_EXTERNAL: z.coerce
+        .number()
+        .default(3021),
+
+    VRCA_SERVER_SERVICE_TICK_HOST_CLUSTER: z.string().default("tick"),
+    VRCA_SERVER_SERVICE_TICK_PORT_CLUSTER: z.coerce.number().default(3022),
+    VRCA_SERVER_SERVICE_TICK_HOST_CONTAINER_EXTERNAL: z
+        .string()
+        .default("127.0.0.1"),
+    VRCA_SERVER_SERVICE_TICK_PORT_CONTAINER_EXTERNAL: z.coerce
+        .number()
+        .default(3022),
+
     VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_EXTERNAL: z
         .string()
         .default("127.0.0.1"),
@@ -96,8 +116,22 @@ const VircadiaConfig_Server = {
             HOST_PUBLIC: serverEnv.VRCA_SERVER_SERVICE_API_HOST_PUBLIC,
             PORT_PUBLIC: serverEnv.VRCA_SERVER_SERVICE_API_PORT_PUBLIC,
         },
-        SCRIPT_WEB: {},
-        TICK: {},
+        SCRIPT_WEB: {
+            HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_SCRIPT_WEB_HOST_CLUSTER,
+            PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_SCRIPT_WEB_PORT_CLUSTER,
+            HOST_CONTAINER_EXTERNAL:
+                serverEnv.VRCA_SERVER_SERVICE_SCRIPT_WEB_HOST_CONTAINER_EXTERNAL,
+            PORT_CONTAINER_EXTERNAL:
+                serverEnv.VRCA_SERVER_SERVICE_SCRIPT_WEB_PORT_CONTAINER_EXTERNAL,
+        },
+        TICK: {
+            HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_TICK_HOST_CLUSTER,
+            PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_TICK_PORT_CLUSTER,
+            HOST_CONTAINER_EXTERNAL:
+                serverEnv.VRCA_SERVER_SERVICE_TICK_HOST_CONTAINER_EXTERNAL,
+            PORT_CONTAINER_EXTERNAL:
+                serverEnv.VRCA_SERVER_SERVICE_TICK_PORT_CONTAINER_EXTERNAL,
+        },
         POSTGRES: {
             HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_CLUSTER,
             PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_CLUSTER,
