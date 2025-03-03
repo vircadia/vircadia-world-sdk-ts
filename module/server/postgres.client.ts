@@ -22,9 +22,11 @@ export class PostgresClient {
             suppress: VircadiaConfig.SERVER.SUPPRESS,
             data: {
                 HOST_EXTERNAL:
-                    VircadiaConfig.SERVER.SERVICE.POSTGRES.HOST_EXTERNAL,
+                    VircadiaConfig.SERVER.SERVICE.POSTGRES
+                        .HOST_CONTAINER_EXTERNAL,
                 PORT_EXTERNAL:
-                    VircadiaConfig.SERVER.SERVICE.POSTGRES.PORT_EXTERNAL,
+                    VircadiaConfig.SERVER.SERVICE.POSTGRES
+                        .PORT_CONTAINER_EXTERNAL,
                 HOST_CLUSTER:
                     VircadiaConfig.SERVER.SERVICE.POSTGRES.HOST_CLUSTER,
                 PORT_CLUSTER:

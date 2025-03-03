@@ -35,11 +35,21 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_API_PORT_BIND: z.coerce.number().default(3020),
     VRCA_SERVER_SERVICE_API_HOST_CLUSTER: z.string().default("api"),
     VRCA_SERVER_SERVICE_API_PORT_CLUSTER: z.coerce.number().default(3020),
-    VRCA_SERVER_SERVICE_API_HOST_PUBLIC: z.string().default("localhost"),
+    VRCA_SERVER_SERVICE_API_HOST_CONTAINER_EXTERNAL: z
+        .string()
+        .default("127.0.0.1"),
+    VRCA_SERVER_SERVICE_API_PORT_CONTAINER_EXTERNAL: z.coerce
+        .number()
+        .default(3020),
+    VRCA_SERVER_SERVICE_API_HOST_PUBLIC: z.string().default("127.0.0.1"),
     VRCA_SERVER_SERVICE_API_PORT_PUBLIC: z.coerce.number().default(3020),
 
-    VRCA_SERVER_SERVICE_POSTGRES_HOST_EXTERNAL: z.string().default("localhost"),
-    VRCA_SERVER_SERVICE_POSTGRES_PORT_EXTERNAL: z.coerce.number().default(5432),
+    VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_EXTERNAL: z
+        .string()
+        .default("127.0.0.1"),
+    VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_EXTERNAL: z.coerce
+        .number()
+        .default(5432),
     VRCA_SERVER_SERVICE_POSTGRES_HOST_CLUSTER: z.string().default("postgres"),
     VRCA_SERVER_SERVICE_POSTGRES_PORT_CLUSTER: z.coerce.number().default(5432),
     VRCA_SERVER_SERVICE_POSTGRES_DATABASE: z
@@ -79,14 +89,20 @@ const VircadiaConfig_Server = {
             PORT_BIND: serverEnv.VRCA_SERVER_SERVICE_API_PORT_BIND,
             HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_API_HOST_CLUSTER,
             PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_API_PORT_CLUSTER,
+            HOST_CONTAINER_EXTERNAL:
+                serverEnv.VRCA_SERVER_SERVICE_API_HOST_CONTAINER_EXTERNAL,
+            PORT_CONTAINER_EXTERNAL:
+                serverEnv.VRCA_SERVER_SERVICE_API_PORT_CONTAINER_EXTERNAL,
             HOST_PUBLIC: serverEnv.VRCA_SERVER_SERVICE_API_HOST_PUBLIC,
             PORT_PUBLIC: serverEnv.VRCA_SERVER_SERVICE_API_PORT_PUBLIC,
         },
         SCRIPT_WEB: {},
         TICK: {},
         POSTGRES: {
-            HOST_EXTERNAL: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_EXTERNAL,
-            PORT_EXTERNAL: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_EXTERNAL,
+            HOST_CONTAINER_EXTERNAL:
+                serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_EXTERNAL,
+            PORT_CONTAINER_EXTERNAL:
+                serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_EXTERNAL,
             HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_CLUSTER,
             PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_CLUSTER,
             DATABASE: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_DATABASE,
@@ -179,10 +195,14 @@ const cliEnvSchema = z.object({
         .default(false),
     VRCA_CLI_POSTGRES_HOST: z
         .string()
-        .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_EXTERNAL),
+        .default(
+            serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_EXTERNAL,
+        ),
     VRCA_CLI_POSTGRES_PORT: z
         .number()
-        .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_EXTERNAL),
+        .default(
+            serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_EXTERNAL,
+        ),
     VRCA_CLI_POSTGRES_MIGRATION_DIR: z
         .string()
         .default(
