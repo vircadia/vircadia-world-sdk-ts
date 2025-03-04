@@ -100,64 +100,6 @@ const serverEnvSchema = z.object({
 });
 const serverEnv = serverEnvSchema.parse(import.meta.env);
 
-// Server config
-const VircadiaConfig_Server = {
-    DEBUG: serverEnv.VRCA_SERVER_DEBUG,
-    SUPPRESS: serverEnv.VRCA_SERVER_SUPPRESS,
-    CONTAINER_NAME: serverEnv.VRCA_SERVER_CONTAINER_NAME,
-    SERVICE: {
-        API: {
-            HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_API_HOST_CLUSTER,
-            PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_API_PORT_CLUSTER,
-            HOST_CONTAINER_EXTERNAL:
-                serverEnv.VRCA_SERVER_SERVICE_API_HOST_CONTAINER_EXTERNAL,
-            PORT_CONTAINER_EXTERNAL:
-                serverEnv.VRCA_SERVER_SERVICE_API_PORT_CONTAINER_EXTERNAL,
-            HOST_PUBLIC: serverEnv.VRCA_SERVER_SERVICE_API_HOST_PUBLIC,
-            PORT_PUBLIC: serverEnv.VRCA_SERVER_SERVICE_API_PORT_PUBLIC,
-        },
-        SCRIPT_WEB: {
-            HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_SCRIPT_WEB_HOST_CLUSTER,
-            PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_SCRIPT_WEB_PORT_CLUSTER,
-            HOST_CONTAINER_EXTERNAL:
-                serverEnv.VRCA_SERVER_SERVICE_SCRIPT_WEB_HOST_CONTAINER_EXTERNAL,
-            PORT_CONTAINER_EXTERNAL:
-                serverEnv.VRCA_SERVER_SERVICE_SCRIPT_WEB_PORT_CONTAINER_EXTERNAL,
-        },
-        TICK: {
-            HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_TICK_HOST_CLUSTER,
-            PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_TICK_PORT_CLUSTER,
-            HOST_CONTAINER_EXTERNAL:
-                serverEnv.VRCA_SERVER_SERVICE_TICK_HOST_CONTAINER_EXTERNAL,
-            PORT_CONTAINER_EXTERNAL:
-                serverEnv.VRCA_SERVER_SERVICE_TICK_PORT_CONTAINER_EXTERNAL,
-        },
-        POSTGRES: {
-            HOST_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_CLUSTER,
-            PORT_CLUSTER: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_CLUSTER,
-            HOST_CONTAINER_EXTERNAL:
-                serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_EXTERNAL,
-            PORT_CONTAINER_EXTERNAL:
-                serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_EXTERNAL,
-            DATABASE: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_DATABASE,
-            PASSWORD: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PASSWORD,
-            EXTENSIONS: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_EXTENSIONS,
-            SEED_PATH: serverEnv.VRCA_SERVER_SERVICE_POSTGRES_SEEDS_PATH,
-            SQL_ENV_PREFIX:
-                serverEnv.VRCA_SERVER_SERVICE_POSTGRES_SQL_ENV_PREFIX,
-            SQL_ENV: {},
-            AGENT_PROXY_PASSWORD:
-                serverEnv.VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_PASSWORD,
-        },
-        PGWEB: {
-            HOST_CONTAINER_EXTERNAL:
-                serverEnv.VRCA_SERVER_SERVICE_PGWEB_HOST_CONTAINER_EXTERNAL,
-            PORT_CONTAINER_EXTERNAL:
-                serverEnv.VRCA_SERVER_SERVICE_PGWEB_PORT_CONTAINER_EXTERNAL,
-        },
-    },
-};
-
 // Client environment schema
 const clientEnvSchema = z.object({
     VRCA_CLIENT_DEBUG: z
@@ -188,24 +130,8 @@ const clientEnvSchema = z.object({
     VRCA_CLIENT_DEFAULT_WORLD_SERVER_URI: z.string().default("localhost:3020"),
     VRCA_CLIENT_DEFAULT_WORLD_SERVER_URI_USING_SSL: z.boolean().default(false),
 });
-
-// Parse environments
+// Parse client environment variables
 const clientEnv = clientEnvSchema.parse(import.meta.env);
-
-// Client config
-const VircadiaConfig_Client = {
-    debug: clientEnv.VRCA_CLIENT_DEBUG,
-    defaultTitle: clientEnv.VRCA_CLIENT_DEFAULT_TITLE,
-    defaultDescription: clientEnv.VRCA_CLIENT_DEFAULT_DESCRIPTION,
-    defaultUrl: clientEnv.VRCA_CLIENT_DEFAULT_URL,
-    defaultFavicon: clientEnv.VRCA_CLIENT_DEFAULT_FAVICON,
-    defaultOgImage: clientEnv.VRCA_CLIENT_DEFAULT_OG_IMAGE,
-    defaultOgType: clientEnv.VRCA_CLIENT_DEFAULT_OG_TYPE,
-    baseAppUrl: clientEnv.VRCA_CLIENT_BASE_APP_URL,
-    defaultWorldServerUri: clientEnv.VRCA_CLIENT_DEFAULT_WORLD_SERVER_URI,
-    defaultWorldServerUriUsingSsl:
-        clientEnv.VRCA_CLIENT_DEFAULT_WORLD_SERVER_URI_USING_SSL,
-};
 
 // CLI environment schema
 const cliEnvSchema = z.object({
@@ -282,11 +208,8 @@ const VircadiaConfig_CLI = {
 
 // Combined config object
 export const VircadiaConfig = {
-    CLIENT: VircadiaConfig_Client,
-    CLIENT_ENV: clientEnv,
-    SERVER: VircadiaConfig_Server,
-    SERVER_ENV: serverEnv,
-    CLI: VircadiaConfig_CLI,
-    CLI_ENV: cliEnv,
+    CLIENT: clientEnv,
+    SERVER: serverEnv,
+    CLI: cliEnv,
     GLOBAL_CONSTS: VircadiaConfig_GlobalConsts,
 };
