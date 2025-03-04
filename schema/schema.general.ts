@@ -385,8 +385,12 @@ export namespace Communication {
     }
 
     export namespace REST {
+        export enum E_Endpoint {
+            AUTH_SESSION_VALIDATE = "AUTH_SESSION_VALIDATE",
+        }
+
         export const Endpoint: {
-            [key: string]: {
+            [key in E_Endpoint]: {
                 path: string;
                 method: "POST" | "GET" | "PUT" | "DELETE";
                 createRequest: (...args: any[]) => string;
@@ -442,63 +446,61 @@ export namespace Service {
 
     export namespace API {
         export const Stats_Endpoint = {
-            STATS: {
-                path: "/stats",
-                method: "POST",
-                createRequest: (): string => "",
-                createSuccess: (data: {
-                    uptime: number;
-                    connections: {
-                        active: number;
-                    };
-                    database: {
-                        connected: boolean;
-                    };
-                    memory: {
-                        heapUsed: number;
-                    };
-                    cpu: {
-                        user: number;
-                        system: number;
-                    };
-                }): {
-                    uptime: number;
-                    connections: {
-                        active: number;
-                    };
-                    database: {
-                        connected: boolean;
-                    };
-                    memory: {
-                        heapUsed: number;
-                    };
-                    cpu: {
-                        user: number;
-                        system: number;
-                    };
-                    success: true;
-                    timestamp: number;
-                } => ({
-                    uptime: data.uptime,
-                    connections: data.connections,
-                    database: data.database,
-                    memory: data.memory,
-                    cpu: data.cpu,
-                    success: true,
-                    timestamp: Date.now(),
-                }),
-                createError: (
-                    error: string,
-                ): {
-                    success: false;
-                    timestamp: number;
-                    error: string;
-                } => ({
-                    success: false,
-                    timestamp: Date.now(),
-                    error,
-                }),
-            },
+            path: "/stats",
+            method: "POST",
+            createRequest: (): string => "",
+            createSuccess: (data: {
+                uptime: number;
+                connections: {
+                    active: number;
+                };
+                database: {
+                    connected: boolean;
+                };
+                memory: {
+                    heapUsed: number;
+                };
+                cpu: {
+                    user: number;
+                    system: number;
+                };
+            }): {
+                uptime: number;
+                connections: {
+                    active: number;
+                };
+                database: {
+                    connected: boolean;
+                };
+                memory: {
+                    heapUsed: number;
+                };
+                cpu: {
+                    user: number;
+                    system: number;
+                };
+                success: true;
+                timestamp: number;
+            } => ({
+                uptime: data.uptime,
+                connections: data.connections,
+                database: data.database,
+                memory: data.memory,
+                cpu: data.cpu,
+                success: true,
+                timestamp: Date.now(),
+            }),
+            createError: (
+                error: string,
+            ): {
+                success: false;
+                timestamp: number;
+                error: string;
+            } => ({
+                success: false,
+                timestamp: Date.now(),
+                error,
+            }),
         } as const;
     }
 
@@ -508,111 +510,107 @@ export namespace Service {
 
     export namespace Script_Web {
         export const Stats_Endpoint = {
-            STATS: {
-                path: "/stats",
-                method: "POST",
-                createRequest: (): string => "",
-                createSuccess: (data: {
-                    uptime: number;
-                    database: {
-                        connected: boolean;
-                    };
-                    memory: {
-                        heapUsed: number;
-                    };
-                    cpu: {
-                        user: number;
-                        system: number;
-                    };
-                }): {
-                    uptime: number;
-                    database: {
-                        connected: boolean;
-                    };
-                    memory: {
-                        heapUsed: number;
-                    };
-                    cpu: {
-                        user: number;
-                        system: number;
-                    };
-                    success: true;
-                    timestamp: number;
-                } => ({
-                    uptime: data.uptime,
-                    database: data.database,
-                    memory: data.memory,
-                    cpu: data.cpu,
-                    success: true,
-                    timestamp: Date.now(),
-                }),
-                createError: (
-                    error: string,
-                ): {
-                    success: false;
-                    timestamp: number;
-                    error: string;
-                } => ({
-                    success: false,
-                    timestamp: Date.now(),
-                    error,
-                }),
-            },
+            path: "/stats",
+            method: "POST",
+            createRequest: (): string => "",
+            createSuccess: (data: {
+                uptime: number;
+                database: {
+                    connected: boolean;
+                };
+                memory: {
+                    heapUsed: number;
+                };
+                cpu: {
+                    user: number;
+                    system: number;
+                };
+            }): {
+                uptime: number;
+                database: {
+                    connected: boolean;
+                };
+                memory: {
+                    heapUsed: number;
+                };
+                cpu: {
+                    user: number;
+                    system: number;
+                };
+                success: true;
+                timestamp: number;
+            } => ({
+                uptime: data.uptime,
+                database: data.database,
+                memory: data.memory,
+                cpu: data.cpu,
+                success: true,
+                timestamp: Date.now(),
+            }),
+            createError: (
+                error: string,
+            ): {
+                success: false;
+                timestamp: number;
+                error: string;
+            } => ({
+                success: false,
+                timestamp: Date.now(),
+                error,
+            }),
         } as const;
     }
 
     export namespace Tick {
         export const Stats_Endpoint = {
-            STATS: {
-                method: "POST",
-                path: "/stats",
-                createRequest: (): string => "",
-                createSuccess: (data: {
-                    uptime: number;
-                    database: {
-                        connected: boolean;
-                    };
-                    memory: {
-                        heapUsed: number;
-                    };
-                    cpu: {
-                        user: number;
-                        system: number;
-                    };
-                }): {
-                    uptime: number;
-                    database: {
-                        connected: boolean;
-                    };
-                    memory: {
-                        heapUsed: number;
-                    };
-                    cpu: {
-                        user: number;
-                        system: number;
-                    };
-                    success: true;
-                    timestamp: number;
-                } => ({
-                    uptime: data.uptime,
-                    database: data.database,
-                    memory: data.memory,
-                    cpu: data.cpu,
-                    success: true,
-                    timestamp: Date.now(),
-                }),
-                createError: (
-                    error: string,
-                ): {
-                    success: false;
-                    timestamp: number;
-                    error: string;
-                } => ({
-                    success: false,
-                    timestamp: Date.now(),
-                    error,
-                }),
-            },
+            method: "POST",
+            path: "/stats",
+            createRequest: (): string => "",
+            createSuccess: (data: {
+                uptime: number;
+                database: {
+                    connected: boolean;
+                };
+                memory: {
+                    heapUsed: number;
+                };
+                cpu: {
+                    user: number;
+                    system: number;
+                };
+            }): {
+                uptime: number;
+                database: {
+                    connected: boolean;
+                };
+                memory: {
+                    heapUsed: number;
+                };
+                cpu: {
+                    user: number;
+                    system: number;
+                };
+                success: true;
+                timestamp: number;
+            } => ({
+                uptime: data.uptime,
+                database: data.database,
+                memory: data.memory,
+                cpu: data.cpu,
+                success: true,
+                timestamp: Date.now(),
+            }),
+            createError: (
+                error: string,
+            ): {
+                success: false;
+                timestamp: number;
+                error: string;
+            } => ({
+                success: false,
+                timestamp: Date.now(),
+                error,
+            }),
         } as const;
     }
 }
