@@ -110,8 +110,8 @@ export class PostgresClient {
                             .VRCA_SERVER_SERVICE_POSTGRES_DATABASE,
                     username: VircadiaConfig.GLOBAL_CONSTS.DB_AGENT_PROXY_USER,
                     password:
-                        VircadiaConfig.SERVER.SERVICE.POSTGRES
-                            .AGENT_PROXY_PASSWORD,
+                        VircadiaConfig.SERVER
+                            .VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_PASSWORD,
                     onnotice: VircadiaConfig.SERVER.VRCA_SERVER_SUPPRESS
                         ? () => {}
                         : undefined,
