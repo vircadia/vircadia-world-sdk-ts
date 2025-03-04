@@ -289,16 +289,6 @@ export namespace Auth {
     }
 }
 
-interface REST_ENDPOINTS {
-    [key: string]: {
-        path: string;
-        method: "POST" | "GET" | "PUT" | "DELETE";
-        createRequest: (...args: any[]) => string;
-        createSuccess: (...args: any[]) => any;
-        createError: (...args: any[]) => any;
-    };
-}
-
 export namespace Communication {
     export const WS_UPGRADE_PATH = "/world/ws";
     export const REST_BASE_PATH = "/world/rest";
@@ -395,7 +385,15 @@ export namespace Communication {
     }
 
     export namespace REST {
-        export const Endpoint: REST_ENDPOINTS = {
+        export const Endpoint: {
+            [key: string]: {
+                path: string;
+                method: "POST" | "GET" | "PUT" | "DELETE";
+                createRequest: (...args: any[]) => string;
+                createSuccess: (...args: any[]) => any;
+                createError: (...args: any[]) => any;
+            };
+        } = {
             AUTH_SESSION_VALIDATE: {
                 path: `${REST_BASE_PATH}/session/validate`,
                 method: "POST",
@@ -443,7 +441,7 @@ export namespace Service {
     }
 
     export namespace API {
-        export const Stats_Endpoint: REST_ENDPOINTS = {
+        export const Stats_Endpoint = {
             STATS: {
                 path: "/stats",
                 method: "POST",
@@ -456,8 +454,13 @@ export namespace Service {
                     database: {
                         connected: boolean;
                     };
-                    memory: typeof process.cpuUsage;
-                    cpu: typeof process.cpuUsage;
+                    memory: {
+                        heapUsed: number;
+                    };
+                    cpu: {
+                        user: number;
+                        system: number;
+                    };
                 }): {
                     uptime: number;
                     connections: {
@@ -466,8 +469,13 @@ export namespace Service {
                     database: {
                         connected: boolean;
                     };
-                    memory: typeof process.cpuUsage;
-                    cpu: typeof process.cpuUsage;
+                    memory: {
+                        heapUsed: number;
+                    };
+                    cpu: {
+                        user: number;
+                        system: number;
+                    };
                     success: true;
                     timestamp: number;
                 } => ({
@@ -499,7 +507,7 @@ export namespace Service {
     export namespace PGWeb {}
 
     export namespace Script_Web {
-        export const Stats_Endpoint: REST_ENDPOINTS = {
+        export const Stats_Endpoint = {
             STATS: {
                 path: "/stats",
                 method: "POST",
@@ -509,15 +517,25 @@ export namespace Service {
                     database: {
                         connected: boolean;
                     };
-                    memory: typeof process.cpuUsage;
-                    cpu: typeof process.cpuUsage;
+                    memory: {
+                        heapUsed: number;
+                    };
+                    cpu: {
+                        user: number;
+                        system: number;
+                    };
                 }): {
                     uptime: number;
                     database: {
                         connected: boolean;
                     };
-                    memory: typeof process.cpuUsage;
-                    cpu: typeof process.cpuUsage;
+                    memory: {
+                        heapUsed: number;
+                    };
+                    cpu: {
+                        user: number;
+                        system: number;
+                    };
                     success: true;
                     timestamp: number;
                 } => ({
@@ -544,7 +562,7 @@ export namespace Service {
     }
 
     export namespace Tick {
-        export const Stats_Endpoint: REST_ENDPOINTS = {
+        export const Stats_Endpoint = {
             STATS: {
                 method: "POST",
                 path: "/stats",
@@ -554,15 +572,25 @@ export namespace Service {
                     database: {
                         connected: boolean;
                     };
-                    memory: typeof process.cpuUsage;
-                    cpu: typeof process.cpuUsage;
+                    memory: {
+                        heapUsed: number;
+                    };
+                    cpu: {
+                        user: number;
+                        system: number;
+                    };
                 }): {
                     uptime: number;
                     database: {
                         connected: boolean;
                     };
-                    memory: typeof process.cpuUsage;
-                    cpu: typeof process.cpuUsage;
+                    memory: {
+                        heapUsed: number;
+                    };
+                    cpu: {
+                        user: number;
+                        system: number;
+                    };
                     success: true;
                     timestamp: number;
                 } => ({
