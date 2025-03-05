@@ -344,7 +344,7 @@ export namespace Communication {
 
             constructor(
                 public readonly result?: any[],
-                public readonly error: string | null = null,
+                public readonly errorMessage: string | null = null,
             ) {
                 super();
             }
