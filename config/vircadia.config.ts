@@ -178,12 +178,20 @@ const cliEnvSchema = z.object({
     VRCA_CLI_POSTGRES_DATABASE: z
         .string()
         .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_DATABASE),
-    VRCA_CLI_POSTGRES_USERNAME: z
+    VRCA_CLI_POSTGRES_SUPER_USER_USERNAME: z
         .string()
         .default(VircadiaConfig_GlobalConsts.DB_SUPER_USER),
-    VRCA_CLI_POSTGRES_PASSWORD: z
+    VRCA_CLI_POSTGRES_SUPER_USER_PASSWORD: z
         .string()
         .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PASSWORD),
+
+    VRCA_CLI_POSTGRES_AGENT_PROXY_USER_USERNAME: z
+        .string()
+        .default(VircadiaConfig_GlobalConsts.DB_AGENT_PROXY_USER),
+    VRCA_CLI_POSTGRES_AGENT_PROXY_USER_PASSWORD: z
+        .string()
+        .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_PASSWORD),
+
     VRCA_CLI_POSTGRES_MIGRATION_DIR: z
         .string()
         .default(
