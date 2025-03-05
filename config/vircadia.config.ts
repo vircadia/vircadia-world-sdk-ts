@@ -3,8 +3,8 @@ import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
 const VircadiaConfig_GlobalConsts = {
-    DB_SUPER_USER: "vircadia",
-    DB_AGENT_PROXY_USER: "vircadia_agent_proxy",
+    DB_SUPER_USER_USERNAME: "vircadia",
+    DB_AGENT_PROXY_USER_USERNAME: "vircadia_agent_proxy",
 };
 
 // Server environment schema
@@ -122,21 +122,25 @@ const clientEnvSchema = z.object({
                 ),
         ])
         .default(false),
-    VRCA_CLIENT_DEFAULT_TITLE: z
-        .string()
-        .default("Vircadia World Web Interface"),
-    VRCA_CLIENT_DEFAULT_DESCRIPTION: z.string().default("..."),
-    VRCA_CLIENT_DEFAULT_URL: z
-        .string()
-        .url()
-        .default("https://app.vircadia.com"),
-    VRCA_CLIENT_DEFAULT_OG_IMAGE: z.string().default("/brand/logo_icon.webp"),
-    VRCA_CLIENT_DEFAULT_OG_TYPE: z.string().default("website"),
-    VRCA_CLIENT_DEFAULT_FAVICON: z.string().default("/brand/favicon.svg"),
-    VRCA_CLIENT_BASE_APP_URL: z
-        .string()
-        .url()
-        .default("https://app.vircadia.com"),
+    VRCA_CLIENT_SUPPRESS: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
+
+    VRCA_CLIENT_META_TITLE_BASE: z.string().default("Vircadia"),
+    VRCA_CLIENT_META_DESCRIPTION: z.string().default("..."),
+    VRCA_CLIENT_META_OG_IMAGE: z.string().default("/brand/logo_icon.webp"),
+    VRCA_CLIENT_META_OG_TYPE: z.string().default("website"),
+    VRCA_CLIENT_META_FAVICON: z.string().default("/brand/favicon.svg"),
+
+    VRCA_CLIENT_APP_URL: z.string().url().default("https://app.vircadia.com"),
+
     VRCA_CLIENT_DEFAULT_WORLD_SERVER_URI: z.string().default("localhost:3020"),
     VRCA_CLIENT_DEFAULT_WORLD_SERVER_URI_USING_SSL: z.boolean().default(false),
 });
@@ -180,14 +184,14 @@ const cliEnvSchema = z.object({
         .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_DATABASE),
     VRCA_CLI_SERVICE_POSTGRES_SUPER_USER_USERNAME: z
         .string()
-        .default(VircadiaConfig_GlobalConsts.DB_SUPER_USER),
+        .default(VircadiaConfig_GlobalConsts.DB_SUPER_USER_USERNAME),
     VRCA_CLI_SERVICE_POSTGRES_SUPER_USER_PASSWORD: z
         .string()
         .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PASSWORD),
 
     VRCA_CLI_SERVICE_POSTGRES_AGENT_PROXY_USER_USERNAME: z
         .string()
-        .default(VircadiaConfig_GlobalConsts.DB_AGENT_PROXY_USER),
+        .default(VircadiaConfig_GlobalConsts.DB_AGENT_PROXY_USER_USERNAME),
     VRCA_CLI_SERVICE_POSTGRES_AGENT_PROXY_USER_PASSWORD: z
         .string()
         .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_PASSWORD),
