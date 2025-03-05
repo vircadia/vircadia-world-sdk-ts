@@ -83,7 +83,9 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_POSTGRES_DATABASE: z
         .string()
         .default("vircadia_world_db"),
-    VRCA_SERVER_SERVICE_POSTGRES_PASSWORD: z.string().default("CHANGE_ME!"),
+    VRCA_SERVER_SERVICE_POSTGRES_SUPER_USER_PASSWORD: z
+        .string()
+        .default("CHANGE_ME!"),
     VRCA_SERVER_SERVICE_POSTGRES_SQL_ENV_PREFIX: z
         .string()
         .default("VRCA_SERVER"),
@@ -187,7 +189,7 @@ const cliEnvSchema = z.object({
         .default(VircadiaConfig_GlobalConsts.DB_SUPER_USER_USERNAME),
     VRCA_CLI_SERVICE_POSTGRES_SUPER_USER_PASSWORD: z
         .string()
-        .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PASSWORD),
+        .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_SUPER_USER_PASSWORD),
 
     VRCA_CLI_SERVICE_POSTGRES_AGENT_PROXY_USER_USERNAME: z
         .string()
