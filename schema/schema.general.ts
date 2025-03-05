@@ -310,7 +310,7 @@ export namespace Communication {
         export abstract class BaseMessage {
             public readonly timestamp: number;
             public readonly transactionId: string;
-            public readonly error: string | null;
+            public readonly errorMessage: string | null;
             public abstract readonly type: MessageType;
 
             constructor() {
@@ -342,10 +342,7 @@ export namespace Communication {
         export class QueryResponseMessage extends BaseMessage {
             public readonly type = MessageType.QUERY_RESPONSE;
 
-            constructor(
-                public readonly result?: any[],
-                public readonly errorMessage: string | null = null,
-            ) {
+            constructor(public readonly result?: any[]) {
                 super();
             }
         }
