@@ -175,6 +175,15 @@ const cliEnvSchema = z.object({
         .default(
             serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_EXTERNAL,
         ),
+    VRCA_CLI_POSTGRES_DATABASE: z
+        .string()
+        .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_DATABASE),
+    VRCA_CLI_POSTGRES_USERNAME: z
+        .string()
+        .default(VircadiaConfig_GlobalConsts.DB_SUPER_USER),
+    VRCA_CLI_POSTGRES_PASSWORD: z
+        .string()
+        .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PASSWORD),
     VRCA_CLI_POSTGRES_MIGRATION_DIR: z
         .string()
         .default(
@@ -199,22 +208,15 @@ const cliEnvSchema = z.object({
                 "../../../server/cli/database/reset",
             ),
         ),
-    // TODO: Need to add DB connection info, need to add access to containers info (remote/local)
+
+    VRCA_CLI_SERVICE_PGWEB_HOST: z
+        .string()
+        .default(serverEnv.VRCA_SERVER_SERVICE_PGWEB_HOST_CONTAINER_EXTERNAL),
+    VRCA_CLI_SERVICE_PGWEB_PORT: z
+        .number()
+        .default(serverEnv.VRCA_SERVER_SERVICE_PGWEB_PORT_CONTAINER_EXTERNAL),
 });
 const cliEnv = cliEnvSchema.parse(import.meta.env);
-
-// CLI Config
-const VircadiaConfig_CLI = {
-    DEBUG: cliEnv.VRCA_CLI_DEBUG,
-    SUPPRESS: cliEnv.VRCA_CLI_SUPPRESS,
-    POSTGRES: {
-        MIGRATION_DIR: cliEnv.VRCA_CLI_POSTGRES_MIGRATION_DIR,
-        SEED_DIR: cliEnv.VRCA_CLI_POSTGRES_SEED_DIR,
-        RESET_DIR: cliEnv.VRCA_CLI_POSTGRES_RESET_DIR,
-        HOST: cliEnv.VRCA_CLI_POSTGRES_HOST,
-        PORT: cliEnv.VRCA_CLI_POSTGRES_PORT,
-    },
-};
 
 // Combined config object
 export const VircadiaConfig = {

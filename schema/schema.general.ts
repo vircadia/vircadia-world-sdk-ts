@@ -212,6 +212,12 @@ export namespace Tick {
         general__script_state_id: string;
         general__tick_id: string;
     }
+
+    export interface I_TickNotification {
+        syncGroup: string;
+        tickId: string;
+        tickNumber: number;
+    }
 }
 
 export namespace Auth {

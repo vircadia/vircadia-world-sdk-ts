@@ -7,28 +7,44 @@ export class PostgresClient {
     private superSql: postgres.Sql | null = null;
     private proxySql: postgres.Sql | null = null;
 
-    public static getInstance(): PostgresClient {
+    private debug: boolean;
+    private suppress: boolean;
+
+    constructor(data: {
+        debug: boolean;
+        suppress: boolean;
+    }) {
+        this.debug = data.debug;
+        this.suppress = data.suppress;
+    }
+
+    public static getInstance(data: {
+        debug: boolean;
+        suppress: boolean;
+    }): PostgresClient {
         if (!PostgresClient.instance) {
-            PostgresClient.instance = new PostgresClient();
+            PostgresClient.instance = new PostgresClient(data);
         }
         return PostgresClient.instance;
     }
 
-    private static logIssue(error: unknown, host: string, port: number): void {
+    private logIssue(error: unknown, host: string, port: number): void {
         log({
-            message: `PostgreSQL connection issue, using
-            host: [${host}],
-            port: [${port}]`,
+            message: "PostgreSQL connection issue.",
+            data: {
+                host,
+                port,
+            },
             type: "debug",
-            suppress: VircadiaConfig.SERVER.VRCA_SERVER_SUPPRESS,
-            debug: VircadiaConfig.SERVER.VRCA_SERVER_DEBUG,
+            suppress: this.suppress,
+            debug: this.debug,
             error,
         });
         log({
             message: "PostgreSQL connection env variables:",
             type: "debug",
-            debug: VircadiaConfig.SERVER.VRCA_SERVER_DEBUG,
-            suppress: VircadiaConfig.SERVER.VRCA_SERVER_SUPPRESS,
+            debug: this.debug,
+            suppress: this.suppress,
             data: {
                 ...VircadiaConfig.SERVER,
                 ...VircadiaConfig.CLI,
@@ -40,6 +56,9 @@ export class PostgresClient {
         postgres: {
             host: string;
             port: number;
+            database: string;
+            username: string;
+            password: string;
         };
     }): Promise<postgres.Sql> {
         try {
@@ -48,19 +67,11 @@ export class PostgresClient {
                 this.superSql = postgres({
                     host: data.postgres.host,
                     port: data.postgres.port,
-                    database:
-                        VircadiaConfig.SERVER
-                            .VRCA_SERVER_SERVICE_POSTGRES_DATABASE,
-                    username: VircadiaConfig.GLOBAL_CONSTS.DB_SUPER_USER,
-                    password:
-                        VircadiaConfig.SERVER
-                            .VRCA_SERVER_SERVICE_POSTGRES_PASSWORD,
-                    onnotice: VircadiaConfig.SERVER.VRCA_SERVER_SUPPRESS
-                        ? () => {}
-                        : undefined,
-                    onclose: VircadiaConfig.SERVER.VRCA_SERVER_SUPPRESS
-                        ? () => {}
-                        : undefined,
+                    database: data.postgres.database,
+                    username: data.postgres.username,
+                    password: data.postgres.password,
+                    onnotice: this.suppress ? () => {} : undefined,
+                    onclose: this.suppress ? () => {} : undefined,
                 });
 
                 // Test super user connection immediately
@@ -70,17 +81,13 @@ export class PostgresClient {
                     message:
                         "PostgreSQL super user connection established successfully.",
                     type: "debug",
-                    suppress: VircadiaConfig.SERVER.VRCA_SERVER_SUPPRESS,
-                    debug: VircadiaConfig.SERVER.VRCA_SERVER_DEBUG,
+                    suppress: this.suppress,
+                    debug: this.debug,
                 });
             }
             return this.superSql;
         } catch (error) {
-            PostgresClient.logIssue(
-                error,
-                data.postgres.host,
-                data.postgres.port,
-            );
+            this.logIssue(error, data.postgres.host, data.postgres.port);
             throw error;
         }
     }
@@ -89,6 +96,9 @@ export class PostgresClient {
         postgres: {
             host: string;
             port: number;
+            database: string;
+            username: string;
+            password: string;
         };
     }): Promise<postgres.Sql> {
         try {
@@ -98,26 +108,18 @@ export class PostgresClient {
                     message:
                         "Initializing PostgreSQL proxy account connection...",
                     type: "debug",
-                    suppress: VircadiaConfig.SERVER.VRCA_SERVER_SUPPRESS,
-                    debug: VircadiaConfig.SERVER.VRCA_SERVER_DEBUG,
+                    suppress: this.suppress,
+                    debug: this.debug,
                 });
 
                 this.proxySql = postgres({
                     host: data.postgres.host,
                     port: data.postgres.port,
-                    database:
-                        VircadiaConfig.SERVER
-                            .VRCA_SERVER_SERVICE_POSTGRES_DATABASE,
-                    username: VircadiaConfig.GLOBAL_CONSTS.DB_AGENT_PROXY_USER,
-                    password:
-                        VircadiaConfig.SERVER
-                            .VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_PASSWORD,
-                    onnotice: VircadiaConfig.SERVER.VRCA_SERVER_SUPPRESS
-                        ? () => {}
-                        : undefined,
-                    onclose: VircadiaConfig.SERVER.VRCA_SERVER_SUPPRESS
-                        ? () => {}
-                        : undefined,
+                    database: data.postgres.database,
+                    username: data.postgres.username,
+                    password: data.postgres.password,
+                    onnotice: this.suppress ? () => {} : undefined,
+                    onclose: this.suppress ? () => {} : undefined,
                 });
 
                 // Test proxy account connection immediately
@@ -127,17 +129,13 @@ export class PostgresClient {
                     message:
                         "PostgreSQL proxy account connection established successfully.",
                     type: "debug",
-                    suppress: VircadiaConfig.SERVER.VRCA_SERVER_SUPPRESS,
-                    debug: VircadiaConfig.SERVER.VRCA_SERVER_DEBUG,
+                    suppress: this.suppress,
+                    debug: this.debug,
                 });
             }
             return this.proxySql;
         } catch (error) {
-            PostgresClient.logIssue(
-                error,
-                data.postgres.host,
-                data.postgres.port,
-            );
+            this.logIssue(error, data.postgres.host, data.postgres.port);
             throw error;
         }
     }
@@ -149,8 +147,8 @@ export class PostgresClient {
             log({
                 message: "PostgreSQL super user connection closed.",
                 type: "debug",
-                suppress: VircadiaConfig.SERVER.VRCA_SERVER_SUPPRESS,
-                debug: VircadiaConfig.SERVER.VRCA_SERVER_DEBUG,
+                suppress: this.suppress,
+                debug: this.debug,
             });
         }
 
@@ -160,8 +158,8 @@ export class PostgresClient {
             log({
                 message: "PostgreSQL proxy account connection closed.",
                 type: "debug",
-                suppress: VircadiaConfig.SERVER.VRCA_SERVER_SUPPRESS,
-                debug: VircadiaConfig.SERVER.VRCA_SERVER_DEBUG,
+                suppress: this.suppress,
+                debug: this.debug,
             });
         }
     }
