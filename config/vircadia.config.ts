@@ -165,34 +165,34 @@ const cliEnvSchema = z.object({
                 ),
         ])
         .default(false),
-    VRCA_CLI_POSTGRES_HOST: z
+    VRCA_CLI_SERVICE_POSTGRES_HOST: z
         .string()
         .default(
             serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_EXTERNAL,
         ),
-    VRCA_CLI_POSTGRES_PORT: z
+    VRCA_CLI_SERVICE_POSTGRES_PORT: z
         .number()
         .default(
             serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_EXTERNAL,
         ),
-    VRCA_CLI_POSTGRES_DATABASE: z
+    VRCA_CLI_SERVICE_POSTGRES_DATABASE: z
         .string()
         .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_DATABASE),
-    VRCA_CLI_POSTGRES_SUPER_USER_USERNAME: z
+    VRCA_CLI_SERVICE_POSTGRES_SUPER_USER_USERNAME: z
         .string()
         .default(VircadiaConfig_GlobalConsts.DB_SUPER_USER),
-    VRCA_CLI_POSTGRES_SUPER_USER_PASSWORD: z
+    VRCA_CLI_SERVICE_POSTGRES_SUPER_USER_PASSWORD: z
         .string()
         .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PASSWORD),
 
-    VRCA_CLI_POSTGRES_AGENT_PROXY_USER_USERNAME: z
+    VRCA_CLI_SERVICE_POSTGRES_AGENT_PROXY_USER_USERNAME: z
         .string()
         .default(VircadiaConfig_GlobalConsts.DB_AGENT_PROXY_USER),
-    VRCA_CLI_POSTGRES_AGENT_PROXY_USER_PASSWORD: z
+    VRCA_CLI_SERVICE_POSTGRES_AGENT_PROXY_USER_PASSWORD: z
         .string()
         .default(serverEnv.VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_PASSWORD),
 
-    VRCA_CLI_POSTGRES_MIGRATION_DIR: z
+    VRCA_CLI_SERVICE_POSTGRES_MIGRATION_DIR: z
         .string()
         .default(
             path.join(
@@ -200,7 +200,7 @@ const cliEnvSchema = z.object({
                 "../../../server/cli/database/migration",
             ),
         ),
-    VRCA_CLI_POSTGRES_SEED_DIR: z
+    VRCA_CLI_SERVICE_POSTGRES_SEED_DIR: z
         .string()
         .default(
             path.join(
@@ -208,7 +208,7 @@ const cliEnvSchema = z.object({
                 "../../../server/cli/database/seed",
             ),
         ),
-    VRCA_CLI_POSTGRES_RESET_DIR: z
+    VRCA_CLI_SERVICE_POSTGRES_RESET_DIR: z
         .string()
         .default(
             path.join(
