@@ -2,6 +2,8 @@ import postgres from "postgres";
 import { log } from "../general/log";
 import { VircadiaConfig } from "../../config/vircadia.config";
 
+// TODO: Use Bun native .sql client and use pooling to reduce latency issues.
+
 export class PostgresClient {
     private static instance: PostgresClient | null = null;
     private superSql: postgres.Sql | null = null;
