@@ -636,6 +636,12 @@ export namespace Service {
     }
 }
 
+export namespace Client {
+    export enum E_Client {
+        WEB_BABYLON_JS = "web_babylon_js",
+    }
+}
+
 export type DeepPartial<T> = {
     [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
