@@ -107,7 +107,6 @@ const serverEnvSchema = z.object({
                 .filter((ext) => ext.length > 0),
         )
         .default("uuid-ossp,hstore,pgcrypto"),
-    VRCA_SERVER_SERVICE_POSTGRES_SEEDS_PATH: z.string().optional(),
 
     VRCA_SERVER_SERVICE_PGWEB_HOST_CONTAINER_EXTERNAL: z
         .string()
