@@ -322,10 +322,10 @@ export namespace Communication {
             public readonly errorMessage: string | null;
             public abstract readonly type: MessageType;
 
-            constructor() {
+            constructor(errorMessage: string | null = null) {
                 this.timestamp = Date.now();
                 this.transactionId = crypto.randomUUID();
-                this.error = null;
+                this.errorMessage = errorMessage;
             }
         }
 
@@ -333,7 +333,7 @@ export namespace Communication {
             public readonly type = MessageType.GENERAL_ERROR_RESPONSE;
 
             constructor(public readonly error: string) {
-                super();
+                super(error);
             }
         }
 
@@ -342,6 +342,7 @@ export namespace Communication {
 
             constructor(
                 public readonly query: string,
+                // biome-ignore lint/suspicious/noExplicitAny: <explanation>
                 public readonly parameters?: any[],
             ) {
                 super();
@@ -351,8 +352,12 @@ export namespace Communication {
         export class QueryResponseMessage extends BaseMessage {
             public readonly type = MessageType.QUERY_RESPONSE;
 
-            constructor(public readonly result?: any[]) {
-                super();
+            constructor(
+                // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+                public readonly result?: any[],
+                errorMessage?: string,
+            ) {
+                super(errorMessage || null);
             }
         }
 
@@ -378,8 +383,9 @@ export namespace Communication {
                     operation: Config.E_OperationType;
                     error?: string | null;
                 }>,
+                errorMessage: string | null = null,
             ) {
-                super();
+                super(errorMessage);
             }
         }
 
@@ -405,8 +411,11 @@ export namespace Communication {
             [key in E_Endpoint]: {
                 path: string;
                 method: "POST" | "GET" | "PUT" | "DELETE";
+                // biome-ignore lint/suspicious/noExplicitAny: This interface needs to be flexible for different endpoint implementations
                 createRequest: (...args: any[]) => string;
+                // biome-ignore lint/suspicious/noExplicitAny: This interface needs to be flexible for different endpoint implementations
                 createSuccess: (...args: any[]) => any;
+                // biome-ignore lint/suspicious/noExplicitAny: This interface needs to be flexible for different endpoint implementations
                 createError: (...args: any[]) => any;
             };
         } = {
