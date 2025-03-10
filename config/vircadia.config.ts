@@ -9,7 +9,7 @@ const VircadiaConfig_GlobalConsts = {
 
 // Server environment schema
 const serverEnvSchema = z.object({
-    VRCA_SERVER_CONTAINER_NAME: z.string().default("vircadia_world"),
+    VRCA_SERVER_CONTAINER_NAME: z.string().default("vircadia_world_server"),
     VRCA_SERVER_DEBUG: z
         .union([
             z.boolean(),
