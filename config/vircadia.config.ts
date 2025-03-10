@@ -114,7 +114,9 @@ const serverEnv = serverEnvSchema.parse(import.meta.env);
 
 // Client environment schema
 const clientEnvSchema = z.object({
-    VRCA_CLIENT_DEBUG: z
+    VRCA_CLIENT_CONTAINER_NAME: z.string().default("vircadia_world_client"),
+
+    VRCA_CLIENT_WEB_BABYLON_JS_DEBUG: z
         .union([
             z.boolean(),
             z
@@ -124,7 +126,7 @@ const clientEnvSchema = z.object({
                 ),
         ])
         .default(false),
-    VRCA_CLIENT_SUPPRESS: z
+    VRCA_CLIENT_WEB_BABYLON_JS_SUPPRESS: z
         .union([
             z.boolean(),
             z
@@ -135,16 +137,27 @@ const clientEnvSchema = z.object({
         ])
         .default(false),
 
-    VRCA_CLIENT_META_TITLE_BASE: z.string().default("Vircadia"),
-    VRCA_CLIENT_META_DESCRIPTION: z.string().default("..."),
-    VRCA_CLIENT_META_OG_IMAGE: z.string().default("/brand/logo_icon.webp"),
-    VRCA_CLIENT_META_OG_TYPE: z.string().default("website"),
-    VRCA_CLIENT_META_FAVICON: z.string().default("/brand/favicon.svg"),
+    VRCA_CLIENT_WEB_BABYLON_JS_META_TITLE_BASE: z.string().default("Vircadia"),
+    VRCA_CLIENT_WEB_BABYLON_JS_META_DESCRIPTION: z.string().default("..."),
+    VRCA_CLIENT_WEB_BABYLON_JS_META_OG_IMAGE: z
+        .string()
+        .default("/brand/logo_icon.webp"),
+    VRCA_CLIENT_WEB_BABYLON_JS_META_OG_TYPE: z.string().default("website"),
+    VRCA_CLIENT_WEB_BABYLON_JS_META_FAVICON: z
+        .string()
+        .default("/brand/favicon.svg"),
 
-    VRCA_CLIENT_APP_URL: z.string().url().default("https://app.vircadia.com"),
+    VRCA_CLIENT_WEB_BABYLON_JS_APP_URL: z
+        .string()
+        .url()
+        .default("https://app.vircadia.com"),
 
-    VRCA_CLIENT_DEFAULT_WORLD_SERVER_URI: z.string().default("localhost:3020"),
-    VRCA_CLIENT_DEFAULT_WORLD_SERVER_URI_USING_SSL: z.boolean().default(false),
+    VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_SERVER_URI: z
+        .string()
+        .default("localhost:3020"),
+    VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_SERVER_URI_USING_SSL: z
+        .boolean()
+        .default(false),
 });
 // Parse client environment variables
 const clientEnv = clientEnvSchema.parse(import.meta.env);
