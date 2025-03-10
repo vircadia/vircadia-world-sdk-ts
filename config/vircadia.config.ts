@@ -257,5 +257,4 @@ export const VircadiaConfig = {
     CLIENT: clientEnv,
     SERVER: serverEnv,
     CLI: cliEnv,
-    GLOBAL_CONSTS: VircadiaConfig_GlobalConsts,
 };
