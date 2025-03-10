@@ -162,21 +162,30 @@ export namespace Entity {
 
 export namespace Tick {
     export interface I_Tick {
-        // General fields
         general__tick_id: string;
-
-        // Tick specific fields
         tick__number: number;
         group__sync: string;
-        tick__start_time: string;
-        tick__end_time: string;
+        tick__start_time: Date;
+        tick__end_time: Date;
         tick__duration_ms: number;
         tick__entity_states_processed: number;
         tick__script_states_processed: number;
         tick__asset_states_processed: number;
         tick__is_delayed: boolean;
-        tick__headroom_ms?: number;
-        tick__time_since_last_tick_ms?: number;
+        tick__headroom_ms: number | null;
+        tick__time_since_last_tick_ms: number | null;
+
+        // DB-specific metrics
+        tick__db__start_time: Date | null;
+        tick__db__end_time: Date | null;
+        tick__db__duration_ms: number | null;
+        tick__db__is_delayed: boolean | null;
+
+        // Manager-specific metrics
+        tick__manager__start_time: Date | null;
+        tick__manager__end_time: Date | null;
+        tick__manager__duration_ms: number | null;
+        tick__manager__is_delayed: boolean | null;
     }
 
     export interface I_EntityUpdate {
