@@ -142,6 +142,18 @@ const clientEnvSchema = z.object({
         ])
         .default(false),
 
+    VRCA_CLIENT_WEB_BABYLON_JS_HOST_CONTAINER_EXTERNAL: z
+        .string()
+        .default("127.0.0.1"),
+    VRCA_CLIENT_WEB_BABYLON_JS_PORT_CONTAINER_EXTERNAL: z.coerce
+        .number()
+        .default(3025),
+    VRCA_CLIENT_WEB_BABYLON_JS_PORT_CONTAINER_INTERNAL: z.coerce
+        .number()
+        .default(3025),
+
+    VRCA_CLIENT_WEB_BABYLON_JS_DEBUG_SESSION_TOKEN: z.string().default(""),
+
     VRCA_CLIENT_WEB_BABYLON_JS_META_TITLE_BASE: z.string().default("Vircadia"),
     VRCA_CLIENT_WEB_BABYLON_JS_META_DESCRIPTION: z.string().default("..."),
     VRCA_CLIENT_WEB_BABYLON_JS_META_OG_IMAGE: z
