@@ -72,8 +72,10 @@ export class PostgresClient {
                     database: data.postgres.database,
                     username: data.postgres.username,
                     password: data.postgres.password,
-                    onnotice: this.suppress ? () => {} : undefined,
-                    onclose: this.suppress ? () => {} : undefined,
+                    onnotice:
+                        this.debug && !this.suppress ? () => {} : undefined,
+                    onclose:
+                        this.debug && !this.suppress ? () => {} : undefined,
                 });
 
                 // Test super user connection immediately
@@ -120,8 +122,10 @@ export class PostgresClient {
                     database: data.postgres.database,
                     username: data.postgres.username,
                     password: data.postgres.password,
-                    onnotice: this.suppress ? () => {} : undefined,
-                    onclose: this.suppress ? () => {} : undefined,
+                    onnotice:
+                        this.debug && !this.suppress ? () => {} : undefined,
+                    onclose:
+                        this.debug && !this.suppress ? () => {} : undefined,
                 });
 
                 // Test proxy account connection immediately

@@ -33,32 +33,32 @@ function browserLog(data: Parameters<typeof log>[0]): void {
 
     switch (data.type) {
         case "debug":
-            icon = "🔍";
+            icon = "🔍 ";
             style = "color: #4a9eff";
             break;
         case "info":
-            icon = "ℹ️";
+            icon = "ℹ️ ";
             style = "color: #4a9eff";
             break;
         case "success":
-            icon = "✅";
+            icon = "✅ ";
             style = "color: #2ecc71";
             break;
         case "error":
-            icon = "❌";
+            icon = "❌ ";
             style = "color: #e74c3c";
             break;
         case "warn":
         case "warning":
-            icon = "⚠️";
+            icon = "⚠️ ";
             style = "color: #f1c40f";
             break;
         default:
-            icon = "📝";
+            icon = "📝 ";
             style = "color: inherit";
     }
 
-    const formattedMessage = `${prefix}${icon} ${data.message}`;
+    const formattedMessage = `${icon}${prefix}${data.message}`;
     const hasGroup = !!data.data;
 
     if (hasGroup) {
@@ -125,16 +125,16 @@ function nodeLog(data: Parameters<typeof log>[0]): void {
     switch (data.type) {
         case "debug":
             if (!hasGroup) {
-                console.debug(EC.blue(`${prefix}ℹ ${data.message}`));
+                console.debug(EC.blue(`ℹ ${prefix}${data.message}`));
             }
             break;
         case "info":
             if (!hasGroup) {
-                console.info(EC.blue(`${prefix}ℹ ${data.message}`));
+                console.info(EC.blue(`ℹ ${prefix}${data.message}`));
             }
             break;
         case "success":
-            console.log(EC.green(`${prefix}✔ ${data.message}`));
+            console.log(EC.green(`✔ ${prefix}${data.message}`));
             break;
         case "error": {
             let errorMessage = data.message;
@@ -148,15 +148,15 @@ function nodeLog(data: Parameters<typeof log>[0]): void {
                     errorMessage += `\nError Details: ${JSON.stringify(data.error, null, 2)}`;
                 }
             }
-            console.error(EC.red(`${prefix}✖ ${errorMessage}`));
+            console.error(EC.red(`✖ ${prefix}${errorMessage}`));
             break;
         }
         case "warn":
         case "warning":
-            console.warn(EC.yellow(`${prefix}⚠ ${data.message}`));
+            console.warn(EC.yellow(`⚠ ${prefix}${data.message}`));
             break;
         default:
-            console.info(EC.white(`${prefix}? ${data.message}`));
+            console.info(EC.white(`? ${prefix}${data.message}`));
     }
 
     // Show additional data if present and close group
