@@ -173,7 +173,14 @@ const clientEnvSchema = z.object({
         .string()
         .default("localhost:3020"),
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_SERVER_URI_USING_SSL: z
-        .boolean()
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
         .default(false),
 });
 // Parse client environment variables
