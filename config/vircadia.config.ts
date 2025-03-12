@@ -154,7 +154,7 @@ const clientEnvSchema = z.object({
 
     VRCA_CLIENT_WEB_BABYLON_JS_DEV_PORT_CONTAINER_INTERNAL: z.coerce
         .number()
-        .default(3000),
+        .default(3066),
 
     VRCA_CLIENT_WEB_BABYLON_JS_DEBUG_SESSION_TOKEN: z.string().default(""),
 
