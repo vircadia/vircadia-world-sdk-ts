@@ -152,6 +152,10 @@ const clientEnvSchema = z.object({
         .number()
         .default(3025),
 
+    VRCA_CLIENT_WEB_BABYLON_JS_DEV_PORT_CONTAINER_INTERNAL: z.coerce
+        .number()
+        .default(3000),
+
     VRCA_CLIENT_WEB_BABYLON_JS_DEBUG_SESSION_TOKEN: z.string().default(""),
 
     VRCA_CLIENT_WEB_BABYLON_JS_META_TITLE_BASE: z.string().default("Vircadia"),
