@@ -2,6 +2,9 @@ import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
+const envSource =
+    typeof process !== "undefined" ? process.env : import.meta.env;
+
 const VircadiaConfig_GlobalConsts = {
     DB_SUPER_USER_USERNAME: "vircadia",
     DB_AGENT_PROXY_USER_USERNAME: "vircadia_agent_proxy",
@@ -115,7 +118,8 @@ const serverEnvSchema = z.object({
         .number()
         .default(5437),
 });
-const serverEnv = serverEnvSchema.parse(import.meta.env);
+
+const serverEnv = serverEnvSchema.parse(envSource);
 
 // Client environment schema
 const clientEnvSchema = z.object({
@@ -188,7 +192,7 @@ const clientEnvSchema = z.object({
         .default(false),
 });
 // Parse client environment variables
-const clientEnv = clientEnvSchema.parse(import.meta.env);
+const clientEnv = clientEnvSchema.parse(envSource);
 
 // CLI environment schema
 const cliEnvSchema = z.object({
@@ -273,7 +277,7 @@ const cliEnvSchema = z.object({
         .number()
         .default(serverEnv.VRCA_SERVER_SERVICE_PGWEB_PORT_CONTAINER_EXTERNAL),
 });
-const cliEnv = cliEnvSchema.parse(import.meta.env);
+const cliEnv = cliEnvSchema.parse(envSource);
 
 // Combined config object
 export const VircadiaConfig = {
