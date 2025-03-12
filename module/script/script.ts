@@ -37,8 +37,6 @@ export namespace Script {
                     context.Vircadia?.Hook?.onEntityBeforeUnmount,
                 onScriptMount: context.Vircadia?.Hook?.onScriptMount,
                 onEntityUpdate: context.Vircadia?.Hook?.onEntityUpdate,
-                onEntityKeyframeUpdate:
-                    context.Vircadia?.Hook?.onEntityKeyframeUpdate,
             };
 
             return {

@@ -124,6 +124,7 @@ const serverEnv = serverEnvSchema.parse(envSource);
 // Client environment schema
 const clientEnvSchema = z.object({
     VRCA_CLIENT_CONTAINER_NAME: z.string().default("vircadia_world_client"),
+    VRCA_CLIENT_TEST_TOKEN: z.string().nullable().default(null),
 
     VRCA_CLIENT_WEB_BABYLON_JS_DEBUG: z
         .union([
