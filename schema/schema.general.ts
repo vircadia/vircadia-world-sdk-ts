@@ -148,13 +148,33 @@ export namespace Entity {
             }
 
             export interface I_Hook {
-                onScriptMount?: () => void;
-                onScriptBeforeUnmount?: () => void;
+                // Entity lifecycle hooks
+                onBeforeEntityMount?: (entity: Entity.I_Entity) => void;
                 onEntityUpdate?: (
                     entity: Entity.I_Entity,
                     tickInfo: Tick.I_Tick,
                 ) => void;
                 onEntityBeforeUnmount?: () => void;
+
+                // Script lifecycle hooks
+                onScriptMount?: () => void;
+                onBeforeScriptUnmount?: () => void;
+                onScriptUpdate?: (scriptId: string) => void;
+
+                // Client lifecycle hooks
+                onBeforeClientDestroy?: () => void;
+
+                // Connection state hooks
+                onAfterConnected?: () => void;
+                onAfterDisconnected?: (reason?: string) => void;
+                onBeforeReconnect?: (
+                    attempt: number,
+                    maxAttempts: number,
+                ) => void;
+                onConnectionError?: (error: string) => void;
+
+                // Tick hooks
+                onTick?: (tickInfo: Tick.I_Tick) => void;
             }
         }
     }
@@ -314,6 +334,7 @@ export namespace Communication {
             QUERY_REQUEST = "QUERY_REQUEST",
             QUERY_RESPONSE = "QUERY_RESPONSE",
             SYNC_GROUP_UPDATES_RESPONSE = "SYNC_GROUP_UPDATES_RESPONSE",
+            TICK_NOTIFICATION = "TICK_NOTIFICATION",
         }
 
         export abstract class BaseMessage {
@@ -361,7 +382,7 @@ export namespace Communication {
             }
         }
 
-        export class SyncGroupUpdatesResponseMessage extends BaseMessage {
+        export class SyncGroupUpdatesNotificationMessage extends BaseMessage {
             public readonly type = MessageType.SYNC_GROUP_UPDATES_RESPONSE;
 
             constructor(
@@ -389,10 +410,19 @@ export namespace Communication {
             }
         }
 
+        export class TickNotificationMessage extends BaseMessage {
+            public readonly type = MessageType.TICK_NOTIFICATION;
+
+            constructor(public readonly tick: Tick.I_Tick) {
+                super();
+            }
+        }
+
         export type Message =
             | QueryRequestMessage
             | QueryResponseMessage
-            | SyncGroupUpdatesResponseMessage;
+            | SyncGroupUpdatesNotificationMessage
+            | TickNotificationMessage;
 
         export function isMessageType<T extends Message>(
             message: Message,
