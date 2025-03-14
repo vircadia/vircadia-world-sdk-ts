@@ -491,7 +491,6 @@ export namespace Service {
         API = "api",
         POSTGRES = "postgres",
         PGWEB = "pgweb",
-        SCRIPT_WEB = "script_web",
         TICK = "tick",
     }
 
@@ -558,59 +557,6 @@ export namespace Service {
     export namespace Postgres {}
 
     export namespace PGWeb {}
-
-    export namespace Script_Web {
-        export const Stats_Endpoint = {
-            path: "/stats",
-            method: "POST",
-            createRequest: (): string => "",
-            createSuccess: (data: {
-                uptime: number;
-                database: {
-                    connected: boolean;
-                };
-                memory: {
-                    heapUsed: number;
-                };
-                cpu: {
-                    user: number;
-                    system: number;
-                };
-            }): {
-                uptime: number;
-                database: {
-                    connected: boolean;
-                };
-                memory: {
-                    heapUsed: number;
-                };
-                cpu: {
-                    user: number;
-                    system: number;
-                };
-                success: true;
-                timestamp: number;
-            } => ({
-                uptime: data.uptime,
-                database: data.database,
-                memory: data.memory,
-                cpu: data.cpu,
-                success: true,
-                timestamp: Date.now(),
-            }),
-            createError: (
-                error: string,
-            ): {
-                success: false;
-                timestamp: number;
-                error: string;
-            } => ({
-                success: false,
-                timestamp: Date.now(),
-                error,
-            }),
-        } as const;
-    }
 
     export namespace Tick {
         export const Stats_Endpoint = {
