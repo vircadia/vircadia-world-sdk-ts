@@ -7,14 +7,16 @@ import {
     Color3,
     HemisphericLight,
     ArcRotateCamera,
+    type NullEngine,
+    type WebGPUEngine,
 } from "@babylonjs/core";
-import { log } from "../general/log";
+import { log } from "../../general/log";
 import {
     Communication,
     type Entity,
     type Config,
-    Tick,
-} from "../../schema/schema.general";
+    type Tick,
+} from "../../../schema/schema.general";
 
 /**
  * Vircadia Client Configuration
@@ -27,7 +29,7 @@ export interface VircadiaBabylonClientConfig {
     syncGroup: string;
 
     // Engine/Scene settings
-    engine: Engine;
+    engine: Engine | NullEngine | WebGPUEngine;
     scene?: Scene;
 
     // Reconnection settings
@@ -97,7 +99,7 @@ export class VircadiaBabylonClient {
     // Core properties
     private ws: WebSocket | null = null;
     private scene: Scene;
-    private engine: Engine;
+    private engine: Engine | NullEngine | WebGPUEngine;
 
     // State tracking
     private entities = new Map<string, ManagedEntity>();

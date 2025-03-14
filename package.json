@@ -2,7 +2,7 @@
     "name": "vircadia-world-sdk-ts",
     "type": "module",
     "dependencies": {
-        "@babylonjs/core": "^7.37.0",
+        "@babylonjs/core": "^7.53.2",
         "console-log-colors": "latest",
         "eight-colors": "latest",
         "jsonwebtoken": "^9.0.2",
