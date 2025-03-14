@@ -21,12 +21,11 @@ import {
 /**
  * Vircadia Client Configuration
  */
-export interface VircadiaBabylonClientConfig {
+export interface VircadiaBabylonCoreConfig {
     // Connection settings
     serverUrl: string;
     authToken: string;
     authProvider: string;
-    syncGroup: string;
 
     // Engine/Scene settings
     engine: Engine | NullEngine | WebGPUEngine;
@@ -95,7 +94,7 @@ interface ManagedEntity {
  * A lightweight client for connecting to the Vircadia World API
  * and managing entity scripts in a BabylonJS scene.
  */
-export class VircadiaBabylonClient {
+export class VircadiaBabylonCore {
     // Core properties
     private ws: WebSocket | null = null;
     private scene: Scene;
@@ -134,7 +133,7 @@ export class VircadiaBabylonClient {
     /**
      * Creates a new Vircadia Babylon Client
      */
-    constructor(private config: VircadiaBabylonClientConfig) {
+    constructor(private config: VircadiaBabylonCoreConfig) {
         // Set default config values
         this.config = {
             reconnectAttempts: 5,
