@@ -54,6 +54,7 @@ export namespace Vircadia {
                 oldEntity?: Entity.I_Entity,
             ) => void;
             onEntityBeforeUnmount?: () => void;
+            onTick?: (tick: Tick.I_Tick) => void;
         }
 
         /**
@@ -109,6 +110,12 @@ export class VircadiaBabylonClient {
     private reconnectTimer: number | null = null;
     private reconnectCount = 0;
 
+    // Sync group and tick tracking
+    private syncGroups = new Set<string>();
+    private syncGroupTicks = new Map<string, Tick.I_Tick>();
+    private syncGroupQueryInterval: number | null = null;
+    private readonly SYNC_GROUP_QUERY_INTERVAL_MS = 30000; // 30 seconds
+
     // Observables
     public readonly onConnectedObservable = new Observable<void>();
     public readonly onDisconnectedObservable = new Observable<string>();
@@ -117,6 +124,10 @@ export class VircadiaBabylonClient {
     public readonly onEntityUpdatedObservable =
         new Observable<Entity.I_Entity>();
     public readonly onEntityRemovedObservable = new Observable<string>();
+    public readonly onTickObservable = new Observable<{
+        syncGroup: string;
+        tick: Tick.I_Tick;
+    }>();
 
     /**
      * Creates a new Vircadia Babylon Client
@@ -232,6 +243,10 @@ export class VircadiaBabylonClient {
                     this.isConnecting = false;
                     this.reconnectCount = 0;
                     this.onConnectedObservable.notifyObservers();
+
+                    // Start sync group tracking
+                    this.startSyncGroupTracking();
+
                     resolve(true);
                 };
             });
@@ -293,6 +308,9 @@ export class VircadiaBabylonClient {
      * Disconnect from the server
      */
     disconnect(): void {
+        // Stop sync group tracking first
+        this.stopSyncGroupTracking();
+
         if (this.ws) {
             // Clean up entities first
             this.cleanupAllEntities();
@@ -364,8 +382,13 @@ export class VircadiaBabylonClient {
                     this.handleSyncGroupUpdates(message);
                     break;
 
+                case Communication.WebSocket.MessageType.TICK_NOTIFICATION:
+                    this.handleTickNotification(message);
+                    break;
+
                 case Communication.WebSocket.MessageType.QUERY_RESPONSE:
-                    // Could handle query responses if needed
+                    // Handle query responses (for sync group queries)
+                    this.handleQueryResponse(message);
                     break;
 
                 case Communication.WebSocket.MessageType.GENERAL_ERROR_RESPONSE:
@@ -865,10 +888,208 @@ export class VircadiaBabylonClient {
     }
 
     /**
+     * Start tracking sync groups
+     * Queries the database for sync groups at regular intervals
+     */
+    private startSyncGroupTracking(): void {
+        // Clear existing interval if any
+        if (this.syncGroupQueryInterval !== null) {
+            window.clearInterval(this.syncGroupQueryInterval);
+        }
+
+        // Initial query
+        this.querySyncGroups();
+
+        // Set up interval for regular queries
+        this.syncGroupQueryInterval = window.setInterval(() => {
+            this.querySyncGroups();
+        }, this.SYNC_GROUP_QUERY_INTERVAL_MS);
+    }
+
+    /**
+     * Stop tracking sync groups
+     */
+    private stopSyncGroupTracking(): void {
+        if (this.syncGroupQueryInterval !== null) {
+            window.clearInterval(this.syncGroupQueryInterval);
+            this.syncGroupQueryInterval = null;
+        }
+
+        this.syncGroups.clear();
+        this.syncGroupTicks.clear();
+    }
+
+    /**
+     * Query the database for sync groups the current session has access to
+     */
+    private querySyncGroups(): void {
+        if (!this.isConnected || !this.ws) {
+            return;
+        }
+
+        const query = `
+            SELECT group__sync
+            FROM auth.active_sync_group_sessions
+            WHERE general__session_id = $1
+        `;
+
+        const message = new Communication.WebSocket.QueryRequestMessage(
+            query,
+            [this.config.authToken], // Using the token as session ID
+        );
+
+        this.ws.send(JSON.stringify(message));
+    }
+
+    /**
+     * Handle query response messages
+     */
+    private handleQueryResponse(
+        message: Communication.WebSocket.QueryResponseMessage,
+    ): void {
+        if (message.errorMessage) {
+            log({
+                message: "Query error:",
+                error: message.errorMessage,
+                type: "error",
+                suppress: this.config.suppress,
+                debug: this.config.debug,
+            });
+            return;
+        }
+
+        if (!message.result || !Array.isArray(message.result)) {
+            return;
+        }
+
+        // Check if this is a sync group query response
+        if (message.result.length > 0 && message.result[0].group_sync) {
+            const newSyncGroups = new Set<string>();
+
+            // Extract sync groups from response
+            for (const row of message.result) {
+                if (row.group_sync) {
+                    newSyncGroups.add(row.group_sync);
+                }
+            }
+
+            // Check for added or removed sync groups
+            const addedSyncGroups = [...newSyncGroups].filter(
+                (sg) => !this.syncGroups.has(sg),
+            );
+            const removedSyncGroups = [...this.syncGroups].filter(
+                (sg) => !newSyncGroups.has(sg),
+            );
+
+            // Update our sync groups set
+            this.syncGroups = newSyncGroups;
+
+            // Clean up removed sync groups
+            for (const sg of removedSyncGroups) {
+                this.syncGroupTicks.delete(sg);
+            }
+
+            if (addedSyncGroups.length > 0 || removedSyncGroups.length > 0) {
+                log({
+                    message: "Sync group membership updated",
+                    data: {
+                        added: addedSyncGroups,
+                        removed: removedSyncGroups,
+                        current: [...this.syncGroups],
+                    },
+                    type: "info",
+                    suppress: this.config.suppress,
+                    debug: this.config.debug,
+                });
+            }
+        }
+    }
+
+    /**
+     * Handle tick notifications from the server
+     */
+    private handleTickNotification(
+        message: Communication.WebSocket.TickNotificationMessage,
+    ): void {
+        const tick = message.tick;
+        const syncGroup = tick.group__sync;
+
+        if (!this.syncGroups.has(syncGroup)) {
+            // This is a tick for a sync group we're not tracking
+            // This could happen if we've just joined or left a sync group
+            // and haven't received updated sync group info yet
+            return;
+        }
+
+        // Store the tick information for this sync group
+        this.syncGroupTicks.set(syncGroup, tick);
+
+        // Notify global observers
+        this.onTickObservable.notifyObservers({
+            syncGroup,
+            tick,
+        });
+
+        // Notify entity scripts in this sync group
+        this.notifyScriptsOfTick(syncGroup, tick);
+    }
+
+    /**
+     * Notify scripts in a specific sync group about a new tick
+     */
+    private notifyScriptsOfTick(syncGroup: string, tick: Tick.I_Tick): void {
+        // Iterate through all entities in this sync group
+        for (const [entityId, managedEntity] of this.entities) {
+            // Skip entities not in this sync group
+            if (managedEntity.entity.group__sync !== syncGroup) {
+                continue;
+            }
+
+            // Notify all scripts for this entity
+            for (const script of managedEntity.scripts) {
+                try {
+                    script.hooks.onTick?.(tick);
+                } catch (error) {
+                    log({
+                        message: `Error executing onTick for entity ${entityId} in sync group ${syncGroup}:`,
+                        error,
+                        type: "error",
+                        suppress: this.config.suppress,
+                        debug: this.config.debug,
+                    });
+                }
+            }
+        }
+    }
+
+    /**
+     * Get the current tick information for a specific sync group
+     */
+    getCurrentTickForSyncGroup(syncGroup: string): Tick.I_Tick | undefined {
+        return this.syncGroupTicks.get(syncGroup);
+    }
+
+    /**
+     * Get all sync groups the client is currently part of
+     */
+    getSyncGroups(): string[] {
+        return [...this.syncGroups];
+    }
+
+    /**
+     * Check if the client is in a specific sync group
+     */
+    isInSyncGroup(syncGroup: string): boolean {
+        return this.syncGroups.has(syncGroup);
+    }
+
+    /**
      * Clean up resources when the client is no longer needed
-     * Note: This doesn't dispose the engine or scene as they were provided externally
      */
     dispose(): void {
+        // Stop sync group tracking
+        this.stopSyncGroupTracking();
+
         // Disconnect from server
         this.disconnect();
 
@@ -883,5 +1104,6 @@ export class VircadiaBabylonClient {
         this.onEntityAddedObservable.clear();
         this.onEntityUpdatedObservable.clear();
         this.onEntityRemovedObservable.clear();
+        this.onTickObservable.clear();
     }
 }
