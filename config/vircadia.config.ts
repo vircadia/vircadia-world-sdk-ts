@@ -222,7 +222,7 @@ const cliEnvSchema = z.object({
         .default(
             serverEnv.VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_EXTERNAL,
         ),
-    VRCA_CLI_SERVICE_POSTGRES_PORT: z
+    VRCA_CLI_SERVICE_POSTGRES_PORT: z.coerce
         .number()
         .default(
             serverEnv.VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_EXTERNAL,
@@ -274,7 +274,7 @@ const cliEnvSchema = z.object({
     VRCA_CLI_SERVICE_PGWEB_HOST: z
         .string()
         .default(serverEnv.VRCA_SERVER_SERVICE_PGWEB_HOST_CONTAINER_EXTERNAL),
-    VRCA_CLI_SERVICE_PGWEB_PORT: z
+    VRCA_CLI_SERVICE_PGWEB_PORT: z.coerce
         .number()
         .default(serverEnv.VRCA_SERVER_SERVICE_PGWEB_PORT_CONTAINER_EXTERNAL),
 });
