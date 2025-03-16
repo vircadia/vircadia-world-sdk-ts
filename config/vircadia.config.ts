@@ -292,3 +292,8 @@ export const VircadiaConfig = {
     SERVER: serverEnv,
     CLI: cliEnv,
 };
+
+// Export individual config objects
+export const VircadiaConfig_CLIENT = clientEnv;
+export const VircadiaConfig_SERVER = serverEnv;
+export const VircadiaConfig_CLI = cliEnv;
