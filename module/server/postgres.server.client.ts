@@ -1,6 +1,6 @@
 import postgres from "postgres";
 import { log } from "../general/log";
-import { VircadiaConfig } from "../../config/vircadia.config";
+import { VircadiaConfig } from "../../config/vircadia.cli.config";
 
 // TODO: Use Bun native .sql client and use pooling to reduce latency issues.
 
