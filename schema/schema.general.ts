@@ -488,10 +488,10 @@ export namespace Communication {
 
 export namespace Service {
     export enum E_Service {
-        API = "api",
+        WORLD_API_MANAGER = "world_api_manager",
+        WORLD_TICK_MANAGER = "world_tick_manager",
         POSTGRES = "postgres",
         PGWEB = "pgweb",
-        TICK = "tick",
     }
 
     export namespace API {
