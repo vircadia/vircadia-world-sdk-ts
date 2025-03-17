@@ -25,40 +25,35 @@ const serverEnvSchema = z.object({
         ])
         .default(false),
 
-    VRCA_SERVER_SERVICE_API_HOST_CONTAINER_CLUSTER: z.string().default("api"),
-    VRCA_SERVER_SERVICE_API_PORT_CONTAINER_CLUSTER: z.coerce
+    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_HOST_CONTAINER_CLUSTER: z
+        .string()
+        .default("world_api_manager"),
+    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_PORT_CONTAINER_CLUSTER: z.coerce
         .number()
         .default(3020),
-    VRCA_SERVER_SERVICE_API_HOST_CONTAINER_EXTERNAL: z
+    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_HOST_CONTAINER_EXTERNAL: z
         .string()
         .default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_API_PORT_CONTAINER_EXTERNAL: z.coerce
+    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_PORT_CONTAINER_EXTERNAL: z.coerce
         .number()
         .default(3020),
-    VRCA_SERVER_SERVICE_API_HOST_PUBLIC: z.string().default("127.0.0.1"),
-    VRCA_SERVER_SERVICE_API_PORT_PUBLIC: z.coerce.number().default(3020),
-
-    VRCA_SERVER_SERVICE_SCRIPT_WEB_HOST_CONTAINER_CLUSTER: z
-        .string()
-        .default("script"),
-    VRCA_SERVER_SERVICE_SCRIPT_WEB_PORT_CONTAINER_CLUSTER: z.coerce
-        .number()
-        .default(3021),
-    VRCA_SERVER_SERVICE_SCRIPT_WEB_HOST_CONTAINER_EXTERNAL: z
+    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_HOST_PUBLIC: z
         .string()
         .default("127.0.0.1"),
-    VRCA_SERVER_SERVICE_SCRIPT_WEB_PORT_CONTAINER_EXTERNAL: z.coerce
+    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_PORT_PUBLIC: z.coerce
         .number()
-        .default(3021),
+        .default(3020),
 
-    VRCA_SERVER_SERVICE_TICK_HOST_CONTAINER_CLUSTER: z.string().default("tick"),
-    VRCA_SERVER_SERVICE_TICK_PORT_CONTAINER_CLUSTER: z.coerce
+    VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_HOST_CONTAINER_CLUSTER: z
+        .string()
+        .default("world_tick_manager"),
+    VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_PORT_CONTAINER_CLUSTER: z.coerce
         .number()
         .default(3022),
-    VRCA_SERVER_SERVICE_TICK_HOST_CONTAINER_EXTERNAL: z
+    VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_HOST_CONTAINER_EXTERNAL: z
         .string()
         .default("127.0.0.1"),
-    VRCA_SERVER_SERVICE_TICK_PORT_CONTAINER_EXTERNAL: z.coerce
+    VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_PORT_CONTAINER_EXTERNAL: z.coerce
         .number()
         .default(3022),
 
