@@ -23,9 +23,9 @@ export namespace Entity {
         general__initialized_at?: string;
         general__initialized_by?: string;
         meta__data: Record<string, object>;
-        scripts__ids: string[];
-        scripts__status: T_EntityScriptStatus;
-        assets__ids: string[];
+        script__ids: string[];
+        script__statuses: T_EntityScriptStatus;
+        asset__names: string[];
         validation__log?: Array<{
             timestamp: string;
             agent_id: string;
@@ -38,7 +38,6 @@ export namespace Entity {
     export namespace Asset {
         export interface I_Asset {
             general__asset_name: string;
-            general__asset_id: string;
             general__created_at?: string;
             general__created_by?: string;
             general__updated_at?: string;
@@ -225,7 +224,7 @@ export namespace Tick {
     }
 
     export interface I_AssetUpdate {
-        general__asset_id: string;
+        general__asset_name: string;
         operation: Config.E_OperationType;
         changes: Config.E_OperationType extends "INSERT"
             ? Entity.Asset.I_Asset

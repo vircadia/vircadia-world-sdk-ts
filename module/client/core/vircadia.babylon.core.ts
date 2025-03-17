@@ -637,8 +637,8 @@ export class VircadiaBabylonCore {
         this.entities.set(entity.general__entity_id, managedEntity);
 
         // Load scripts for this entity
-        if (entity.scripts__ids && entity.scripts__ids.length > 0) {
-            for (const scriptId of entity.scripts__ids) {
+        if (entity.script__ids && entity.script__ids.length > 0) {
+            for (const scriptId of entity.script__ids) {
                 await this.loadScriptForEntity(
                     scriptId,
                     entity.general__entity_id,
