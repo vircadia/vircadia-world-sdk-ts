@@ -46,7 +46,6 @@ export namespace Entity {
 
             // Asset fields
             asset__data: string;
-            meta__data: Record<string, object>;
         }
     }
 
