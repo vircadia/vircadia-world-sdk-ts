@@ -38,10 +38,10 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_WORLD_API_MANAGER_PORT_CONTAINER_EXTERNAL: z.coerce
         .number()
         .default(3020),
-    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_HOST_PUBLIC: z
+    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
         .string()
         .default("127.0.0.1"),
-    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_PORT_PUBLIC: z.coerce
+    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_PORT_PUBLIC_AVAILABLE_AT: z.coerce
         .number()
         .default(3020),
 
