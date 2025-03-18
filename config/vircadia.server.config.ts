@@ -50,24 +50,18 @@ const serverEnvSchema = z.object({
         .string()
         .default("world_tick_manager"),
     VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_PORT_CONTAINER_BIND_INTERNAL:
-        z.coerce.number().default(3020),
+        z.coerce.number().default(3021),
     VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_HOST_CONTAINER_BIND_EXTERNAL: z
         .string()
         .default("127.0.0.1"),
     VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_PORT_CONTAINER_BIND_EXTERNAL:
-        z.coerce.number().default(3020),
+        z.coerce.number().default(3021),
 
     // Postgres
     VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_BIND_EXTERNAL: z
         .string()
         .default("127.0.0.1"),
     VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
-        .number()
-        .default(5432),
-    VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_BIND_INTERNAL: z
-        .string()
-        .default("postgres"),
-    VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_BIND_INTERNAL: z.coerce
         .number()
         .default(5432),
     VRCA_SERVER_SERVICE_POSTGRES_DATABASE: z
