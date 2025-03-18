@@ -26,20 +26,28 @@ const browserClientEnvSchema = z.object({
         ])
         .default(false),
 
+    // Production Web Babylon JS Client
+    VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_CONTAINER_NAME: z
+        .string()
+        .default("vircadia_world_client_prod"),
     VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_HOST_CONTAINER_BIND_EXTERNAL: z
         .string()
         .default("127.0.0.1"),
     VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
         .number()
         .default(3025),
-    VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_PORT_CONTAINER_INTERNAL: z.coerce
+    VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_PORT_CONTAINER_BIND_INTERNAL: z.coerce
         .number()
         .default(3025),
 
+    // Development Web Babylon JS Client
+    VRCA_CLIENT_WEB_BABYLON_JS_DEV_CONTAINER_NAME: z
+        .string()
+        .default("vircadia_world_client_dev"),
     VRCA_CLIENT_WEB_BABYLON_JS_DEV_HOST_CONTAINER_BIND_EXTERNAL: z
         .string()
         .default("127.0.0.1"),
-    VRCA_CLIENT_WEB_BABYLON_JS_DEV_PORT_CONTAINER_INTERNAL: z.coerce
+    VRCA_CLIENT_WEB_BABYLON_JS_DEV_PORT_CONTAINER_BIND_INTERNAL: z.coerce
         .number()
         .default(3066),
     VRCA_CLIENT_WEB_BABYLON_JS_DEV_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
@@ -63,10 +71,10 @@ const browserClientEnvSchema = z.object({
         .url()
         .default("https://app.vircadia.com"),
 
-    VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_SERVER_URI: z
+    VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_URI: z
         .string()
         .default("localhost:3020"),
-    VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_SERVER_URI_USING_SSL: z
+    VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_URI_USING_SSL: z
         .union([
             z.boolean(),
             z
