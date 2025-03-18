@@ -29,6 +29,58 @@ export namespace Entity {
     }
 
     export namespace Asset {
+        export enum E_AssetType {
+            // 3D Models
+            GLB = "GLB",
+            GLTF = "GLTF",
+            OBJ = "OBJ",
+            FBX = "FBX",
+            DAE = "DAE",
+            STL = "STL",
+            STEP = "STEP",
+            IGES = "IGES",
+            BLEND = "BLEND",
+            X3D = "X3D",
+            VRML = "VRML",
+            BVH = "BVH",
+            // Textures
+            PNG = "PNG",
+            JPEG = "JPEG",
+            JPG = "JPG",
+            TIFF = "TIFF",
+            TIF = "TIF",
+            GIF = "GIF",
+            WEBP = "WEBP",
+            BMP = "BMP",
+            TGA = "TGA",
+            HDR = "HDR",
+            EXR = "EXR",
+            KTX2 = "KTX2",
+            // Video
+            WEBM = "WEBM",
+            MP4 = "MP4",
+            MOV = "MOV",
+            AVI = "AVI",
+            // Audio
+            MP3 = "MP3",
+            WAV = "WAV",
+            OGG = "OGG",
+            AAC = "AAC",
+            FLAC = "FLAC",
+            // Material
+            MTL = "MTL",
+            MAT = "MAT",
+            // Shaders
+            GLSL = "GLSL",
+            HLSL = "HLSL",
+            WGSL = "WGSL",
+            SPIRV = "SPIRV",
+            COMP = "COMP",
+            FRAG = "FRAG",
+            VERT = "VERT",
+            SHADERPAK = "SHADERPAK",
+        }
+
         export interface I_Asset {
             general__asset_name: string;
             general__created_at?: string;
@@ -39,6 +91,7 @@ export namespace Entity {
 
             // Asset fields
             asset__data: string;
+            asset__type: E_AssetType;
         }
     }
 
@@ -72,7 +125,7 @@ export namespace Entity {
             script__type: E_ScriptType;
 
             // Compiled script fields
-            script__compiled?: string;
+            script__compiled__data?: string;
             script__compiled__sha256?: string;
             script__compiled__status?: E_CompilationStatus;
             script__compiled__updated_at?: string;
