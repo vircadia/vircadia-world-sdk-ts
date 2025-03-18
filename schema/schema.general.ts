@@ -363,36 +363,25 @@ export namespace Communication {
             }
         }
 
-        // Base update package interface
-        export interface IUpdatePackage<T, IdType extends string> {
-            operation: Config.E_OperationType;
-            changes: DeepPartial<T>;
+        export type EntityUpdateWithError = Tick.I_EntityUpdate & {
             error?: string | null;
-        }
+        };
 
-        // Specific update package interfaces
-        export interface IEntityUpdatePackage
-            extends IUpdatePackage<Entity.I_Entity, "entityId"> {
-            entityId: string;
-        }
+        export type ScriptUpdateWithError = Tick.I_ScriptUpdate & {
+            error?: string | null;
+        };
 
-        export interface IScriptUpdatePackage
-            extends IUpdatePackage<Entity.Script.I_Script, "scriptName"> {
-            scriptName: string;
-        }
-
-        export interface IAssetUpdatePackage
-            extends IUpdatePackage<Entity.Asset.I_Asset, "assetName"> {
-            assetName: string;
-        }
+        export type AssetUpdateWithError = Tick.I_AssetUpdate & {
+            error?: string | null;
+        };
 
         export class SyncGroupUpdatesNotificationMessage extends BaseMessage {
             public readonly type = MessageType.SYNC_GROUP_UPDATES_RESPONSE;
 
             constructor(
-                public entities: IEntityUpdatePackage[],
-                public scripts: IScriptUpdatePackage[],
-                public assets: IAssetUpdatePackage[],
+                public entities: EntityUpdateWithError[],
+                public scripts: ScriptUpdateWithError[],
+                public assets: AssetUpdateWithError[],
                 errorMessage: string | null = null,
             ) {
                 super(errorMessage);
