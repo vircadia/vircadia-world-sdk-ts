@@ -23,15 +23,8 @@ export namespace Entity {
         general__initialized_at?: string;
         general__initialized_by?: string;
         meta__data: Record<string, object>;
-        script__ids: string[];
-        script__statuses: T_EntityScriptStatus;
+        script__names: string[];
         asset__names: string[];
-        validation__log?: Array<{
-            timestamp: string;
-            agent_id: string;
-            entity_script_id: string;
-            query: string;
-        }>;
         group__sync: string;
     }
 
@@ -50,6 +43,12 @@ export namespace Entity {
     }
 
     export namespace Script {
+        export enum E_ScriptType {
+            NODE = "node",
+            BUN = "bun",
+            BROWSER = "browser",
+        }
+
         export enum E_CompilationStatus {
             PENDING = "PENDING",
             COMPILING = "COMPILING",
@@ -58,7 +57,6 @@ export namespace Entity {
         }
 
         export interface I_Script {
-            general__script_id: string;
             general__script_name: string;
             general__created_at?: string;
             general__created_by?: string;
@@ -70,29 +68,14 @@ export namespace Entity {
             source__repo__entry_path?: string;
             source__repo__url?: string;
 
-            // Node platform
-            compiled__node__script?: string;
-            compiled__node__script_sha256?: string;
-            compiled__node__status?: E_CompilationStatus;
-            compiled__node__updated_at?: string;
+            // Script type
+            script__type: E_ScriptType;
 
-            // Bun platform
-            compiled__bun__script?: string;
-            compiled__bun__script_sha256?: string;
-            compiled__bun__status?: E_CompilationStatus;
-            compiled__bun__updated_at?: string;
-
-            // Browser platform
-            compiled__browser__script?: string;
-            compiled__browser__script_sha256?: string;
-            compiled__browser__status?: E_CompilationStatus;
-            compiled__browser__updated_at?: string;
-        }
-
-        export enum E_Platform {
-            NODE = "node",
-            BUN = "bun",
-            BROWSER = "browser",
+            // Compiled script fields
+            script__compiled?: string;
+            script__compiled__sha256?: string;
+            script__compiled__status?: E_CompilationStatus;
+            script__compiled__updated_at?: string;
         }
 
         export interface SourceInfo {
@@ -215,7 +198,7 @@ export namespace Tick {
     }
 
     export interface I_ScriptUpdate {
-        general__script_id: string;
+        general__script_name: string;
         operation: Config.E_OperationType;
         changes: Config.E_OperationType extends "INSERT"
             ? Entity.Script.I_Script
