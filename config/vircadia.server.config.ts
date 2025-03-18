@@ -31,7 +31,7 @@ const serverEnvSchema = z.object({
         .default("vircadia_world_api_manager"),
     VRCA_SERVER_SERVICE_WORLD_API_MANAGER_HOST_CONTAINER_BIND_INTERNAL: z
         .string()
-        .default("127.0.0.1"),
+        .default("0.0.0.0"),
     VRCA_SERVER_SERVICE_WORLD_API_MANAGER_PORT_CONTAINER_BIND_INTERNAL: z.coerce
         .number()
         .default(3020),
