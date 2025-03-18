@@ -51,13 +51,13 @@ const serverEnvSchema = z.object({
         .default("world_tick_manager"),
     VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_PORT_CONTAINER_CLUSTER: z.coerce
         .number()
-        .default(3022),
+        .default(3020),
     VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_HOST_CONTAINER_EXPOSE: z
         .string()
         .default("127.0.0.1"),
     VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_PORT_CONTAINER_EXPOSE: z.coerce
         .number()
-        .default(3022),
+        .default(3020),
 
     // Postgres
     VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_EXPOSE: z
