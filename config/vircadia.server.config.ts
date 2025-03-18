@@ -32,10 +32,10 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_WORLD_API_MANAGER_PORT_CONTAINER_CLUSTER: z.coerce
         .number()
         .default(3020),
-    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_HOST_CONTAINER_EXTERNAL: z
+    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_HOST_CONTAINER_EXPOSE: z
         .string()
         .default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_PORT_CONTAINER_EXTERNAL: z.coerce
+    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_PORT_CONTAINER_EXPOSE: z.coerce
         .number()
         .default(3020),
     VRCA_SERVER_SERVICE_WORLD_API_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
@@ -54,10 +54,10 @@ const serverEnvSchema = z.object({
         .default(3022),
 
     // Postgres
-    VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_EXTERNAL: z
+    VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_EXPOSE: z
         .string()
         .default("127.0.0.1"),
-    VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_EXTERNAL: z.coerce
+    VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_EXPOSE: z.coerce
         .number()
         .default(5432),
     VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_CLUSTER: z
@@ -95,10 +95,10 @@ const serverEnvSchema = z.object({
         .default("uuid-ossp,hstore,pgcrypto"),
 
     // PGWEB
-    VRCA_SERVER_SERVICE_PGWEB_HOST_CONTAINER_EXTERNAL: z
+    VRCA_SERVER_SERVICE_PGWEB_HOST_CONTAINER_EXPOSE: z
         .string()
         .default("127.0.0.1"),
-    VRCA_SERVER_SERVICE_PGWEB_PORT_CONTAINER_EXTERNAL: z.coerce
+    VRCA_SERVER_SERVICE_PGWEB_PORT_CONTAINER_EXPOSE: z.coerce
         .number()
         .default(5437),
 });
