@@ -26,9 +26,12 @@ const serverEnvSchema = z.object({
         .default(false),
 
     // API manager
+    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_CONTAINER_NAME: z
+        .string()
+        .default("vircadia_world_api_manager"),
     VRCA_SERVER_SERVICE_WORLD_API_MANAGER_HOST_CONTAINER_BIND_INTERNAL: z
         .string()
-        .default("world_api_manager"),
+        .default("127.0.0.1"),
     VRCA_SERVER_SERVICE_WORLD_API_MANAGER_PORT_CONTAINER_BIND_INTERNAL: z.coerce
         .number()
         .default(3020),
@@ -46,9 +49,12 @@ const serverEnvSchema = z.object({
         .default(3020),
 
     // Tick manager
+    VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_CONTAINER_NAME: z
+        .string()
+        .default("vircadia_world_tick_manager"),
     VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_HOST_CONTAINER_BIND_INTERNAL: z
         .string()
-        .default("world_tick_manager"),
+        .default("127.0.0.1"),
     VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_PORT_CONTAINER_BIND_INTERNAL:
         z.coerce.number().default(3021),
     VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_HOST_CONTAINER_BIND_EXTERNAL: z
@@ -58,6 +64,9 @@ const serverEnvSchema = z.object({
         z.coerce.number().default(3021),
 
     // Postgres
+    VRCA_SERVER_SERVICE_POSTGRES_CONTAINER_NAME: z
+        .string()
+        .default("vircadia_world_postgres"),
     VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_BIND_EXTERNAL: z
         .string()
         .default("127.0.0.1"),
@@ -93,6 +102,9 @@ const serverEnvSchema = z.object({
         .default("uuid-ossp,hstore,pgcrypto"),
 
     // PGWEB
+    VRCA_SERVER_SERVICE_PGWEB_CONTAINER_NAME: z
+        .string()
+        .default("vircadia_world_pgweb"),
     VRCA_SERVER_SERVICE_PGWEB_HOST_CONTAINER_BIND_EXTERNAL: z
         .string()
         .default("127.0.0.1"),
