@@ -29,12 +29,12 @@ const cliEnvSchema = z.object({
     VRCA_CLI_SERVICE_POSTGRES_HOST: z
         .string()
         .default(
-            VircadiaConfig_SERVER.VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_EXPOSE,
+            VircadiaConfig_SERVER.VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_BIND_EXTERNAL,
         ),
     VRCA_CLI_SERVICE_POSTGRES_PORT: z.coerce
         .number()
         .default(
-            VircadiaConfig_SERVER.VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_EXPOSE,
+            VircadiaConfig_SERVER.VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_BIND_EXTERNAL,
         ),
     VRCA_CLI_SERVICE_POSTGRES_DATABASE: z
         .string()
@@ -85,12 +85,12 @@ const cliEnvSchema = z.object({
     VRCA_CLI_SERVICE_PGWEB_HOST: z
         .string()
         .default(
-            VircadiaConfig_SERVER.VRCA_SERVER_SERVICE_PGWEB_HOST_CONTAINER_EXPOSE,
+            VircadiaConfig_SERVER.VRCA_SERVER_SERVICE_PGWEB_HOST_CONTAINER_BIND_EXTERNAL,
         ),
     VRCA_CLI_SERVICE_PGWEB_PORT: z.coerce
         .number()
         .default(
-            VircadiaConfig_SERVER.VRCA_SERVER_SERVICE_PGWEB_PORT_CONTAINER_EXPOSE,
+            VircadiaConfig_SERVER.VRCA_SERVER_SERVICE_PGWEB_PORT_CONTAINER_BIND_EXTERNAL,
         ),
 });
 export const VircadiaConfig_CLI = cliEnvSchema.parse(process.env);

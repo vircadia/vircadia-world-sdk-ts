@@ -26,23 +26,23 @@ const browserClientEnvSchema = z.object({
         ])
         .default(false),
 
-    VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_HOST_CONTAINER_EXPOSE: z
+    VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_HOST_CONTAINER_BIND_EXTERNAL: z
         .string()
         .default("127.0.0.1"),
-    VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_PORT_CONTAINER_EXPOSE: z.coerce
+    VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
         .number()
         .default(3025),
     VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_PORT_CONTAINER_INTERNAL: z.coerce
         .number()
         .default(3025),
 
-    VRCA_CLIENT_WEB_BABYLON_JS_DEV_HOST_CONTAINER_EXPOSE: z
+    VRCA_CLIENT_WEB_BABYLON_JS_DEV_HOST_CONTAINER_BIND_EXTERNAL: z
         .string()
         .default("127.0.0.1"),
     VRCA_CLIENT_WEB_BABYLON_JS_DEV_PORT_CONTAINER_INTERNAL: z.coerce
         .number()
         .default(3066),
-    VRCA_CLIENT_WEB_BABYLON_JS_DEV_PORT_CONTAINER_EXPOSE: z.coerce
+    VRCA_CLIENT_WEB_BABYLON_JS_DEV_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
         .number()
         .default(3066),
 
