@@ -65,12 +65,28 @@ const cliEnvSchema = z.object({
                 "../../../cli/database/migration",
             ),
         ),
-    VRCA_CLI_SERVICE_POSTGRES_SEED_DIR: z
+    VRCA_CLI_SERVICE_POSTGRES_SEED_SQL_DIR: z
         .string()
         .default(
             path.join(
                 dirname(fileURLToPath(import.meta.url)),
-                "../../../cli/database/seed",
+                "../../../cli/database/seed/sql",
+            ),
+        ),
+    VRCA_CLI_SERVICE_POSTGRES_SEED_ASSET_DIR: z
+        .string()
+        .default(
+            path.join(
+                dirname(fileURLToPath(import.meta.url)),
+                "../../../cli/database/seed/asset",
+            ),
+        ),
+    VRCA_CLI_SERVICE_POSTGRES_SEED_SCRIPT_DIR: z
+        .string()
+        .default(
+            path.join(
+                dirname(fileURLToPath(import.meta.url)),
+                "../../../cli/database/seed/script",
             ),
         ),
     VRCA_CLI_SERVICE_POSTGRES_RESET_DIR: z
