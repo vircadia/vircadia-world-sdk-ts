@@ -118,8 +118,8 @@ export namespace Entity {
             group__sync: string;
 
             // Source fields
-            source__repo__entry_path?: string;
-            source__repo__url?: string;
+            script__source__repo__entry_path?: string;
+            script__source__repo__url?: string;
 
             // Script type
             script__type: E_ScriptType;
