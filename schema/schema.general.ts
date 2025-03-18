@@ -44,9 +44,9 @@ export namespace Entity {
 
     export namespace Script {
         export enum E_ScriptType {
-            NODE = "node",
-            BUN = "bun",
-            BROWSER = "browser",
+            BABYLON_NODE = "BABYLON_NODE",
+            BABYLON_BUN = "BABYLON_BUN",
+            BABYLON_BROWSER = "BABYLON_BROWSER",
         }
 
         export enum E_CompilationStatus {
