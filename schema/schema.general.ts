@@ -519,10 +519,10 @@ export namespace Communication {
 
 export namespace Service {
     export enum E_Service {
-        WORLD_API_MANAGER = "world_api_manager",
-        WORLD_TICK_MANAGER = "world_tick_manager",
-        POSTGRES = "postgres",
-        PGWEB = "pgweb",
+        WORLD_API_MANAGER = "vircadia_world_api_manager",
+        WORLD_TICK_MANAGER = "vircadia_world_tick_manager",
+        POSTGRES = "vircadia_world_postgres",
+        PGWEB = "vircadia_world_pgweb",
     }
 
     export namespace API {
