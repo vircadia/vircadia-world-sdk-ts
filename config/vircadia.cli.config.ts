@@ -89,6 +89,24 @@ const cliEnvSchema = z.object({
                 "../../../cli/database/seed/script",
             ),
         ),
+
+    VRCA_CLI_SERVICE_POSTGRES_SYNC_ASSET_DIR: z
+        .string()
+        .default(
+            path.join(
+                dirname(fileURLToPath(import.meta.url)),
+                "../../../cli/database/sync/asset",
+            ),
+        ),
+    VRCA_CLI_SERVICE_POSTGRES_SYNC_SCRIPT_DIR: z
+        .string()
+        .default(
+            path.join(
+                dirname(fileURLToPath(import.meta.url)),
+                "../../../cli/database/sync/script",
+            ),
+        ),
+
     VRCA_CLI_SERVICE_POSTGRES_RESET_DIR: z
         .string()
         .default(
