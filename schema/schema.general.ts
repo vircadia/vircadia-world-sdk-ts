@@ -82,7 +82,7 @@ export namespace Entity {
         }
 
         export interface I_Asset {
-            general__asset_name: string;
+            general__asset_file_name: string;
             general__created_at?: string;
             general__created_by?: string;
             general__updated_at?: string;
@@ -110,7 +110,7 @@ export namespace Entity {
         }
 
         export interface I_Script {
-            general__script_name: string;
+            general__script_file_name: string;
             general__created_at?: string;
             general__created_by?: string;
             general__updated_at?: string;
@@ -253,7 +253,7 @@ export namespace Tick {
     }
 
     export interface I_ScriptUpdate {
-        general__script_name: string;
+        general__script_file_name: string;
         operation: Config.E_OperationType;
         changes: Config.E_OperationType extends "INSERT"
             ? Entity.Script.I_Script
@@ -261,7 +261,7 @@ export namespace Tick {
     }
 
     export interface I_AssetUpdate {
-        general__asset_name: string;
+        general__asset_file_name: string;
         operation: Config.E_OperationType;
         changes: Config.E_OperationType extends "INSERT"
             ? Entity.Asset.I_Asset
