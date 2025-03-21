@@ -1,12 +1,6 @@
 import {
     type Engine,
     Scene,
-    Vector3,
-    Mesh,
-    Observable,
-    Color3,
-    HemisphericLight,
-    ArcRotateCamera,
     type NullEngine,
     type WebGPUEngine,
 } from "@babylonjs/core";
@@ -14,7 +8,6 @@ import { log } from "../../general/log";
 import {
     Communication,
     type Entity,
-    type Config,
     type Tick,
 } from "../../../schema/schema.general";
 
@@ -41,149 +34,20 @@ export interface VircadiaBabylonCoreConfig {
 }
 
 /**
- * Namespaced API for scripts to use
+ * Handles WebSocket connection, authentication, and message handling
  */
-export namespace Vircadia {
-    export namespace v1 {
-        /**
-         * Entity lifecycle hooks that scripts can implement
-         */
-        export interface EntityHooks {
-            onBeforeEntityMount?: (entity: Entity.I_Entity) => void;
-            onEntityUpdate?: (
-                entity: Entity.I_Entity,
-                oldEntity?: Entity.I_Entity,
-            ) => void;
-            onEntityBeforeUnmount?: () => void;
-            onTick?: (tick: Tick.I_Tick) => void;
-        }
-
-        /**
-         * Context provided to scripts
-         */
-        export interface ScriptContext {
-            entity: Entity.I_Entity;
-            scene: Scene;
-            engine: Engine;
-            scriptId: string;
-            entityId: string;
-            // Add more utilities/helpers here
-        }
-    }
-}
-
-/**
- * Internal representation of a loaded entity script
- */
-interface LoadedScript {
-    scriptId: string;
-    scriptContent: string;
-    hooks: Vircadia.v1.EntityHooks;
-    context: Vircadia.v1.ScriptContext;
-}
-
-/**
- * Internal representation of an entity with its associated scripts
- */
-interface ManagedEntity {
-    entity: Entity.I_Entity;
-    scripts: LoadedScript[];
-}
-
-/**
- * A lightweight client for connecting to the Vircadia World API
- * and managing entity scripts in a BabylonJS scene.
- */
-export class VircadiaBabylonCore {
-    // Core properties
-    private ws: WebSocket | null = null;
-    private scene: Scene;
-    private engine: Engine | NullEngine | WebGPUEngine;
-
-    // State tracking
-    private entities = new Map<string, ManagedEntity>();
-    private scripts = new Map<string, Entity.Script.I_Script>();
-    private assets = new Map<string, Entity.Asset.I_Asset>();
-
+class VircadiaConnection {
     // Connection state
+    private ws: WebSocket | null = null;
     private isConnecting = false;
     private isConnected = false;
     private reconnectTimer: number | null = null;
     private reconnectCount = 0;
 
-    // Sync group and tick tracking
-    private syncGroups = new Set<string>();
-    private syncGroupTicks = new Map<string, Tick.I_Tick>();
-    private syncGroupQueryInterval: number | null = null;
-    private readonly SYNC_GROUP_QUERY_INTERVAL_MS = 30000; // 30 seconds
-
-    // Observables
-    public readonly onConnectedObservable = new Observable<void>();
-    public readonly onDisconnectedObservable = new Observable<string>();
-    public readonly onErrorObservable = new Observable<string>();
-    public readonly onEntityAddedObservable = new Observable<Entity.I_Entity>();
-    public readonly onEntityUpdatedObservable =
-        new Observable<Entity.I_Entity>();
-    public readonly onEntityRemovedObservable = new Observable<string>();
-    public readonly onTickObservable = new Observable<{
-        syncGroup: string;
-        tick: Tick.I_Tick;
-    }>();
-
-    /**
-     * Creates a new Vircadia Babylon Client
-     */
-    constructor(private config: VircadiaBabylonCoreConfig) {
-        // Set default config values
-        this.config = {
-            reconnectAttempts: 5,
-            reconnectDelay: 1000,
-            debug: false,
-            suppress: false,
-            ...config,
-        };
-
-        this.engine = config.engine;
-
-        // Use provided scene or create a new one
-        if (config.scene) {
-            this.scene = config.scene;
-        } else {
-            this.scene = new Scene(this.engine);
-            this.setupBasicScene();
-        }
-
-        log({
-            message: "Vircadia Babylon Client initialized",
-            type: "info",
-            suppress: this.config.suppress,
-            debug: this.config.debug,
-        });
-    }
-
-    /**
-     * Sets up a basic scene with camera and lighting
-     * Only used if no scene was provided
-     */
-    private setupBasicScene(): void {
-        // Create a camera
-        const camera = new ArcRotateCamera(
-            "vircadiaDefaultCamera",
-            -Math.PI / 2,
-            Math.PI / 3,
-            10,
-            Vector3.Zero(),
-            this.scene,
-        );
-
-        // Create a light
-        const light = new HemisphericLight(
-            "vircadiaDefaultLight",
-            new Vector3(0, 1, 0),
-            this.scene,
-        );
-        light.intensity = 0.7;
-    }
+    constructor(
+        private config: VircadiaBabylonCoreConfig,
+        private sceneManager: VircadiaSceneManager,
+    ) {}
 
     /**
      * Connect to the Vircadia World API server
@@ -205,9 +69,6 @@ export class VircadiaBabylonCore {
                     debug: this.config.debug,
                 });
                 this.isConnecting = false;
-                this.onErrorObservable.notifyObservers(
-                    `Session validation failed: ${validationResult.error}`,
-                );
                 return false;
             }
 
@@ -243,10 +104,9 @@ export class VircadiaBabylonCore {
                     this.isConnected = true;
                     this.isConnecting = false;
                     this.reconnectCount = 0;
-                    this.onConnectedObservable.notifyObservers();
 
                     // Start sync group tracking
-                    this.startSyncGroupTracking();
+                    this.sceneManager.startSyncGroupTracking();
 
                     resolve(true);
                 };
@@ -260,9 +120,6 @@ export class VircadiaBabylonCore {
                 debug: this.config.debug,
             });
             this.isConnecting = false;
-            this.onErrorObservable.notifyObservers(
-                `Connection error: ${error}`,
-            );
             return false;
         }
     }
@@ -310,11 +167,11 @@ export class VircadiaBabylonCore {
      */
     disconnect(): void {
         // Stop sync group tracking first
-        this.stopSyncGroupTracking();
+        this.sceneManager.stopSyncGroupTracking();
 
         if (this.ws) {
             // Clean up entities first
-            this.cleanupAllEntities();
+            this.sceneManager.cleanupAllEntities();
 
             this.ws.close(1000, "Client disconnected");
             this.ws = null;
@@ -327,46 +184,6 @@ export class VircadiaBabylonCore {
             window.clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
         }
-
-        this.onDisconnectedObservable.notifyObservers("Client disconnected");
-    }
-
-    /**
-     * Clean up all entities and their scripts
-     */
-    private cleanupAllEntities(): void {
-        // Call onEntityBeforeUnmount for all entities
-        for (const [entityId, managedEntity] of this.entities) {
-            this.cleanupEntity(entityId);
-        }
-
-        // Clear entity tracking
-        this.entities.clear();
-    }
-
-    /**
-     * Clean up a specific entity
-     */
-    private cleanupEntity(entityId: string): void {
-        const managedEntity = this.entities.get(entityId);
-        if (!managedEntity) return;
-
-        // Call onEntityBeforeUnmount on all scripts in reverse order
-        for (let i = managedEntity.scripts.length - 1; i >= 0; i--) {
-            try {
-                managedEntity.scripts[i].hooks.onEntityBeforeUnmount?.();
-            } catch (error) {
-                log({
-                    message: `Error executing onEntityBeforeUnmount for entity ${entityId}:`,
-                    error,
-                    type: "error",
-                    suppress: this.config.suppress,
-                    debug: this.config.debug,
-                });
-            }
-        }
-
-        this.entities.delete(entityId);
     }
 
     /**
@@ -376,20 +193,19 @@ export class VircadiaBabylonCore {
         try {
             const message = JSON.parse(event.data);
 
-            // Handle different message types
+            // Directly dispatch based on message type instead of using the map
             switch (message.type) {
                 case Communication.WebSocket.MessageType
                     .SYNC_GROUP_UPDATES_RESPONSE:
-                    this.handleSyncGroupUpdates(message);
+                    this.sceneManager.handleSyncGroupUpdates(message);
                     break;
 
                 case Communication.WebSocket.MessageType.TICK_NOTIFICATION:
-                    this.handleTickNotification(message);
+                    this.sceneManager.handleTickNotification(message);
                     break;
 
                 case Communication.WebSocket.MessageType.QUERY_RESPONSE:
-                    // Handle query responses (for sync group queries)
-                    this.handleQueryResponse(message);
+                    this.sceneManager.handleQueryResponse(message);
                     break;
 
                 case Communication.WebSocket.MessageType.GENERAL_ERROR_RESPONSE:
@@ -400,7 +216,6 @@ export class VircadiaBabylonCore {
                         suppress: this.config.suppress,
                         debug: this.config.debug,
                     });
-                    this.onErrorObservable.notifyObservers(message.error);
                     break;
 
                 default:
@@ -441,10 +256,6 @@ export class VircadiaBabylonCore {
             this.reconnectCount < (this.config.reconnectAttempts || 5)
         ) {
             this.attemptReconnect();
-        } else {
-            this.onDisconnectedObservable.notifyObservers(
-                event.reason || "Connection closed",
-            );
         }
     }
 
@@ -459,7 +270,6 @@ export class VircadiaBabylonCore {
             suppress: this.config.suppress,
             debug: this.config.debug,
         });
-        this.onErrorObservable.notifyObservers("WebSocket error occurred");
     }
 
     /**
@@ -494,9 +304,83 @@ export class VircadiaBabylonCore {
     }
 
     /**
+     * Send a query to the server
+     */
+    // biome-ignore lint/suspicious/noExplicitAny: Need to send queries
+    sendQuery(query: string, parameters: any[] = []): void {
+        if (!this.isConnected || !this.ws) {
+            log({
+                message: "Cannot send query: not connected",
+                type: "error",
+                suppress: this.config.suppress,
+                debug: this.config.debug,
+            });
+            return;
+        }
+
+        const message = new Communication.WebSocket.QueryRequestMessage(
+            query,
+            parameters,
+        );
+        this.ws.send(JSON.stringify(message));
+    }
+
+    /**
+     * Check if the client is connected
+     */
+    isClientConnected(): boolean {
+        return this.isConnected;
+    }
+}
+
+interface ScriptInstance {
+    script_name: string;
+    hooks: Entity.Script.Base.I_Context["Vircadia"]["v1"]["Hook"];
+    context: Entity.Script.Babylon.I_Context;
+}
+
+interface EntityContainer {
+    entityId: string;
+    entityData: Entity.I_Entity;
+    scripts: ScriptInstance[];
+    // We don't track Babylon objects directly - scripts do that
+}
+
+/**
+ * Manages the scene, entities, scripts, and assets
+ */
+class VircadiaSceneManager {
+    private scene: Scene;
+    private engine: Engine | NullEngine | WebGPUEngine;
+
+    // Sync group and tick tracking
+    private syncGroups = new Set<string>();
+    private syncGroupTicks = new Map<string, Tick.I_Tick>();
+    private syncGroupQueryInterval: number | null = null;
+    private readonly SYNC_GROUP_QUERY_INTERVAL_MS = 30000; // 30 seconds
+
+    // Entity management
+    private entityContainers = new Map<string, EntityContainer>();
+
+    constructor(
+        private config: VircadiaBabylonCoreConfig,
+        private connection: VircadiaConnection,
+    ) {
+        this.engine = config.engine;
+        this.scene = config.scene || new Scene(this.engine);
+
+        // Initialize the scene metadata structure
+        this.scene.metadata = this.scene.metadata || {};
+        this.scene.metadata.vircadia = {
+            scripts: new Map(),
+            assets: new Map(),
+        };
+    }
+
+    /**
      * Handle sync group updates from the server
      */
-    private handleSyncGroupUpdates(
+    public handleSyncGroupUpdates(
         message: Communication.WebSocket.SyncGroupUpdatesNotificationMessage,
     ): void {
         // First process script updates as entities may need them
@@ -516,28 +400,44 @@ export class VircadiaBabylonCore {
     }
 
     /**
+     * Handle tick notifications
+     */
+    public handleTickNotification(message: any): void {
+        // Implementation for tick notifications
+    }
+
+    /**
+     * Handle query responses
+     */
+    public handleQueryResponse(message: any): void {
+        // Implementation for query responses
+    }
+
+    /**
      * Process script updates from the server
      */
     private processScriptUpdates(
-        updates: Array<{
-            scriptId: string;
-            operation: Config.E_OperationType;
-            changes: any;
-            error?: string | null;
-        }>,
+        updates: Array<Communication.WebSocket.ScriptUpdateMessage>,
     ): void {
         for (const update of updates) {
-            const { scriptId, operation, changes } = update;
+            const { general__script_file_name, operation, changes } = update;
 
             if (operation === "DELETE") {
-                this.scripts.delete(scriptId);
+                this.scene.metadata.vircadia.scripts.delete(
+                    general__script_file_name,
+                );
                 continue;
             }
 
-            let script = this.scripts.get(scriptId);
+            let script = this.scene.metadata.vircadia.scripts.get(
+                general__script_file_name,
+            );
             if (!script && operation === "INSERT") {
                 script = changes as Entity.Script.I_Script;
-                this.scripts.set(scriptId, script);
+                this.scene.metadata.vircadia.scripts.set(
+                    general__script_file_name,
+                    script,
+                );
             } else if (script && operation === "UPDATE") {
                 Object.assign(script, changes);
             }
@@ -548,25 +448,27 @@ export class VircadiaBabylonCore {
      * Process asset updates from the server
      */
     private processAssetUpdates(
-        updates: Array<{
-            assetId: string;
-            operation: Config.E_OperationType;
-            changes: any;
-            error?: string | null;
-        }>,
+        updates: Array<Communication.WebSocket.AssetUpdateMessage>,
     ): void {
         for (const update of updates) {
-            const { assetId, operation, changes } = update;
+            const { general__asset_file_name, operation, changes } = update;
 
             if (operation === "DELETE") {
-                this.assets.delete(assetId);
+                this.scene.metadata.vircadia.assets.delete(
+                    general__asset_file_name,
+                );
                 continue;
             }
 
-            let asset = this.assets.get(assetId);
+            let asset = this.scene.metadata.vircadia.assets.get(
+                general__asset_file_name,
+            );
             if (!asset && operation === "INSERT") {
                 asset = changes as Entity.Asset.I_Asset;
-                this.assets.set(assetId, asset);
+                this.scene.metadata.vircadia.assets.set(
+                    general__asset_file_name,
+                    asset,
+                );
             } else if (asset && operation === "UPDATE") {
                 Object.assign(asset, changes);
             }
@@ -576,91 +478,64 @@ export class VircadiaBabylonCore {
     /**
      * Process entity updates from the server
      */
-    private processEntityUpdates(
-        updates: Array<{
-            entityId: string;
-            operation: Config.E_OperationType;
-            changes: any;
-            error?: string | null;
-        }>,
-    ): void {
+    private async processEntityUpdates(
+        updates: Array<Communication.WebSocket.EntityUpdateMessage>,
+    ): Promise<void> {
         for (const update of updates) {
-            const { entityId, operation, changes } = update;
+            const { general__entity_id, operation, changes } = update;
 
             // Handle entity deletion
             if (operation === "DELETE") {
-                this.cleanupEntity(entityId);
-                this.onEntityRemovedObservable.notifyObservers(entityId);
+                await this.unmountEntity(general__entity_id);
+                this.entityContainers.delete(general__entity_id);
                 continue;
             }
 
-            const existingEntity = this.entities.get(entityId);
-
             // Handle entity creation
-            if (!existingEntity && operation === "INSERT") {
+            if (
+                !this.entityContainers.has(general__entity_id) &&
+                operation === "INSERT"
+            ) {
                 const entity = changes as Entity.I_Entity;
-                this.createEntity(entity);
-                this.onEntityAddedObservable.notifyObservers(entity);
+                await this.mountEntity(entity);
                 continue;
             }
 
             // Handle entity update
-            if (existingEntity && operation === "UPDATE") {
-                const updatedEntity = { ...existingEntity.entity, ...changes };
-                this.updateEntity(
-                    entityId,
-                    updatedEntity,
-                    existingEntity.entity,
-                );
-                this.onEntityUpdatedObservable.notifyObservers(updatedEntity);
+            if (
+                this.entityContainers.has(general__entity_id) &&
+                operation === "UPDATE"
+            ) {
+                const container = this.entityContainers.get(general__entity_id);
+                if (!container) continue;
+
+                const previousData = container.entityData;
+                const updatedData = { ...previousData, ...changes };
+                container.entityData = updatedData as Entity.I_Entity;
+
+                // Notify scripts of update
+                for (const script of container.scripts) {
+                    try {
+                        script.hooks.onEntityUpdate?.(updatedData);
+                    } catch (error) {
+                        // Log error
+                    }
+                }
             }
         }
-    }
-
-    /**
-     * Create a new entity and load its scripts
-     */
-    private async createEntity(entity: Entity.I_Entity): Promise<void> {
-        log({
-            message: `Creating entity: ${entity.general__entity_name} (${entity.general__entity_id})`,
-            type: "info",
-            suppress: this.config.suppress,
-            debug: this.config.debug,
-        });
-
-        const managedEntity: ManagedEntity = {
-            entity,
-            scripts: [],
-        };
-
-        // Store the entity first
-        this.entities.set(entity.general__entity_id, managedEntity);
-
-        // Load scripts for this entity
-        if (entity.script__ids && entity.script__ids.length > 0) {
-            for (const scriptId of entity.script__ids) {
-                await this.loadScriptForEntity(
-                    scriptId,
-                    entity.general__entity_id,
-                );
-            }
-        }
-
-        // Now that scripts are loaded, mount the entity
-        await this.mountEntity(entity.general__entity_id);
     }
 
     /**
      * Load a script for an entity
      */
     private async loadScriptForEntity(
-        scriptId: string,
+        scriptName: string,
         entityId: string,
     ): Promise<boolean> {
-        const script = this.scripts.get(scriptId);
+        const script = this.scene.metadata.vircadia.scripts.get(scriptName);
         if (!script) {
             log({
-                message: `Script ${scriptId} not found for entity ${entityId}`,
+                message: `Script ${scriptName} not found for entity ${entityId}`,
                 type: "warn",
                 suppress: this.config.suppress,
                 debug: this.config.debug,
@@ -668,10 +543,10 @@ export class VircadiaBabylonCore {
             return false;
         }
 
-        const managedEntity = this.entities.get(entityId);
-        if (!managedEntity) {
+        const entityMesh = this.scene.getMeshByName(entityId);
+        if (!entityMesh || !entityMesh.metadata) {
             log({
-                message: `Entity ${entityId} not found when loading script ${scriptId}`,
+                message: `Entity ${entityId} not found when loading script ${scriptName}`,
                 type: "warn",
                 suppress: this.config.suppress,
                 debug: this.config.debug,
@@ -680,10 +555,10 @@ export class VircadiaBabylonCore {
         }
 
         // Get script content - prefer browser script
-        const scriptContent = script.compiled__browser__script || "";
+        const scriptContent = script.script__compiled__data || "";
         if (!scriptContent) {
             log({
-                message: `No browser script content for ${scriptId}`,
+                message: `No browser script content for ${scriptName}`,
                 type: "warn",
                 suppress: this.config.suppress,
                 debug: this.config.debug,
@@ -693,11 +568,11 @@ export class VircadiaBabylonCore {
 
         try {
             // Create context for the script
-            const context: Vircadia.v1.ScriptContext = {
-                entity: managedEntity.entity,
+            const context: Entity.Script.Babylon.I_Context = {
+                entity: entityMesh.metadata.entityData,
                 scene: this.scene,
                 engine: this.engine,
-                scriptId,
+                scriptId: scriptName,
                 entityId,
             };
 
@@ -705,8 +580,8 @@ export class VircadiaBabylonCore {
             const hooks = await this.executeScript(scriptContent, context);
 
             // Store the loaded script
-            managedEntity.scripts.push({
-                scriptId,
+            entityMesh.metadata.scripts.push({
+                scriptName,
                 scriptContent,
                 hooks,
                 context,
@@ -715,7 +590,7 @@ export class VircadiaBabylonCore {
             return true;
         } catch (error) {
             log({
-                message: `Error loading script ${scriptId} for entity ${entityId}:`,
+                message: `Error loading script ${scriptName} for entity ${entityId}:`,
                 error,
                 type: "error",
                 suppress: this.config.suppress,
@@ -730,8 +605,8 @@ export class VircadiaBabylonCore {
      */
     private async executeScript(
         script: string,
-        context: Vircadia.v1.ScriptContext,
-    ): Promise<Vircadia.v1.EntityHooks> {
+        context: Entity.Script.Babylon.I_Context,
+    ): Promise<Entity.Script.Babylon.I_Context["Vircadia"]["v1"]["Hook"]> {
         // Create a wrapped script that will execute in the context provided
         const wrappedScript = `
         return (function(context) {
@@ -754,7 +629,7 @@ export class VircadiaBabylonCore {
             // Execute the script to get hooks
             const hooks = await scriptFunction(context);
 
-            return hooks as Vircadia.v1.EntityHooks;
+            return hooks as Entity.Script.Babylon.I_Context["Vircadia"]["v1"]["Hook"];
         } catch (error) {
             log({
                 message: "Error executing script:",
@@ -770,129 +645,102 @@ export class VircadiaBabylonCore {
     /**
      * Mount an entity by calling onBeforeEntityMount on all its scripts
      */
-    private async mountEntity(entityId: string): Promise<void> {
-        const managedEntity = this.entities.get(entityId);
-        if (!managedEntity) return;
+    private async mountEntity(entity: Entity.I_Entity): Promise<void> {
+        const container: EntityContainer = {
+            entityId: entity.general__entity_id,
+            entityData: entity,
+            scripts: [],
+        };
 
-        // Call onBeforeEntityMount on all scripts in order
-        for (const script of managedEntity.scripts) {
+        this.entityContainers.set(entity.general__entity_id, container);
+
+        // Load scripts
+        if (entity.script__names && entity.script__names.length > 0) {
+            for (const scriptName of entity.script__names) {
+                await this.loadScriptForEntity(
+                    scriptName,
+                    entity.general__entity_id,
+                );
+            }
+        }
+
+        // Initialize scripts after all are loaded
+        for (const script of container.scripts) {
             try {
                 await Promise.resolve(
-                    script.hooks.onBeforeEntityMount?.(managedEntity.entity),
+                    script.hooks.onScriptInitialize?.(entity, this.scene),
                 );
             } catch (error) {
-                log({
-                    message: `Error executing onBeforeEntityMount for entity ${entityId}:`,
-                    error,
-                    type: "error",
-                    suppress: this.config.suppress,
-                    debug: this.config.debug,
-                });
+                // Log error
             }
         }
     }
 
     /**
-     * Update an entity and notify its scripts
+     * Unmount an entity by calling onScriptTeardown on all its scripts
      */
-    private async updateEntity(
-        entityId: string,
-        updatedEntity: Entity.I_Entity,
-        previousEntity: Entity.I_Entity,
-    ): Promise<void> {
-        const managedEntity = this.entities.get(entityId);
-        if (!managedEntity) return;
+    private async unmountEntity(entityId: string): Promise<void> {
+        const container = this.entityContainers.get(entityId);
+        if (!container) return;
 
-        // Update the stored entity
-        managedEntity.entity = updatedEntity;
-
-        // Call onEntityUpdate on all scripts
-        for (const script of managedEntity.scripts) {
+        // Call teardown on all scripts in reverse order
+        for (let i = container.scripts.length - 1; i >= 0; i--) {
             try {
-                // Update the context with the new entity
-                script.context.entity = updatedEntity;
-
-                // Call the hook
                 await Promise.resolve(
-                    script.hooks.onEntityUpdate?.(
-                        updatedEntity,
-                        previousEntity,
-                    ),
+                    container.scripts[i].hooks.onScriptTeardown?.(),
                 );
             } catch (error) {
-                log({
-                    message: `Error executing onEntityUpdate for entity ${entityId}:`,
-                    error,
-                    type: "error",
-                    suppress: this.config.suppress,
-                    debug: this.config.debug,
-                });
+                // Log error
             }
         }
     }
 
     /**
-     * Send a query to the server
+     * Clean up all entities and their scripts
      */
-    sendQuery(query: string, parameters: any[] = []): void {
-        if (!this.isConnected || !this.ws) {
-            this.onErrorObservable.notifyObservers(
-                "Cannot send query: not connected",
-            );
-            return;
-        }
-
-        const message = new Communication.WebSocket.QueryRequestMessage(
-            query,
-            parameters,
+    cleanupAllEntities(): void {
+        // Find all entity meshes
+        const entityMeshes = this.scene.meshes.filter(
+            (mesh) => mesh.metadata?.entityData,
         );
-        this.ws.send(JSON.stringify(message));
-    }
 
-    /**
-     * Get all entities
-     */
-    getEntities(): Map<string, Entity.I_Entity> {
-        const result = new Map<string, Entity.I_Entity>();
-        for (const [entityId, managedEntity] of this.entities) {
-            result.set(entityId, managedEntity.entity);
+        // Call cleanup on each entity
+        for (const mesh of entityMeshes) {
+            this.cleanupEntity(mesh.name);
         }
-        return result;
     }
 
     /**
-     * Get a specific entity by ID
+     * Clean up a specific entity
      */
-    getEntity(entityId: string): Entity.I_Entity | undefined {
-        return this.entities.get(entityId)?.entity;
-    }
+    private cleanupEntity(entityId: string): void {
+        const entityMesh = this.scene.getMeshByName(entityId);
+        if (!entityMesh || !entityMesh.metadata) return;
 
-    /**
-     * Get the BabylonJS scene
-     */
-    getScene(): Scene {
-        return this.scene;
-    }
+        // Call onEntityBeforeUnmount on all scripts in reverse order
+        for (let i = entityMesh.metadata.scripts.length - 1; i >= 0; i--) {
+            try {
+                entityMesh.metadata.scripts[i].hooks.onEntityBeforeUnmount?.();
+            } catch (error) {
+                log({
+                    message: `Error executing onEntityBeforeUnmount for entity ${entityId}:`,
+                    error,
+                    type: "error",
+                    suppress: this.config.suppress,
+                    debug: this.config.debug,
+                });
+            }
+        }
 
-    /**
-     * Get the BabylonJS engine
-     */
-    getEngine(): Engine {
-        return this.engine;
-    }
-
-    /**
-     * Check if the client is connected
-     */
-    isClientConnected(): boolean {
-        return this.isConnected;
+        // Remove the mesh from the scene
+        entityMesh.dispose();
     }
 
     /**
      * Start tracking sync groups
      * Queries the database for sync groups at regular intervals
      */
-    private startSyncGroupTracking(): void {
+    startSyncGroupTracking(): void {
         // Clear existing interval if any
         if (this.syncGroupQueryInterval !== null) {
             window.clearInterval(this.syncGroupQueryInterval);
@@ -910,7 +758,7 @@ export class VircadiaBabylonCore {
     /**
      * Stop tracking sync groups
      */
-    private stopSyncGroupTracking(): void {
+    stopSyncGroupTracking(): void {
         if (this.syncGroupQueryInterval !== null) {
             window.clearInterval(this.syncGroupQueryInterval);
             this.syncGroupQueryInterval = null;
@@ -924,187 +772,193 @@ export class VircadiaBabylonCore {
      * Query the database for sync groups the current session has access to
      */
     private querySyncGroups(): void {
-        if (!this.isConnected || !this.ws) {
-            return;
-        }
-
         const query = `
             SELECT group__sync
             FROM auth.active_sync_group_sessions
             WHERE general__session_id = $1
         `;
-
-        const message = new Communication.WebSocket.QueryRequestMessage(
-            query,
-            [this.config.authToken], // Using the token as session ID
-        );
-
-        this.ws.send(JSON.stringify(message));
+        this.connection.sendQuery(query, [this.config.authToken]);
     }
 
     /**
-     * Handle query response messages
+     * Get all entities
      */
-    private handleQueryResponse(
-        message: Communication.WebSocket.QueryResponseMessage,
-    ): void {
-        if (message.errorMessage) {
+    getEntities(): Map<string, Entity.I_Entity> {
+        const result = new Map<string, Entity.I_Entity>();
+
+        for (const mesh of this.scene.meshes) {
+            if (mesh.metadata?.entityData) {
+                result.set(mesh.name, mesh.metadata.entityData);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Get a specific entity by ID
+     */
+    getEntity(entityId: string): Entity.I_Entity | undefined {
+        const mesh = this.scene.getMeshByName(entityId);
+        return mesh?.metadata?.entityData;
+    }
+
+    /**
+     * Get the BabylonJS scene
+     */
+    getScene(): Scene {
+        return this.scene;
+    }
+
+    /**
+     * Get the BabylonJS engine
+     */
+    getEngine(): Engine | NullEngine | WebGPUEngine {
+        return this.engine;
+    }
+}
+
+/**
+ * A lightweight client for connecting to the Vircadia World API server
+ * and managing entity scripts in a BabylonJS scene.
+ */
+export class VircadiaBabylonCore {
+    private connection: VircadiaConnection;
+    private sceneManager: VircadiaSceneManager;
+    private autoConnectTimer: number | null = null;
+
+    /**
+     * Creates a new Vircadia Babylon Client
+     */
+    constructor(private config: VircadiaBabylonCoreConfig) {
+        // Set default config values
+        this.config = {
+            reconnectAttempts: 5,
+            reconnectDelay: 1000,
+            debug: false,
+            suppress: false,
+            ...config,
+        };
+
+        // Initialize manager classes with circular references
+        // This is a bit tricky but allows them to interact properly
+        this.sceneManager = new VircadiaSceneManager(this.config, null as any);
+        this.connection = new VircadiaConnection(
+            this.config,
+            this.sceneManager,
+        );
+
+        // Now properly set the connection reference in the scene manager
+        Object.defineProperty(this.sceneManager, "connection", {
+            value: this.connection,
+        });
+
+        log({
+            message: "Vircadia Babylon Client initialized",
+            type: "info",
+            suppress: this.config.suppress,
+            debug: this.config.debug,
+        });
+
+        // Automatically initiate connection after initialization
+        this.ensureConnected();
+    }
+
+    /**
+     * Ensures the client is connected, attempting connection if necessary
+     * This is called automatically by the constructor and when needed
+     * @returns Promise that resolves to connection state
+     */
+    private async ensureConnected(): Promise<boolean> {
+        // If we're already connected, just return true
+        if (this.connection.isClientConnected()) {
+            return true;
+        }
+
+        try {
+            // Attempt to connect
+            return await this.connection.connect();
+        } catch (error) {
             log({
-                message: "Query error:",
-                error: message.errorMessage,
-                type: "error",
+                message: "Auto-connection failed, will retry:",
+                error,
+                type: "warn",
                 suppress: this.config.suppress,
                 debug: this.config.debug,
             });
-            return;
-        }
 
-        if (!message.result || !Array.isArray(message.result)) {
-            return;
-        }
-
-        // Check if this is a sync group query response
-        if (message.result.length > 0 && message.result[0].group_sync) {
-            const newSyncGroups = new Set<string>();
-
-            // Extract sync groups from response
-            for (const row of message.result) {
-                if (row.group_sync) {
-                    newSyncGroups.add(row.group_sync);
-                }
+            // Schedule retry
+            if (this.autoConnectTimer === null) {
+                this.autoConnectTimer = window.setTimeout(() => {
+                    this.autoConnectTimer = null;
+                    this.ensureConnected();
+                }, this.config.reconnectDelay || 1000);
             }
 
-            // Check for added or removed sync groups
-            const addedSyncGroups = [...newSyncGroups].filter(
-                (sg) => !this.syncGroups.has(sg),
-            );
-            const removedSyncGroups = [...this.syncGroups].filter(
-                (sg) => !newSyncGroups.has(sg),
-            );
-
-            // Update our sync groups set
-            this.syncGroups = newSyncGroups;
-
-            // Clean up removed sync groups
-            for (const sg of removedSyncGroups) {
-                this.syncGroupTicks.delete(sg);
-            }
-
-            if (addedSyncGroups.length > 0 || removedSyncGroups.length > 0) {
-                log({
-                    message: "Sync group membership updated",
-                    data: {
-                        added: addedSyncGroups,
-                        removed: removedSyncGroups,
-                        current: [...this.syncGroups],
-                    },
-                    type: "info",
-                    suppress: this.config.suppress,
-                    debug: this.config.debug,
-                });
-            }
+            return false;
         }
     }
 
     /**
-     * Handle tick notifications from the server
+     * Explicitly disconnect from the server
+     * Use this only when you want to completely stop all connection attempts
      */
-    private handleTickNotification(
-        message: Communication.WebSocket.TickNotificationMessage,
-    ): void {
-        const tick = message.tick;
-        const syncGroup = tick.group__sync;
-
-        if (!this.syncGroups.has(syncGroup)) {
-            // This is a tick for a sync group we're not tracking
-            // This could happen if we've just joined or left a sync group
-            // and haven't received updated sync group info yet
-            return;
+    disconnect(): void {
+        // Clear any pending reconnection attempt
+        if (this.autoConnectTimer !== null) {
+            window.clearTimeout(this.autoConnectTimer);
+            this.autoConnectTimer = null;
         }
 
-        // Store the tick information for this sync group
-        this.syncGroupTicks.set(syncGroup, tick);
-
-        // Notify global observers
-        this.onTickObservable.notifyObservers({
-            syncGroup,
-            tick,
-        });
-
-        // Notify entity scripts in this sync group
-        this.notifyScriptsOfTick(syncGroup, tick);
+        this.connection.disconnect();
     }
 
     /**
-     * Notify scripts in a specific sync group about a new tick
+     * Send a query to the server
+     * Automatically attempts to connect if not already connected
      */
-    private notifyScriptsOfTick(syncGroup: string, tick: Tick.I_Tick): void {
-        // Iterate through all entities in this sync group
-        for (const [entityId, managedEntity] of this.entities) {
-            // Skip entities not in this sync group
-            if (managedEntity.entity.group__sync !== syncGroup) {
-                continue;
-            }
-
-            // Notify all scripts for this entity
-            for (const script of managedEntity.scripts) {
-                try {
-                    script.hooks.onTick?.(tick);
-                } catch (error) {
-                    log({
-                        message: `Error executing onTick for entity ${entityId} in sync group ${syncGroup}:`,
-                        error,
-                        type: "error",
-                        suppress: this.config.suppress,
-                        debug: this.config.debug,
-                    });
-                }
-            }
+    // biome-ignore lint/suspicious/noExplicitAny: Need to send queries
+    async sendQuery(query: string, parameters: any[] = []): Promise<void> {
+        // Ensure we're connected before sending
+        if (!this.connection.isClientConnected()) {
+            await this.ensureConnected();
         }
+
+        this.connection.sendQuery(query, parameters);
     }
 
     /**
-     * Get the current tick information for a specific sync group
+     * Get all entities
      */
-    getCurrentTickForSyncGroup(syncGroup: string): Tick.I_Tick | undefined {
-        return this.syncGroupTicks.get(syncGroup);
+    getEntities(): Map<string, Entity.I_Entity> {
+        return this.sceneManager.getEntities();
     }
 
     /**
-     * Get all sync groups the client is currently part of
+     * Get a specific entity by ID
      */
-    getSyncGroups(): string[] {
-        return [...this.syncGroups];
+    getEntity(entityId: string): Entity.I_Entity | undefined {
+        return this.sceneManager.getEntity(entityId);
     }
 
     /**
-     * Check if the client is in a specific sync group
+     * Get the BabylonJS scene
      */
-    isInSyncGroup(syncGroup: string): boolean {
-        return this.syncGroups.has(syncGroup);
+    getScene(): Scene {
+        return this.sceneManager.getScene();
     }
 
     /**
-     * Clean up resources when the client is no longer needed
+     * Get the BabylonJS engine
      */
-    dispose(): void {
-        // Stop sync group tracking
-        this.stopSyncGroupTracking();
+    getEngine(): Engine | NullEngine | WebGPUEngine {
+        return this.sceneManager.getEngine();
+    }
 
-        // Disconnect from server
-        this.disconnect();
-
-        // Clear all data
-        this.scripts.clear();
-        this.assets.clear();
-
-        // Clear all observables
-        this.onConnectedObservable.clear();
-        this.onDisconnectedObservable.clear();
-        this.onErrorObservable.clear();
-        this.onEntityAddedObservable.clear();
-        this.onEntityUpdatedObservable.clear();
-        this.onEntityRemovedObservable.clear();
-        this.onTickObservable.clear();
+    /**
+     * Check if the client is connected
+     */
+    isClientConnected(): boolean {
+        return this.connection.isClientConnected();
     }
 }

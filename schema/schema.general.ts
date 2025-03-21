@@ -141,8 +141,10 @@ export namespace Entity {
         export namespace Babylon {
             export interface I_Context extends Base.I_Context {
                 Vircadia: Base.I_Context["Vircadia"] & {
-                    Babylon: {
-                        Scene: Scene;
+                    v1: {
+                        Babylon: {
+                            Scene: Scene;
+                        };
                     };
                 };
             }
@@ -153,64 +155,50 @@ export namespace Entity {
         export namespace Base {
             export interface I_Context {
                 Vircadia: {
-                    Version: {
-                        client: string;
-                        server: string;
+                    v1: {
+                        Query: {
+                            executeSqlQuery: (
+                                query: string,
+                                // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+                                parameters?: any[],
+                                // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+                            ) => Promise<any[]>;
+                        };
+                        Hook: {
+                            // Script lifecycle hooks
+                            onScriptInitialize?: (
+                                entityData: Entity.I_Entity,
+                                scene: Scene,
+                            ) => void;
+                            onEntityUpdate?: (
+                                entityData: Entity.I_Entity,
+                            ) => void;
+                            onScriptTeardown?: () => void;
+
+                            // Network state hooks
+                            onConnected?: () => void;
+                            onDisconnected?: (reason?: string) => void;
+
+                            // Data synchronization
+                            onTick?: (tickInfo: Tick.I_Tick) => void;
+                        };
+                        Tick: {
+                            getCurrentTick: () => Tick.I_Tick;
+                        };
+                        State: {
+                            getCurrentState: () => Entity.I_Entity;
+                            getLastKnownState: () => Entity.I_Entity;
+                            getPastStates: (count: number) => Entity.I_Entity[];
+                        };
+                        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+                        [key: string]: any;
                     };
-                    // TODO: Determine if we need to give scripts SQL access, maybe safer not to, or only with elevated scripts.
-                    // Query: {
-                    //     executeSqlQuery: (
-                    //         query: string,
-                    //         parameters?: any[],
-                    //     ) => Promise<any[]>;
-                    // };
-                    Hook: I_Hook;
-                    Tick: {
-                        getCurrentTick: () => Tick.I_Tick;
-                    };
-                    State: {
-                        getCurrentState: () => Entity.I_Entity;
-                        getLastKnownState: () => Entity.I_Entity;
-                        getPastStates: (count: number) => Entity.I_Entity[];
-                    };
-                    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-                    [key: string]: any;
                 };
             }
 
             export interface I_Return {
                 scriptFunction: (context: I_Context) => unknown;
-                hooks: I_Hook;
-            }
-
-            export interface I_Hook {
-                // Entity lifecycle hooks
-                onBeforeEntityMount?: (entity: Entity.I_Entity) => void;
-                onEntityUpdate?: (
-                    entity: Entity.I_Entity,
-                    tickInfo: Tick.I_Tick,
-                ) => void;
-                onEntityBeforeUnmount?: () => void;
-
-                // Script lifecycle hooks
-                onScriptMount?: () => void;
-                onBeforeScriptUnmount?: () => void;
-                onScriptUpdate?: (scriptId: string) => void;
-
-                // Client lifecycle hooks
-                onBeforeClientDestroy?: () => void;
-
-                // Connection state hooks
-                onAfterConnected?: () => void;
-                onAfterDisconnected?: (reason?: string) => void;
-                onBeforeReconnect?: (
-                    attempt: number,
-                    maxAttempts: number,
-                ) => void;
-                onConnectionError?: (error: string) => void;
-
-                // Tick hooks
-                onTick?: (tickInfo: Tick.I_Tick) => void;
+                hooks: Base.I_Context["Vircadia"]["v1"]["Hook"];
             }
         }
     }
@@ -245,7 +233,10 @@ export namespace Tick {
     }
 
     export interface I_EntityUpdate {
-        general__entity_id: string;
+        general__entity_id: Pick<
+            Entity.I_Entity,
+            "general__entity_id"
+        >["general__entity_id"];
         operation: Config.E_OperationType;
         changes: Config.E_OperationType extends "INSERT"
             ? Entity.I_Entity
@@ -253,7 +244,10 @@ export namespace Tick {
     }
 
     export interface I_ScriptUpdate {
-        general__script_file_name: string;
+        general__script_file_name: Pick<
+            Entity.Script.I_Script,
+            "general__script_file_name"
+        >["general__script_file_name"];
         operation: Config.E_OperationType;
         changes: Config.E_OperationType extends "INSERT"
             ? Entity.Script.I_Script
@@ -261,7 +255,10 @@ export namespace Tick {
     }
 
     export interface I_AssetUpdate {
-        general__asset_file_name: string;
+        general__asset_file_name: Pick<
+            Entity.Asset.I_Asset,
+            "general__asset_file_name"
+        >["general__asset_file_name"];
         operation: Config.E_OperationType;
         changes: Config.E_OperationType extends "INSERT"
             ? Entity.Asset.I_Asset
