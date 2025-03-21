@@ -418,15 +418,15 @@ export namespace Communication {
             }
         }
 
-        export type EntityUpdateWithError = Tick.I_EntityUpdate & {
+        export type EntityUpdateMessage = Tick.I_EntityUpdate & {
             error?: string | null;
         };
 
-        export type ScriptUpdateWithError = Tick.I_ScriptUpdate & {
+        export type ScriptUpdateMessage = Tick.I_ScriptUpdate & {
             error?: string | null;
         };
 
-        export type AssetUpdateWithError = Tick.I_AssetUpdate & {
+        export type AssetUpdateMessage = Tick.I_AssetUpdate & {
             error?: string | null;
         };
 
@@ -434,9 +434,9 @@ export namespace Communication {
             public readonly type = MessageType.SYNC_GROUP_UPDATES_RESPONSE;
 
             constructor(
-                public entities: EntityUpdateWithError[],
-                public scripts: ScriptUpdateWithError[],
-                public assets: AssetUpdateWithError[],
+                public entities: EntityUpdateMessage[],
+                public scripts: ScriptUpdateMessage[],
+                public assets: AssetUpdateMessage[],
                 errorMessage: string | null = null,
             ) {
                 super(errorMessage);
