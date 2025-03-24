@@ -145,6 +145,10 @@ export namespace Entity {
                         Babylon: {
                             Scene: Scene;
                         };
+                        Hook: {
+                            onScriptInitialize?: Base.I_Context["Vircadia"]["v1"]["Hook"]["onScriptInitialize"] &
+                                ((scene: Scene) => void);
+                        };
                     };
                 };
             }
@@ -157,7 +161,7 @@ export namespace Entity {
                 Vircadia: {
                     v1: {
                         Query: {
-                            executeSqlQuery: (
+                            execute: (
                                 query: string,
                                 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
                                 parameters?: any[],
@@ -168,27 +172,25 @@ export namespace Entity {
                             // Script lifecycle hooks
                             onScriptInitialize?: (
                                 entityData: Entity.I_Entity,
-                                scene: Scene,
+                                entityAssets: Entity.Asset.I_Asset[],
                             ) => void;
                             onEntityUpdate?: (
                                 entityData: Entity.I_Entity,
+                            ) => void;
+                            onAssetUpdate?: (
+                                assetData: Entity.Asset.I_Asset,
+                            ) => void;
+                            onScriptUpdate?: (
+                                scriptData: Entity.Script.I_Script,
                             ) => void;
                             onScriptTeardown?: () => void;
 
                             // Network state hooks
                             onConnected?: () => void;
                             onDisconnected?: (reason?: string) => void;
-
-                            // Data synchronization
-                            onTick?: (tickInfo: Tick.I_Tick) => void;
                         };
-                        Tick: {
-                            getCurrentTick: () => Tick.I_Tick;
-                        };
-                        State: {
-                            getCurrentState: () => Entity.I_Entity;
-                            getLastKnownState: () => Entity.I_Entity;
-                            getPastStates: (count: number) => Entity.I_Entity[];
+                        Script: {
+                            reload: () => void;
                         };
                         // biome-ignore lint/suspicious/noExplicitAny: <explanation>
                         [key: string]: any;
