@@ -372,7 +372,7 @@ export namespace Communication {
 
         interface BaseMessage {
             timestamp: number;
-            transactionId: string | null;
+            requestId: string;
             errorMessage: string | null;
             type: MessageType;
         }
@@ -380,59 +380,80 @@ export namespace Communication {
         export class GeneralErrorResponseMessage implements BaseMessage {
             public readonly type = MessageType.GENERAL_ERROR_RESPONSE;
             public readonly timestamp: number;
-            public transactionId: string | null;
+            public requestId: string;
             public errorMessage: string | null;
 
-            constructor(public readonly error: string) {
+            constructor(data: {
+                error: string;
+                requestId: string;
+            }) {
                 this.timestamp = Date.now();
-                this.transactionId = null;
-                this.errorMessage = error;
+                this.requestId = data.requestId;
+                this.errorMessage = data.error;
             }
         }
 
         export class QueryRequestMessage implements BaseMessage {
             public readonly type = MessageType.QUERY_REQUEST;
             public readonly timestamp: number;
-            public transactionId: string | null;
+            public requestId: string;
             public errorMessage: string | null;
+            public query: string;
+            // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+            public parameters?: any[];
 
-            constructor(
-                public readonly query: string,
+            constructor(data: {
+                query: string;
                 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-                public readonly parameters?: any[],
-            ) {
+                parameters?: any[];
+                requestId: string;
+                errorMessage: string | null;
+            }) {
                 this.timestamp = Date.now();
-                this.transactionId = null;
-                this.errorMessage = null;
+                this.requestId = data.requestId;
+                this.errorMessage = data.errorMessage;
+                this.query = data.query;
+                this.parameters = data.parameters;
             }
         }
 
         export class QueryResponseMessage implements BaseMessage {
             public readonly type = MessageType.QUERY_RESPONSE;
             public readonly timestamp: number;
-            public transactionId: string | null;
+            public requestId: string;
             public errorMessage: string | null;
+            // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+            public result?: any[];
 
-            constructor(
+            constructor(data: {
                 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-                public readonly result?: any[],
-            ) {
+                result?: any[];
+                requestId: string;
+                errorMessage: string | null;
+            }) {
                 this.timestamp = Date.now();
-                this.transactionId = null;
-                this.errorMessage = null;
+                this.requestId = data.requestId;
+                this.errorMessage = data.errorMessage;
+                this.result = data.result;
             }
         }
 
         export class TickNotificationMessage implements BaseMessage {
             public readonly type = MessageType.TICK_NOTIFICATION;
             public readonly timestamp: number;
-            public transactionId: string | null;
+            public requestId: string;
             public errorMessage: string | null;
+            public tick: Tick.I_Tick;
 
-            constructor(public readonly tick: Tick.I_Tick) {
+            constructor(data: {
+                tick: Tick.I_Tick;
+                requestId: string;
+                errorMessage: string | null;
+            }) {
                 this.timestamp = Date.now();
-                this.transactionId = null;
-                this.errorMessage = null;
+                this.requestId = data.requestId;
+                this.errorMessage = data.errorMessage;
+                this.tick = data.tick;
             }
         }
 
