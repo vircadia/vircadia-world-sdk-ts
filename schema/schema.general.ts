@@ -370,88 +370,75 @@ export namespace Communication {
             TICK_NOTIFICATION = "TICK_NOTIFICATION",
         }
 
-        export abstract class BaseMessage {
-            public readonly timestamp: number;
-            public readonly transactionId: string;
-            public readonly errorMessage: string | null;
-            public abstract readonly type: MessageType;
-
-            constructor(errorMessage: string | null = null) {
-                this.timestamp = Date.now();
-                this.transactionId = crypto.randomUUID();
-                this.errorMessage = errorMessage;
-            }
+        interface BaseMessage {
+            timestamp: number;
+            transactionId: string | null;
+            errorMessage: string | null;
+            type: MessageType;
         }
 
-        export class GeneralErrorResponseMessage extends BaseMessage {
+        export class GeneralErrorResponseMessage implements BaseMessage {
             public readonly type = MessageType.GENERAL_ERROR_RESPONSE;
+            public readonly timestamp: number;
+            public transactionId: string | null;
+            public errorMessage: string | null;
 
             constructor(public readonly error: string) {
-                super(error);
+                this.timestamp = Date.now();
+                this.transactionId = null;
+                this.errorMessage = error;
             }
         }
 
-        export class QueryRequestMessage extends BaseMessage {
+        export class QueryRequestMessage implements BaseMessage {
             public readonly type = MessageType.QUERY_REQUEST;
+            public readonly timestamp: number;
+            public transactionId: string | null;
+            public errorMessage: string | null;
 
             constructor(
                 public readonly query: string,
                 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
                 public readonly parameters?: any[],
             ) {
-                super();
+                this.timestamp = Date.now();
+                this.transactionId = null;
+                this.errorMessage = null;
             }
         }
 
-        export class QueryResponseMessage extends BaseMessage {
+        export class QueryResponseMessage implements BaseMessage {
             public readonly type = MessageType.QUERY_RESPONSE;
+            public readonly timestamp: number;
+            public transactionId: string | null;
+            public errorMessage: string | null;
 
             constructor(
                 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
                 public readonly result?: any[],
-                errorMessage?: string,
             ) {
-                super(errorMessage || null);
+                this.timestamp = Date.now();
+                this.transactionId = null;
+                this.errorMessage = null;
             }
         }
 
-        export type EntityUpdateMessage = Tick.I_EntityUpdate & {
-            error?: string | null;
-        };
-
-        export type ScriptUpdateMessage = Tick.I_ScriptUpdate & {
-            error?: string | null;
-        };
-
-        export type AssetUpdateMessage = Tick.I_AssetUpdate & {
-            error?: string | null;
-        };
-
-        export class SyncGroupUpdatesNotificationMessage extends BaseMessage {
-            public readonly type = MessageType.SYNC_GROUP_UPDATES_RESPONSE;
-
-            constructor(
-                public entities: EntityUpdateMessage[],
-                public scripts: ScriptUpdateMessage[],
-                public assets: AssetUpdateMessage[],
-                errorMessage: string | null = null,
-            ) {
-                super(errorMessage);
-            }
-        }
-
-        export class TickNotificationMessage extends BaseMessage {
+        export class TickNotificationMessage implements BaseMessage {
             public readonly type = MessageType.TICK_NOTIFICATION;
+            public readonly timestamp: number;
+            public transactionId: string | null;
+            public errorMessage: string | null;
 
             constructor(public readonly tick: Tick.I_Tick) {
-                super();
+                this.timestamp = Date.now();
+                this.transactionId = null;
+                this.errorMessage = null;
             }
         }
 
         export type Message =
             | QueryRequestMessage
             | QueryResponseMessage
-            | SyncGroupUpdatesNotificationMessage
             | TickNotificationMessage;
 
         export function isMessageType<T extends Message>(
