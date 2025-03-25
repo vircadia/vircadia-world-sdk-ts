@@ -120,7 +120,6 @@ export namespace Entity {
             script__source__repo__entry_path: string;
             script__source__repo__url: string;
             script__source__data: string;
-            script__source__sha256: string;
             script__source__updated_at: string;
 
             // Script type
@@ -128,7 +127,6 @@ export namespace Entity {
 
             // Compiled script fields
             script__compiled__data: string;
-            script__compiled__sha256: string;
             script__compiled__status: E_CompilationStatus;
             script__compiled__updated_at: string;
         }
