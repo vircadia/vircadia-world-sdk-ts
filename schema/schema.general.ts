@@ -438,17 +438,15 @@ export namespace Communication {
             }
         }
 
-        export class QueryResponseMessage implements BaseMessage {
+        export class QueryResponseMessage<T = unknown> implements BaseMessage {
             public readonly type = MessageType.QUERY_RESPONSE;
             public readonly timestamp: number;
             public requestId: string;
             public errorMessage: string | null;
-            // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-            public result: any[];
+            public result: T[] | [];
 
             constructor(data: {
-                // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-                result: any[];
+                result: T[] | [];
                 requestId: string;
                 errorMessage: string | null;
             }) {
