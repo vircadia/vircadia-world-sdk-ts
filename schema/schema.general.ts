@@ -26,6 +26,12 @@ export namespace Entity {
         script__names: string[];
         asset__names: string[];
         group__sync: string;
+
+        // Add timestamp tracking fields for specific properties
+        meta_data_updated_at?: string;
+        script_names_updated_at?: string;
+        asset_names_updated_at?: string;
+        position_updated_at?: string;
     }
 
     export namespace Asset {
@@ -92,6 +98,9 @@ export namespace Entity {
             // Asset fields
             asset__data: string;
             asset__type: E_AssetType;
+
+            // Add timestamp tracking field for asset data
+            asset__data_updated_at?: string;
         }
     }
 
@@ -129,6 +138,13 @@ export namespace Entity {
             script__compiled__data: string;
             script__compiled__status: E_CompilationStatus;
             script__compiled__updated_at: string;
+
+            // Add timestamp tracking fields for specific properties
+            script__source__data_updated_at?: string;
+            script__compiled__data_updated_at?: string;
+            script__compiled__status_updated_at?: string;
+            script__source__repo__url_updated_at?: string;
+            script__source__repo__entry_path_updated_at?: string;
         }
 
         export interface SourceInfo {
@@ -272,6 +288,11 @@ export namespace Tick {
 
     export interface I_ScriptState extends Entity.Script.I_Script {
         general__script_state_id: string;
+        general__tick_id: string;
+    }
+
+    export interface I_AssetState extends Entity.Asset.I_Asset {
+        general__asset_state_id: string;
         general__tick_id: string;
     }
 
