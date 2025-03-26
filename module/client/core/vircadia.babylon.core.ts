@@ -57,14 +57,61 @@ class VircadiaConnection {
             await new Promise<void>((resolve, reject) => {
                 if (!this.ws)
                     return reject(new Error("WebSocket not initialized"));
-                this.ws.onopen = () => resolve();
-                this.ws.onerror = (err) => reject(err);
+
+                // Define a handler for connection errors
+                const handleConnectionError = (event: CloseEvent) => {
+                    // Try to extract detailed error information from the close event
+                    let errorMessage = "Connection failed";
+
+                    // If there's a meaningful reason phrase
+                    if (event.reason) {
+                        errorMessage = event.reason;
+                    }
+
+                    reject(
+                        new Error(
+                            `WebSocket connection failed: ${errorMessage}`,
+                        ),
+                    );
+                };
+
+                this.ws.onopen = () => {
+                    // Remove the error handler once connected
+                    if (this.ws) this.ws.onclose = this.handleClose.bind(this);
+                    resolve();
+                };
+
+                // Enhanced error handling
+                this.ws.onerror = (err) => {
+                    reject(
+                        new Error(
+                            `WebSocket error: ${err instanceof Error ? err.message : "Unknown error"}`,
+                        ),
+                    );
+                };
+
+                // Temporarily override onclose to catch authentication failures
+                this.ws.onclose = handleConnectionError;
             });
 
             this.reconnectCount = 0;
             return true;
         } catch (error) {
+            // Attempt reconnection
             this.attemptReconnect();
+
+            // Re-throw with enhanced error info if possible
+            if (error instanceof Error) {
+                // Check if this is an authentication error
+                if (
+                    error.message.includes("401") ||
+                    error.message.includes("Invalid token") ||
+                    error.message.includes("Authentication")
+                ) {
+                    throw new Error(`Authentication failed: ${error.message}`);
+                }
+            }
+
             throw error;
         }
     }
@@ -96,7 +143,16 @@ class VircadiaConnection {
     }
 
     private handleError(event: Event): void {
-        console.error("WebSocket error:", event);
+        let errorMessage = "Unknown WebSocket error";
+
+        // Try to extract more specific error info
+        if (event instanceof ErrorEvent) {
+            errorMessage = event.message;
+        } else if (event instanceof CloseEvent) {
+            errorMessage = event.reason || `Code: ${event.code}`;
+        }
+
+        console.error("WebSocket error:", errorMessage);
     }
 
     private attemptReconnect(): void {
@@ -126,7 +182,7 @@ class VircadiaConnection {
         query: string,
         parameters: unknown[] = [],
         timeoutMs = 10000,
-    ): Promise<T> {
+    ): Promise<Communication.WebSocket.QueryResponseMessage<T>> {
         if (!this.isClientConnected()) {
             throw new Error("Not connected to server");
         }
@@ -139,19 +195,21 @@ class VircadiaConnection {
             errorMessage: null,
         });
 
-        return new Promise<T>((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                this.pendingRequests.delete(requestId);
-                reject(new Error("Request timeout"));
-            }, timeoutMs);
+        return new Promise<Communication.WebSocket.QueryResponseMessage<T>>(
+            (resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    this.pendingRequests.delete(requestId);
+                    reject(new Error("Request timeout"));
+                }, timeoutMs);
 
-            this.pendingRequests.set(requestId, {
-                resolve: resolve as (value: unknown) => void,
-                reject,
-                timeout,
-            });
-            this.ws?.send(JSON.stringify(message));
-        });
+                this.pendingRequests.set(requestId, {
+                    resolve: resolve as (value: unknown) => void,
+                    reject,
+                    timeout,
+                });
+                this.ws?.send(JSON.stringify(message));
+            },
+        );
     }
 
     /**
@@ -450,7 +508,7 @@ class EntityManager {
     async loadEntitiesByPriority(): Promise<void> {
         try {
             // Get all entities ordered by priority
-            const result = await this.connection.sendQueryAsync<
+            const queryResponse = await this.connection.sendQueryAsync<
                 Entity.I_Entity[]
             >(`
                 SELECT *
@@ -463,7 +521,7 @@ class EntityManager {
             // Group entities by priority
             const priorityGroups = new Map<number, Entity.I_Entity[]>();
 
-            for (const entity of result) {
+            for (const entity of queryResponse.result) {
                 const priority =
                     entity.group__load_priority ?? Number.MAX_SAFE_INTEGER;
                 if (!priorityGroups.has(priority)) {
@@ -509,18 +567,38 @@ class EntityManager {
 export class VircadiaBabylonCore {
     private connection: VircadiaConnection;
     private entityManager: EntityManager;
+    private initialized = false;
 
     constructor(private config: VircadiaBabylonCoreConfig) {
         // Fix ordering - create connection first
         this.connection = new VircadiaConnection(config);
         this.entityManager = new EntityManager(config, this.connection);
 
-        // Automatically connect when instantiated
-        this.connection.connect().catch((error) => {
-            if (!this.config.suppress) {
-                console.error("Failed to automatically connect:", error);
-            }
-        });
+        // No longer auto-connecting in constructor
+    }
+
+    /**
+     * Initializes the VircadiaBabylonCore by establishing connection to the server
+     * and loading initial data
+     * @returns Promise that resolves when initialization is complete
+     */
+    async initialize(): Promise<void> {
+        if (this.initialized) return;
+
+        // Connect to the server and wait for connection to establish
+        await this.connection.connect();
+
+        // Load initial entity data
+        await this.entityManager.loadEntitiesByPriority();
+
+        this.initialized = true;
+    }
+
+    /**
+     * Returns whether the core has been successfully initialized
+     */
+    isInitialized(): boolean {
+        return this.initialized;
     }
 
     getConnection(): VircadiaConnection {
@@ -539,6 +617,8 @@ export class VircadiaBabylonCore {
         if (this.connection) {
             this.connection.disconnect();
         }
+
+        this.initialized = false;
 
         // No need to dispose the scene or engine here since they're provided externally
         // and should be managed by the application

@@ -19,7 +19,7 @@ export namespace Entity {
         general__created_by?: string;
         general__updated_at?: string;
         general__updated_by?: string;
-        group__load_priority?: number;
+        group__load_priority: number;
         general__initialized_at?: string;
         general__initialized_by?: string;
         meta__data: Record<string, object>;
@@ -28,10 +28,10 @@ export namespace Entity {
         group__sync: string;
 
         // Add timestamp tracking fields for specific properties
-        meta_data_updated_at?: string;
-        script_names_updated_at?: string;
-        asset_names_updated_at?: string;
-        position_updated_at?: string;
+        meta_data_updated_at: string;
+        script_names_updated_at: string;
+        asset_names_updated_at: string;
+        position_updated_at: string;
     }
 
     export namespace Asset {
@@ -96,11 +96,11 @@ export namespace Entity {
             group__sync: string;
 
             // Asset fields
-            asset__data: string;
-            asset__type: E_AssetType;
+            asset__data?: string;
+            asset__type?: E_AssetType;
 
             // Add timestamp tracking field for asset data
-            asset__data_updated_at?: string;
+            asset__data_updated_at: string;
         }
     }
 
@@ -139,12 +139,12 @@ export namespace Entity {
             script__compiled__status: E_CompilationStatus;
             script__compiled__updated_at: string;
 
-            // Add timestamp tracking fields for specific properties
-            script__source__data_updated_at?: string;
-            script__compiled__data_updated_at?: string;
-            script__compiled__status_updated_at?: string;
-            script__source__repo__url_updated_at?: string;
-            script__source__repo__entry_path_updated_at?: string;
+            // Timestamp tracking fields
+            script__source__data_updated_at: string;
+            script__compiled__data_updated_at: string;
+            script__compiled__status_updated_at: string;
+            script__source__repo__url_updated_at: string;
+            script__source__repo__entry_path_updated_at: string;
         }
 
         export interface SourceInfo {
