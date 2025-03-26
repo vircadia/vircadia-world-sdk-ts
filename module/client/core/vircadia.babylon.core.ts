@@ -155,6 +155,46 @@ class VircadiaConnection {
     isClientConnected(): boolean {
         return this.isConnected;
     }
+
+    /**
+     * Disconnects from the server and cleans up resources
+     */
+    disconnect(): void {
+        // Clear any reconnect timer
+        if (this.reconnectTimer !== null) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
+
+        // Clear all pending requests with a disconnection error
+        for (const [requestId, request] of this.pendingRequests.entries()) {
+            clearTimeout(request.timeout);
+            request.reject(new Error("Connection closed"));
+            this.pendingRequests.delete(requestId);
+        }
+
+        // Close WebSocket if it exists
+        if (this.ws) {
+            // Remove event handlers first to prevent reconnection attempts
+            this.ws.onclose = null;
+            this.ws.onerror = null;
+            this.ws.onmessage = null;
+            this.ws.onopen = null;
+
+            // Close the connection if it's not already closed
+            if (
+                this.ws.readyState === WebSocket.OPEN ||
+                this.ws.readyState === WebSocket.CONNECTING
+            ) {
+                this.ws.close();
+            }
+            this.ws = null;
+        }
+
+        // Update connection state
+        this.isConnected = false;
+        this.isConnecting = false;
+    }
 }
 
 class EntityManager {
@@ -466,6 +506,10 @@ export class VircadiaBabylonCore {
         await this.entityManager.loadEntitiesByPriority();
     }
 
+    getConnection(): VircadiaConnection {
+        return this.connection;
+    }
+
     getScene(): Scene {
         return this.entityManager.getScene();
     }
@@ -476,5 +520,18 @@ export class VircadiaBabylonCore {
 
     getEntities(): Map<string, Entity.I_Entity> {
         return this.entityManager.getEntities();
+    }
+
+    /**
+     * Disposes the VircadiaBabylonCore instance and cleans up all resources
+     */
+    dispose(): void {
+        // Disconnect from the server
+        if (this.connection) {
+            this.connection.disconnect();
+        }
+
+        // No need to dispose the scene or engine here since they're provided externally
+        // and should be managed by the application
     }
 }
