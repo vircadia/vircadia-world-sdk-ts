@@ -443,10 +443,10 @@ export namespace Communication {
             public readonly timestamp: number;
             public requestId: string;
             public errorMessage: string | null;
-            public result: T[] | [];
+            public result: T | [];
 
             constructor(data: {
-                result: T[] | [];
+                result: T | [];
                 requestId: string;
                 errorMessage: string | null;
             }) {
