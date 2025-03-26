@@ -175,12 +175,13 @@ export namespace Entity {
                 Vircadia: {
                     v1: {
                         Query: {
-                            execute: (
+                            execute<T = unknown>(
                                 query: string,
                                 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
                                 parameters?: any[],
-                                // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-                            ) => Promise<any[]>;
+                            ): Promise<
+                                Communication.WebSocket.QueryResponseMessage<T>
+                            >;
                         };
                         Hook: {
                             // Script lifecycle hooks
