@@ -444,11 +444,11 @@ export namespace Communication {
             public requestId: string;
             public errorMessage: string | null;
             // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-            public result?: any[];
+            public result: any[];
 
             constructor(data: {
                 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-                result?: any[];
+                result: any[];
                 requestId: string;
                 errorMessage: string | null;
             }) {
