@@ -1,5 +1,10 @@
-import { Engine, NullEngine, Scene, WebGPUEngine } from "@babylonjs/core";
-import { Communication, Entity } from "../../../schema/schema.general";
+import {
+    type Engine,
+    type NullEngine,
+    Scene,
+    type WebGPUEngine,
+} from "@babylonjs/core";
+import { Communication, type Entity } from "../../../schema/schema.general";
 
 export interface VircadiaBabylonCoreConfig {
     // Connection settings
@@ -22,15 +27,13 @@ export interface VircadiaBabylonCoreConfig {
 
 class VircadiaConnection {
     private ws: WebSocket | null = null;
-    private isConnecting = false;
-    private isConnected = false;
     private reconnectTimer: Timer | null = null;
     private reconnectCount = 0;
     private pendingRequests = new Map<
         string,
         {
-            resolve: (value: any) => void;
-            reject: (reason: any) => void;
+            resolve: (value: unknown) => void;
+            reject: (reason: unknown) => void;
             timeout: Timer;
         }
     >();
@@ -38,8 +41,8 @@ class VircadiaConnection {
     constructor(private config: VircadiaBabylonCoreConfig) {}
 
     async connect(): Promise<boolean> {
-        if (this.isConnected || this.isConnecting) return this.isConnected;
-        this.isConnecting = true;
+        if (this.isClientConnected() || this.isConnecting())
+            return this.isClientConnected();
 
         try {
             const url = new URL(this.config.serverUrl);
@@ -58,12 +61,9 @@ class VircadiaConnection {
                 this.ws.onerror = (err) => reject(err);
             });
 
-            this.isConnected = true;
-            this.isConnecting = false;
             this.reconnectCount = 0;
             return true;
         } catch (error) {
-            this.isConnecting = false;
             this.attemptReconnect();
             throw error;
         }
@@ -92,13 +92,11 @@ class VircadiaConnection {
     }
 
     private handleClose(event: CloseEvent): void {
-        this.isConnected = false;
         this.attemptReconnect();
     }
 
     private handleError(event: Event): void {
         console.error("WebSocket error:", event);
-        this.isConnected = false;
     }
 
     private attemptReconnect(): void {
@@ -124,12 +122,12 @@ class VircadiaConnection {
         }, delay);
     }
 
-    async sendQueryAsync<T = any>(
+    async sendQueryAsync<T = unknown>(
         query: string,
-        parameters: any[] = [],
+        parameters: unknown[] = [],
         timeoutMs = 10000,
     ): Promise<T> {
-        if (!this.isConnected || !this.ws) {
+        if (!this.isClientConnected()) {
             throw new Error("Not connected to server");
         }
 
@@ -141,19 +139,40 @@ class VircadiaConnection {
             errorMessage: null,
         });
 
-        return new Promise((resolve, reject) => {
+        return new Promise<T>((resolve, reject) => {
             const timeout = setTimeout(() => {
                 this.pendingRequests.delete(requestId);
                 reject(new Error("Request timeout"));
             }, timeoutMs);
 
-            this.pendingRequests.set(requestId, { resolve, reject, timeout });
+            this.pendingRequests.set(requestId, {
+                resolve: resolve as (value: unknown) => void,
+                reject,
+                timeout,
+            });
             this.ws?.send(JSON.stringify(message));
         });
     }
 
+    /**
+     * Checks if the WebSocket is currently connecting
+     */
+    isConnecting(): boolean {
+        return this.ws !== null && this.ws.readyState === WebSocket.CONNECTING;
+    }
+
+    /**
+     * Checks if the WebSocket is currently connected
+     */
     isClientConnected(): boolean {
-        return this.isConnected;
+        return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
+    }
+
+    /**
+     * Checks if reconnection is in progress
+     */
+    isReconnecting(): boolean {
+        return this.reconnectTimer !== null;
     }
 
     /**
@@ -190,10 +209,6 @@ class VircadiaConnection {
             }
             this.ws = null;
         }
-
-        // Update connection state
-        this.isConnected = false;
-        this.isConnecting = false;
     }
 }
 
@@ -499,27 +514,21 @@ export class VircadiaBabylonCore {
         // Fix ordering - create connection first
         this.connection = new VircadiaConnection(config);
         this.entityManager = new EntityManager(config, this.connection);
-    }
 
-    async initialize(): Promise<void> {
-        await this.connection.connect();
-        await this.entityManager.loadEntitiesByPriority();
+        // Automatically connect when instantiated
+        this.connection.connect().catch((error) => {
+            if (!this.config.suppress) {
+                console.error("Failed to automatically connect:", error);
+            }
+        });
     }
 
     getConnection(): VircadiaConnection {
         return this.connection;
     }
 
-    getScene(): Scene {
-        return this.entityManager.getScene();
-    }
-
-    getEntity(entityId: string): Entity.I_Entity | undefined {
-        return this.entityManager.getEntity(entityId);
-    }
-
-    getEntities(): Map<string, Entity.I_Entity> {
-        return this.entityManager.getEntities();
+    getEntityManager(): EntityManager {
+        return this.entityManager;
     }
 
     /**
