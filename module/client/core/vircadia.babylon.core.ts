@@ -468,6 +468,11 @@ class ScriptManager {
     setEntityManager(entityManager: EntityManager): void {
         this.entityManager = entityManager;
     }
+
+    // Get all script instances
+    getScriptInstances(): typeof this.scriptInstances {
+        return this.scriptInstances;
+    }
 }
 
 // Manages entities and entity-related operations
