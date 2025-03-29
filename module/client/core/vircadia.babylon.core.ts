@@ -360,44 +360,62 @@ class ScriptManager {
         entity: Entity.I_Entity,
         assets: Entity.Asset.I_Asset[],
     ): Promise<void> {
-        // Create script context
-        const context: Entity.Script.Babylon.I_Context = {
-            Vircadia: {
-                v1: {
-                    Query: {
-                        execute: this.connectionManager.sendQueryAsync.bind(
-                            this.connectionManager,
-                        ),
-                    },
-                    Hook: {},
-                    Script: {
-                        reload: async () => {
-                            await this.reloadScript(
-                                script.general__script_file_name,
-                            );
+        try {
+            // Create script context
+            const context: Entity.Script.Babylon.I_Context = {
+                Vircadia: {
+                    v1: {
+                        Query: {
+                            execute: this.connectionManager.sendQueryAsync.bind(
+                                this.connectionManager,
+                            ),
+                        },
+                        Hook: {
+                            onScriptInitialize: undefined,
+                            onEntityUpdate: undefined,
+                            onAssetUpdate: undefined,
+                            onScriptUpdate: undefined,
+                            onScriptTeardown: undefined,
+                        },
+                        Script: {
+                            reload: async () => {
+                                await this.reloadScript(
+                                    script.general__script_file_name,
+                                );
+                            },
+                        },
+                        Babylon: {
+                            Scene: this.scene,
                         },
                     },
-                    Babylon: {
-                        Scene: this.scene,
-                    },
                 },
-            },
-        };
+            };
 
-        // Execute script and store instance
-        const instance = await this.executeScriptInContext(script, context);
+            // Execute script and store instance
+            const instance = await this.executeScriptInContext(script, context);
 
-        this.scriptInstances.set(script.general__script_file_name, {
-            script,
-            hooks: instance.hooks as Entity.Script.Babylon.I_Context["Vircadia"]["v1"]["Hook"],
-            context,
-            entityId: entity.general__entity_id,
-            assets,
-        });
+            // Store the instance with its hooks
+            this.scriptInstances.set(script.general__script_file_name, {
+                script,
+                hooks: context.Vircadia.v1.Hook, // Use the context hooks instead of instance.hooks
+                context,
+                entityId: entity.general__entity_id,
+                assets,
+            });
 
-        // Initialize script
-        if (instance.hooks.onScriptInitialize) {
-            await instance.hooks.onScriptInitialize(entity, assets);
+            // Initialize script
+            if (context.Vircadia.v1.Hook.onScriptInitialize) {
+                await context.Vircadia.v1.Hook.onScriptInitialize(
+                    entity,
+                    assets,
+                );
+            }
+        } catch (error) {
+            console.error(
+                `Error executing script ${script.general__script_file_name}:`,
+                error,
+            );
+            throw error;
         }
     }
 
@@ -413,10 +431,12 @@ class ScriptManager {
                 "context",
                 `
                 ${funcBody}
-                return {
-                    scriptFunction: main,
-                    hooks: context.Vircadia.v1.Hook
-                };
+                const mainResult = main(context);
+                // Copy any hooks from mainResult back to the context
+                if (mainResult && mainResult.hooks) {
+                    Object.assign(context.Vircadia.v1.Hook, mainResult.hooks);
+                }
+                return mainResult;
                 `,
             );
 
@@ -533,9 +553,36 @@ class EntityManager {
     private async processEntityGroup(
         entities: Entity.I_Entity[],
     ): Promise<void> {
-        // Store entities in our map
+        // Store entities in our map and process their scripts
         for (const entity of entities) {
             this.entities.set(entity.general__entity_id, entity);
+
+            // Load and execute any scripts associated with this entity
+            if (entity.script__names && entity.script__names.length > 0) {
+                try {
+                    // Load each script and execute it for this entity
+                    for (const scriptName of entity.script__names) {
+                        // Load the script if not already loaded
+                        const script =
+                            await this.scriptManager.loadScript(scriptName);
+
+                        // Load any assets associated with the entity (placeholder for now)
+                        const assets: Entity.Asset.I_Asset[] = [];
+
+                        // Execute the script for this entity
+                        await this.scriptManager.executeScript(
+                            script,
+                            entity,
+                            assets,
+                        );
+                    }
+                } catch (error) {
+                    console.error(
+                        `Error loading scripts for entity ${entity.general__entity_id}:`,
+                        error,
+                    );
+                }
+            }
         }
     }
 
