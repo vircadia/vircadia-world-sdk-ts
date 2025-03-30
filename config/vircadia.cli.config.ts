@@ -70,7 +70,7 @@ const cliEnvSchema = z.object({
         .default(
             path.join(
                 dirname(fileURLToPath(import.meta.url)),
-                "../../../cli/database/seed/babylon_js/sql",
+                "../../../cli/database/seed/sql/babylon_js",
             ),
         ),
     VRCA_CLI_SERVICE_POSTGRES_SEED_USER_SQL_DIR: z
@@ -82,7 +82,7 @@ const cliEnvSchema = z.object({
         .default(
             path.join(
                 dirname(fileURLToPath(import.meta.url)),
-                "../../../cli/database/seed/babylon_js/asset",
+                "../../../cli/database/seed/asset/babylon_js",
             ),
         ),
     VRCA_CLI_SERVICE_POSTGRES_SEED_USER_ASSET_DIR: z
@@ -94,7 +94,7 @@ const cliEnvSchema = z.object({
         .default(
             path.join(
                 dirname(fileURLToPath(import.meta.url)),
-                "../../../cli/database/seed/babylon_js/script",
+                "../../../cli/database/seed/script/babylon_js",
             ),
         ),
     VRCA_CLI_SERVICE_POSTGRES_SEED_USER_SCRIPT_DIR: z

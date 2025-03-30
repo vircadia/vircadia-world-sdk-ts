@@ -5,6 +5,7 @@ import {
     type WebGPUEngine,
 } from "@babylonjs/core";
 import { Communication, type Entity } from "../../../schema/schema.general";
+import babylonPackageJson from "@babylonjs/core/package.json";
 
 export interface VircadiaBabylonCoreConfig {
     // Connection settings
@@ -386,61 +387,63 @@ class ScriptManager {
                         },
                         Babylon: {
                             Scene: this.scene,
+                            Version: babylonPackageJson.version,
                         },
                     },
                 },
             };
 
-            // Execute script and store instance
-            const instance = await this.executeScriptInContext(script, context);
-
-            // Store the instance with its hooks
-            this.scriptInstances.set(script.general__script_file_name, {
-                script,
-                hooks: context.Vircadia.v1.Hook, // Use the context hooks instead of instance.hooks
-                context,
-                entityId: entity.general__entity_id,
-                assets,
-            });
-
-            // Initialize script
-            if (context.Vircadia.v1.Hook.onScriptInitialize) {
-                await context.Vircadia.v1.Hook.onScriptInitialize(
-                    entity,
-                    assets,
+            // Execute script directly in this method
+            try {
+                const funcBody =
+                    script.script__compiled__data ||
+                    script.script__source__data;
+                const scriptFunc = new Function(
+                    "context",
+                    `
+                    ${funcBody}
+                    // Look for a global main function OR evaluate the script and extract its main function
+                    const mainFunc = typeof main !== 'undefined' ? main : null;
+                    if (!mainFunc) {
+                        throw new Error("Script must define a function named 'main'");
+                    }
+                    const mainResult = mainFunc(context);
+                    // Copy any hooks from mainResult back to the context
+                    if (mainResult && mainResult.hooks) {
+                        Object.assign(context.Vircadia.v1.Hook, mainResult.hooks);
+                    }
+                    return mainResult;
+                    `,
                 );
-            }
-        } catch (error) {
-            console.error(
-                `Error executing script ${script.general__script_file_name}:`,
-                error,
-            );
-            throw error;
-        }
-    }
 
-    // Execute script code in a provided context
-    private async executeScriptInContext(
-        script: Entity.Script.I_Script,
-        context: Entity.Script.Babylon.I_Context,
-    ): Promise<Entity.Script.Babylon.I_Return> {
-        try {
-            const funcBody =
-                script.script__compiled__data || script.script__source__data;
-            const scriptFunc = new Function(
-                "context",
-                `
-                ${funcBody}
-                const mainResult = main(context);
-                // Copy any hooks from mainResult back to the context
-                if (mainResult && mainResult.hooks) {
-                    Object.assign(context.Vircadia.v1.Hook, mainResult.hooks);
+                // Execute the script with the context
+                const instance = scriptFunc(
+                    context,
+                ) as Entity.Script.Babylon.I_Return;
+
+                // Store the instance with its hooks
+                this.scriptInstances.set(script.general__script_file_name, {
+                    script,
+                    hooks: context.Vircadia.v1.Hook, // Use the context hooks instead of instance.hooks
+                    context,
+                    entityId: entity.general__entity_id,
+                    assets,
+                });
+
+                // Initialize script
+                if (context.Vircadia.v1.Hook.onScriptInitialize) {
+                    await context.Vircadia.v1.Hook.onScriptInitialize(
+                        entity,
+                        assets,
+                    );
                 }
-                return mainResult;
-                `,
-            );
-
-            return scriptFunc(context) as Entity.Script.Babylon.I_Return;
+            } catch (error) {
+                console.error(
+                    `Error executing script code ${script.general__script_file_name}:`,
+                    error,
+                );
+                throw error;
+            }
         } catch (error) {
             console.error(
                 `Error executing script ${script.general__script_file_name}:`,
