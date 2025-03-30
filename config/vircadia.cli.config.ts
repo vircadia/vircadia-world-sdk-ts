@@ -65,31 +65,42 @@ const cliEnvSchema = z.object({
                 "../../../cli/database/migration",
             ),
         ),
-    VRCA_CLI_SERVICE_POSTGRES_SEED_SQL_DIR: z
+    VRCA_CLI_SERVICE_POSTGRES_SEED_SYSTEM_SQL_DIR: z
         .string()
         .default(
             path.join(
                 dirname(fileURLToPath(import.meta.url)),
-                "../../../cli/database/seed/sql",
+                "../../../cli/database/seed/babylon_js/sql",
             ),
         ),
-    VRCA_CLI_SERVICE_POSTGRES_SEED_ASSET_DIR: z
+    VRCA_CLI_SERVICE_POSTGRES_SEED_USER_SQL_DIR: z
+        .string()
+        .nullable()
+        .default(null),
+    VRCA_CLI_SERVICE_POSTGRES_SEED_SYSTEM_ASSET_DIR: z
         .string()
         .default(
             path.join(
                 dirname(fileURLToPath(import.meta.url)),
-                "../../../cli/database/seed/asset",
+                "../../../cli/database/seed/babylon_js/asset",
             ),
         ),
-    VRCA_CLI_SERVICE_POSTGRES_SEED_SCRIPT_DIR: z
+    VRCA_CLI_SERVICE_POSTGRES_SEED_USER_ASSET_DIR: z
+        .string()
+        .nullable()
+        .default(null),
+    VRCA_CLI_SERVICE_POSTGRES_SEED_SYSTEM_SCRIPT_DIR: z
         .string()
         .default(
             path.join(
                 dirname(fileURLToPath(import.meta.url)),
-                "../../../cli/database/seed/script",
+                "../../../cli/database/seed/babylon_js/script",
             ),
         ),
-
+    VRCA_CLI_SERVICE_POSTGRES_SEED_USER_SCRIPT_DIR: z
+        .string()
+        .nullable()
+        .default(null),
     VRCA_CLI_SERVICE_POSTGRES_SYNC_ASSET_DIR: z
         .string()
         .default(
