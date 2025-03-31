@@ -4,7 +4,7 @@ import {
     Scene,
     type WebGPUEngine,
 } from "@babylonjs/core";
-import { Communication, type Entity } from "../../../schema/schema.general";
+import { Communication, Entity } from "../../../schema/schema.general";
 import babylonPackageJson from "@babylonjs/core/package.json";
 
 export interface VircadiaBabylonCoreConfig {
@@ -329,25 +329,50 @@ class ScriptManager {
             assets?: Entity.Asset.I_Asset[];
         }
     >();
+    private currentPlatform: Entity.Script.E_ScriptType;
 
     constructor(
         private connectionManager: ConnectionManager,
         private scene: Scene,
-        private entityManager: EntityManager, // Will be set after EntityManager is created
+        private entityManager: EntityManager,
         private assetManager: AssetManager,
-    ) {}
+    ) {
+        // Determine the current platform
+        this.currentPlatform = this.detectPlatform();
+    }
 
-    // Load a script from the server
+    // Detect the current platform
+    private detectPlatform(): Entity.Script.E_ScriptType {
+        if (
+            typeof process !== "undefined" &&
+            process.versions &&
+            process.versions.bun
+        ) {
+            return Entity.Script.E_ScriptType.BABYLON_BUN;
+        }
+        if (
+            typeof process !== "undefined" &&
+            process.versions &&
+            process.versions.node
+        ) {
+            return Entity.Script.E_ScriptType.BABYLON_NODE;
+        }
+        return Entity.Script.E_ScriptType.BABYLON_BROWSER;
+    }
+
+    // Load a script from the server, filtered by platform
     async loadScript(scriptName: string): Promise<Entity.Script.I_Script> {
         const queryResponse = await this.connectionManager.sendQueryAsync<
             Entity.Script.I_Script[]
         >(
-            "SELECT * FROM entity.entity_scripts WHERE general__script_file_name = $1",
-            [scriptName],
+            "SELECT * FROM entity.entity_scripts WHERE general__script_file_name = $1 AND script__type = $2",
+            [scriptName, this.currentPlatform],
         );
 
         if (!queryResponse.result.length) {
-            throw new Error(`Script ${scriptName} not found`);
+            throw new Error(
+                `Script ${scriptName} not found for platform ${this.currentPlatform}`,
+            );
         }
 
         const script = queryResponse.result[0];
