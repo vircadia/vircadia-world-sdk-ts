@@ -342,7 +342,7 @@ class ScriptManager {
     }
 
     // Detect the current platform
-    private detectPlatform(): Entity.Script.E_ScriptType {
+    public detectPlatform(): Entity.Script.E_ScriptType {
         if (
             typeof process !== "undefined" &&
             process.versions &&
@@ -362,6 +362,19 @@ class ScriptManager {
 
     // Load a script from the server, filtered by platform
     async loadScript(scriptName: string): Promise<Entity.Script.I_Script> {
+        // First check if any variants of this script exist
+        const allVariantsResponse = await this.connectionManager.sendQueryAsync<
+            Entity.Script.I_Script[]
+        >(
+            "SELECT DISTINCT script__platform FROM entity.entity_scripts WHERE general__script_file_name = $1",
+            [scriptName],
+        );
+
+        if (!allVariantsResponse.result.length) {
+            throw new Error(`Script ${scriptName} not found in any platform`);
+        }
+
+        // Then try to get the specific platform version
         const queryResponse = await this.connectionManager.sendQueryAsync<
             Entity.Script.I_Script[]
         >(
@@ -370,8 +383,13 @@ class ScriptManager {
         );
 
         if (!queryResponse.result.length) {
+            const availablePlatforms = allVariantsResponse.result
+                .map((r) => r.script__platform)
+                .join(", ");
+
             throw new Error(
-                `Script ${scriptName} not found for platform ${this.currentPlatform}`,
+                `Script ${scriptName} not available for platform ${this.currentPlatform}. ` +
+                    `Available platforms: ${availablePlatforms}`,
             );
         }
 
@@ -588,11 +606,26 @@ class EntityManager {
             // Load and execute any scripts associated with this entity
             if (entity.script__names && entity.script__names.length > 0) {
                 try {
-                    // Load each script and execute it for this entity
-                    for (const scriptName of entity.script__names) {
+                    // First, check which scripts are available for our platform
+                    const availableScripts =
+                        await this.connectionManager.sendQueryAsync<
+                            { general__script_file_name: string }[]
+                        >(
+                            "SELECT DISTINCT general__script_file_name FROM entity.entity_scripts WHERE general__script_file_name = ANY($1) AND script__platform = $2",
+                            [
+                                entity.script__names,
+                                this.scriptManager.detectPlatform(),
+                            ],
+                        );
+
+                    // Only process scripts that are available for our platform
+                    for (const {
+                        general__script_file_name,
+                    } of availableScripts.result) {
                         // Load the script if not already loaded
-                        const script =
-                            await this.scriptManager.loadScript(scriptName);
+                        const script = await this.scriptManager.loadScript(
+                            general__script_file_name,
+                        );
 
                         // Load any assets associated with the entity (placeholder for now)
                         const assets: Entity.Asset.I_Asset[] = [];
@@ -602,6 +635,19 @@ class EntityManager {
                             script,
                             entity,
                             assets,
+                        );
+                    }
+
+                    // Log any scripts that were skipped due to platform incompatibility
+                    const skippedScripts = entity.script__names.filter(
+                        (name) =>
+                            !availableScripts.result.some(
+                                (s) => s.general__script_file_name === name,
+                            ),
+                    );
+                    if (skippedScripts.length > 0) {
+                        console.debug(
+                            `Skipped incompatible scripts for entity ${entity.general__entity_id}: ${skippedScripts.join(", ")}`,
                         );
                     }
                 } catch (error) {
@@ -658,7 +704,7 @@ export class VircadiaBabylonCore {
         this.scriptManager = new ScriptManager(
             this.connectionManager,
             scene,
-            null as any, // Will be set after EntityManager is created
+            null as unknown as EntityManager, // Will be set after EntityManager is created
             this.assetManager,
         );
 
