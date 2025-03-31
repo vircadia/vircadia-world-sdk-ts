@@ -365,7 +365,7 @@ class ScriptManager {
         const queryResponse = await this.connectionManager.sendQueryAsync<
             Entity.Script.I_Script[]
         >(
-            "SELECT * FROM entity.entity_scripts WHERE general__script_file_name = $1 AND script__type = $2",
+            "SELECT * FROM entity.entity_scripts WHERE general__script_file_name = $1 AND script__platform = $2",
             [scriptName, this.currentPlatform],
         );
 
