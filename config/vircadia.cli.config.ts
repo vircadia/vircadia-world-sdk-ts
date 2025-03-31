@@ -106,7 +106,7 @@ const cliEnvSchema = z.object({
         .default(
             path.join(
                 dirname(fileURLToPath(import.meta.url)),
-                "../../../cli/database/sync/asset",
+                "../../../cli/database/seed/asset/babylon_js",
             ),
         ),
     VRCA_CLI_SERVICE_POSTGRES_SYNC_SCRIPT_DIR: z
@@ -114,7 +114,7 @@ const cliEnvSchema = z.object({
         .default(
             path.join(
                 dirname(fileURLToPath(import.meta.url)),
-                "../../../cli/database/sync/script",
+                "../../../cli/database/seed/script/babylon_js",
             ),
         ),
 
