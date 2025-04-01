@@ -553,6 +553,10 @@ export namespace Service {
             createRequest: (): string => "",
             createSuccess: (data: {
                 uptime: number;
+                ticks: {
+                    processing: string[];
+                    pending: Record<string, boolean>;
+                };
                 database: {
                     connected: boolean;
                 };
@@ -565,6 +569,10 @@ export namespace Service {
                 };
             }): {
                 uptime: number;
+                ticks: {
+                    processing: string[];
+                    pending: Record<string, boolean>;
+                };
                 database: {
                     connected: boolean;
                 };
@@ -579,6 +587,7 @@ export namespace Service {
                 timestamp: number;
             } => ({
                 uptime: data.uptime,
+                ticks: data.ticks,
                 database: data.database,
                 memory: data.memory,
                 cpu: data.cpu,
