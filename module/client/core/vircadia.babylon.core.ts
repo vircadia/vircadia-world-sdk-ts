@@ -5,7 +5,11 @@ import {
     type WebGPUEngine,
 } from "@babylonjs/core";
 import { Communication, Entity } from "../../../schema/schema.general";
+import type { Babylon } from "../../../schema/schema.babylon.script";
+
 import babylonPackageJson from "@babylonjs/core/package.json";
+import vircadiaSdkTsPackageJson from "../../../package.json";
+import { log } from "../../general/log";
 
 export interface VircadiaBabylonCoreConfig {
     // Connection settings
@@ -24,6 +28,46 @@ export interface VircadiaBabylonCoreConfig {
     // Debug settings
     debug?: boolean;
     suppress?: boolean;
+}
+
+// Script Helper Functions - Vue-inspired Composition API
+export function createVircadiaScript(
+    setupFn: Babylon.ScriptSetupFunction,
+): Babylon.VircadiaScriptFunction {
+    return (context: Babylon.I_Context): Babylon.ScriptReturn => {
+        // Create hooks container
+        const hooks: Babylon.I_Hooks = {};
+
+        // Ensure Babylon context exists
+        if (!context.Babylon) {
+            context.Babylon = {
+                Version: babylonPackageJson.version,
+                Scene: null as unknown as Scene, // Will be properly set by caller
+            };
+        }
+
+        // Create the composable API using the new pattern
+        const api: Babylon.ScriptAPI = {
+            // Full context access
+            context,
+
+            // Direct access to hooks for registration
+            hooks,
+
+            // Method chaining support for fluent API
+            register: (hookUpdates: Partial<Babylon.I_Hooks>) => {
+                // Apply hook updates to the hooks object
+                Object.assign(hooks, hookUpdates);
+                return api;
+            },
+        };
+
+        // Run the setup function to register hooks
+        setupFn(api);
+
+        // Return the expected format
+        return { hooks };
+    };
 }
 
 // Handles all WebSocket communication with the server
@@ -220,7 +264,13 @@ class ConnectionManager {
                 }
             }
         } catch (error) {
-            console.error("Error handling WebSocket message:", error);
+            log({
+                message: "Error handling WebSocket message:",
+                type: "error",
+                error,
+                debug: this.config.debug,
+                suppress: this.config.suppress,
+            });
         }
     }
 
@@ -238,7 +288,13 @@ class ConnectionManager {
             errorMessage = event.reason || `Code: ${event.code}`;
         }
 
-        console.error("WebSocket error:", errorMessage);
+        log({
+            message: "WebSocket error:",
+            type: "error",
+            error: errorMessage,
+            debug: this.config.debug,
+            suppress: this.config.suppress,
+        });
     }
 
     private attemptReconnect(): void {
@@ -248,7 +304,12 @@ class ConnectionManager {
         const delay = this.config.reconnectDelay ?? 5000;
 
         if (this.reconnectCount >= maxAttempts) {
-            console.error("Max reconnection attempts reached");
+            log({
+                message: "Max reconnection attempts reached",
+                type: "error",
+                debug: this.config.debug,
+                suppress: this.config.suppress,
+            });
             return;
         }
 
@@ -259,7 +320,13 @@ class ConnectionManager {
             try {
                 await this.connect();
             } catch (error) {
-                console.error("Reconnection attempt failed:", error);
+                log({
+                    message: "Reconnection attempt failed:",
+                    type: "error",
+                    error,
+                    debug: this.config.debug,
+                    suppress: this.config.suppress,
+                });
             }
         }, delay);
     }
@@ -323,8 +390,8 @@ class ScriptManager {
         string,
         {
             script: Entity.Script.I_Script;
-            hooks: Entity.Script.Babylon.I_Context["Vircadia"]["v1"]["Hook"];
-            context: Entity.Script.Babylon.I_Context;
+            hooks: Babylon.I_Hooks;
+            context: Babylon.I_Context;
             entityId?: string;
             assets?: Entity.Asset.I_Asset[];
         }
@@ -332,6 +399,7 @@ class ScriptManager {
     private currentPlatform: Entity.Script.E_ScriptType;
 
     constructor(
+        private config: VircadiaBabylonCoreConfig,
         private connectionManager: ConnectionManager,
         private scene: Scene,
         private entityManager: EntityManager,
@@ -405,93 +473,118 @@ class ScriptManager {
         assets: Entity.Asset.I_Asset[],
     ): Promise<void> {
         try {
-            // Create script context
-            const context: Entity.Script.Babylon.I_Context = {
+            // Create script context with the simplified flat structure
+            const context: Babylon.I_Context = {
                 Vircadia: {
-                    v1: {
-                        Query: {
-                            execute: this.connectionManager.sendQueryAsync.bind(
-                                this.connectionManager,
-                            ),
-                        },
-                        Hook: {
-                            onScriptInitialize: undefined,
-                            onEntityUpdate: undefined,
-                            onAssetUpdate: undefined,
-                            onScriptUpdate: undefined,
-                            onScriptTeardown: undefined,
-                        },
-                        Script: {
-                            reload: async () => {
-                                await this.reloadScript(
-                                    script.general__script_file_name,
-                                );
-                            },
-                        },
-                        Babylon: {
-                            Scene: this.scene,
-                            Version: babylonPackageJson.version,
+                    // Top-level version identifier
+                    Version: vircadiaSdkTsPackageJson.version,
+
+                    // Core APIs with flat structure
+                    Query: {
+                        execute: this.connectionManager.sendQueryAsync.bind(
+                            this.connectionManager,
+                        ),
+                    },
+
+                    // Script management
+                    Script: {
+                        reload: async () => {
+                            await this.reloadScript(
+                                script.general__script_file_name,
+                            );
                         },
                     },
                 },
+                Babylon: {
+                    Version: babylonPackageJson.version,
+                    Scene: this.scene,
+                },
             };
 
-            // Execute script directly in this method
+            // Execute script with enhanced support for the script definition utility
             try {
                 const funcBody =
                     script.script__compiled__data ||
                     script.script__source__data;
+
+                // Store script name outside the function scope
+                const scriptName = script.general__script_file_name;
+
+                // Execute with the createVircadiaScript helper available
                 const scriptFunc = new Function(
                     "context",
+                    "createVircadiaScript",
                     `
-                    ${funcBody}
-                    // Look for a global main function OR evaluate the script and extract its main function
-                    const mainFunc = typeof main !== 'undefined' ? main : null;
-                    if (!mainFunc) {
-                        throw new Error("Script must define a function named 'main'");
+                    try {
+                        ${funcBody}
+                        
+                        // Look for vircadiaScriptMain function first (our preferred name)
+                        if (typeof vircadiaScriptMain === 'function') {
+                            return vircadiaScriptMain(context);
+                        }
+                        
+                        // Fall back to main for compatibility
+                        if (typeof main === 'function') {
+                            return main(context);
+                        }
+                        
+                        // If neither function exists, throw error
+                        throw new Error("Script must define either vircadiaScriptMain or main function");
+                    } catch (err) {
+                        err.message = \`Script execution error in ${scriptName}: \${err.message}\`;
+                        throw err;
                     }
-                    const mainResult = mainFunc(context);
-                    // Copy any hooks from mainResult back to the context
-                    if (mainResult && mainResult.hooks) {
-                        Object.assign(context.Vircadia.v1.Hook, mainResult.hooks);
-                    }
-                    return mainResult;
                     `,
                 );
 
-                // Execute the script with the context
+                // Execute the script with appropriate parameters
                 const instance = scriptFunc(
                     context,
-                ) as Entity.Script.Babylon.I_Return;
+                    createVircadiaScript,
+                ) as Babylon.ScriptReturn;
+
+                // Validate returned structure
+                if (
+                    !instance ||
+                    typeof instance !== "object" ||
+                    !instance.hooks
+                ) {
+                    throw new Error(
+                        `Script ${script.general__script_file_name} did not return a valid ScriptReturn object`,
+                    );
+                }
 
                 // Store the instance with its hooks
                 this.scriptInstances.set(script.general__script_file_name, {
                     script,
-                    hooks: context.Vircadia.v1.Hook, // Use the context hooks instead of instance.hooks
+                    hooks: instance.hooks,
                     context,
                     entityId: entity.general__entity_id,
                     assets,
                 });
 
                 // Initialize script
-                if (context.Vircadia.v1.Hook.onScriptInitialize) {
-                    await context.Vircadia.v1.Hook.onScriptInitialize(
-                        entity,
-                        assets,
-                    );
+                if (instance.hooks.onScriptInitialize) {
+                    await instance.hooks.onScriptInitialize(entity, assets);
                 }
             } catch (error) {
-                console.error(
-                    `Error executing script code ${script.general__script_file_name}:`,
+                log({
+                    message: `Error executing script code ${script.general__script_file_name}:`,
+                    type: "error",
                     error,
-                );
+                    debug: this.config.debug,
+                    suppress: this.config.suppress,
+                });
                 throw error;
             }
         } catch (error) {
-            console.error(
-                `Error executing script ${script.general__script_file_name}:`,
+            log({
+                message: `Error executing script ${script.general__script_file_name}:`,
+                type: "error",
                 error,
-            );
+                debug: this.config.debug,
+                suppress: this.config.suppress,
+            });
             throw error;
         }
     }
@@ -513,9 +606,12 @@ class ScriptManager {
                 if (entity && instance.assets) {
                     await this.executeScript(script, entity, instance.assets);
                 } else {
-                    console.warn(
-                        `Could not reload script ${scriptName}: Entity or assets not found`,
-                    );
+                    log({
+                        message: `Could not reload script ${scriptName}: Entity or assets not found`,
+                        type: "warn",
+                        debug: this.config.debug,
+                        suppress: this.config.suppress,
+                    });
                 }
             }
         }
@@ -590,7 +686,13 @@ class EntityManager {
                 await this.processEntityGroup(entities);
             }
         } catch (error) {
-            console.error("Failed to load entities:", error);
+            log({
+                message: "Failed to load entities:",
+                type: "error",
+                error,
+                debug: this.config.debug,
+                suppress: this.config.suppress,
+            });
             throw error;
         }
     }
@@ -646,15 +748,19 @@ class EntityManager {
                             ),
                     );
                     if (skippedScripts.length > 0) {
-                        console.debug(
-                            `Skipped incompatible scripts for entity ${entity.general__entity_id}: ${skippedScripts.join(", ")}`,
-                        );
+                        log({
+                            message: `Skipped incompatible scripts for entity ${entity.general__entity_id}: ${skippedScripts.join(", ")}`,
+                            type: "debug",
+                            debug: true,
+                        });
                     }
                 } catch (error) {
-                    console.error(
-                        `Error loading scripts for entity ${entity.general__entity_id}:`,
+                    log({
+                        message: `Error loading scripts for entity ${entity.general__entity_id}:`,
+                        type: "error",
                         error,
-                    );
+                        debug: true,
+                    });
                 }
             }
         }
@@ -702,6 +808,7 @@ export class VircadiaBabylonCore {
 
         // Create script manager with a temporary null entity manager
         this.scriptManager = new ScriptManager(
+            config,
             this.connectionManager,
             scene,
             null as unknown as EntityManager, // Will be set after EntityManager is created

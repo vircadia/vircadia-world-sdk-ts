@@ -1,6 +1,3 @@
-import type { Scene } from "@babylonjs/core";
-import babylonPackageJson from "@babylonjs/core/package.json";
-
 export namespace Config {
     export type E_OperationType = "INSERT" | "UPDATE" | "DELETE";
 }
@@ -150,76 +147,6 @@ export namespace Entity {
         export interface SourceInfo {
             repo_entry_path?: string;
             repo_url?: string;
-        }
-
-        export namespace Babylon {
-            export const VERSION = babylonPackageJson.version;
-
-            export interface I_Context extends Base.I_Context {
-                Vircadia: Base.I_Context["Vircadia"] & {
-                    v1: {
-                        Babylon: {
-                            Version: typeof VERSION;
-                            Scene: Scene;
-                        };
-                        Hook: {
-                            onScriptInitialize?: Base.I_Context["Vircadia"]["v1"]["Hook"]["onScriptInitialize"] &
-                                ((scene: Scene) => void);
-                        };
-                    };
-                };
-            }
-
-            export interface I_Return extends Base.I_Return {}
-        }
-
-        export namespace Base {
-            export interface I_Context {
-                Vircadia: {
-                    v1: {
-                        Query: {
-                            execute<T = unknown>(
-                                query: string,
-                                // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-                                parameters?: any[],
-                            ): Promise<
-                                Communication.WebSocket.QueryResponseMessage<T>
-                            >;
-                        };
-                        Hook: {
-                            // Script lifecycle hooks
-                            onScriptInitialize?: (
-                                entityData: Entity.I_Entity,
-                                entityAssets: Entity.Asset.I_Asset[],
-                            ) => void;
-                            onEntityUpdate?: (
-                                entityData: Entity.I_Entity,
-                            ) => void;
-                            onAssetUpdate?: (
-                                assetData: Entity.Asset.I_Asset,
-                            ) => void;
-                            onScriptUpdate?: (
-                                scriptData: Entity.Script.I_Script,
-                            ) => void;
-                            onScriptTeardown?: () => void;
-
-                            // Network state hooks
-                            onConnected?: () => void;
-                            onDisconnected?: (reason?: string) => void;
-                        };
-                        Script: {
-                            reload: () => void;
-                        };
-                        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-                        [key: string]: any;
-                    };
-                };
-            }
-
-            export interface I_Return {
-                scriptFunction: (context: I_Context) => unknown;
-                hooks: Base.I_Context["Vircadia"]["v1"]["Hook"];
-            }
         }
     }
 }

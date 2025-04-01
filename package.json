@@ -1,6 +1,7 @@
 {
     "name": "vircadia-world-sdk-ts",
     "type": "module",
+    "version": "0.0.1",
     "dependencies": {
         "@babylonjs/core": "8.0.1",
         "console-log-colors": "latest",
