@@ -25,6 +25,9 @@ export namespace Babylon {
     // The context provided to scripts
     export interface I_Context {
         Vircadia: {
+            Debug: boolean;
+            Suppress: boolean;
+
             // Top-level version identifier
             Version: string;
 

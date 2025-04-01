@@ -1,15 +1,10 @@
-import {
-    type Engine,
-    type NullEngine,
-    Scene,
-    type WebGPUEngine,
-} from "@babylonjs/core";
 import { Communication, Entity } from "../../../schema/schema.general";
 import type { Babylon } from "../../../schema/schema.babylon.script";
 
 import babylonPackageJson from "@babylonjs/core/package.json";
 import vircadiaSdkTsPackageJson from "../../../package.json";
 import { log } from "../../general/log";
+import type { Scene } from "@babylonjs/core";
 
 // Error interface with originalMessage property
 interface ErrorWithOriginalMessage extends Error {
@@ -22,9 +17,7 @@ export interface VircadiaBabylonCoreConfig {
     authToken: string;
     authProvider: string;
 
-    // Engine/Scene settings
-    engine: Engine | NullEngine | WebGPUEngine;
-    scene?: Scene;
+    scene: Scene;
 
     // Reconnection settings
     reconnectAttempts?: number;
@@ -479,6 +472,8 @@ class ScriptManager {
                 Vircadia: {
                     // Top-level version identifier
                     Version: vircadiaSdkTsPackageJson.version,
+                    Debug: this.config.debug ?? false,
+                    Suppress: this.config.suppress ?? false,
 
                     // Core APIs with flat structure
                     Query: {
@@ -649,7 +644,7 @@ class EntityManager {
         private scriptManager: ScriptManager,
         private assetManager: AssetManager,
     ) {
-        this.scene = config.scene || new Scene(config.engine);
+        this.scene = config.scene;
 
         // Complete the circular reference
         scriptManager.setEntityManager(this);
@@ -804,7 +799,7 @@ export class VircadiaBabylonCore {
         this.connectionManager = new ConnectionManager(config);
 
         // Create scene first
-        const scene = config.scene || new Scene(config.engine);
+        const scene = config.scene;
 
         // Create asset manager
         this.assetManager = new AssetManager(this.connectionManager);
