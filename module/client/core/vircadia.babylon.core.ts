@@ -11,6 +11,11 @@ import babylonPackageJson from "@babylonjs/core/package.json";
 import vircadiaSdkTsPackageJson from "../../../package.json";
 import { log } from "../../general/log";
 
+// Error interface with originalMessage property
+interface ErrorWithOriginalMessage extends Error {
+    originalMessage: Communication.WebSocket.Message;
+}
+
 export interface VircadiaBabylonCoreConfig {
     // Connection settings
     serverUrl: string;
@@ -257,11 +262,7 @@ class ConnectionManager {
                 clearTimeout(request.timeout);
                 this.pendingRequests.delete(message.requestId);
 
-                if (message.errorMessage) {
-                    request.reject(new Error(message.errorMessage));
-                } else {
-                    request.resolve(message);
-                }
+                request.resolve(message);
             }
         } catch (error) {
             log({
@@ -751,7 +752,8 @@ class EntityManager {
                         log({
                             message: `Skipped incompatible scripts for entity ${entity.general__entity_id}: ${skippedScripts.join(", ")}`,
                             type: "debug",
-                            debug: true,
+                            debug: this.config.debug,
+                            suppress: this.config.suppress,
                         });
                     }
                 } catch (error) {
@@ -759,7 +761,8 @@ class EntityManager {
                         message: `Error loading scripts for entity ${entity.general__entity_id}:`,
                         type: "error",
                         error,
-                        debug: true,
+                        debug: this.config.debug,
+                        suppress: this.config.suppress,
                     });
                 }
             }

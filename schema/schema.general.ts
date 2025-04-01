@@ -19,7 +19,8 @@ export namespace Entity {
         group__load_priority: number;
         general__initialized_at?: string;
         general__initialized_by?: string;
-        meta__data: Record<string, object>;
+        // biome-ignore lint/suspicious/noExplicitAny: Anything is allowed as a value.
+        meta__data: Record<string, { value: any }>;
         script__names: string[];
         asset__names: string[];
         group__sync: string;
