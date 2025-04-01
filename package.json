@@ -3,7 +3,7 @@
     "type": "module",
     "version": "0.0.1",
     "dependencies": {
-        "@babylonjs/core": "8.0.1",
+        "@babylonjs/core": "8.0.2",
         "console-log-colors": "latest",
         "eight-colors": "latest",
         "jsonwebtoken": "^9.0.2",
