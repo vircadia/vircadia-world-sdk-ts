@@ -30,7 +30,7 @@ const browserClientEnvSchema = z.object({
         .default("vircadia_world_client_web_babylon_js_prod"),
     VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_HOST_CONTAINER_BIND_EXTERNAL: z
         .string()
-        .default("127.0.0.1"),
+        .default("0.0.0.0"),
     VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
         .number()
         .default(3025),
@@ -54,7 +54,7 @@ const browserClientEnvSchema = z.object({
         .default("vircadia_world_client_web_babylon_js_dev"),
     VRCA_CLIENT_WEB_BABYLON_JS_DEV_HOST_CONTAINER_BIND_EXTERNAL: z
         .string()
-        .default("127.0.0.1"),
+        .default("0.0.0.0"),
     VRCA_CLIENT_WEB_BABYLON_JS_DEV_PORT_CONTAINER_BIND_INTERNAL: z.coerce
         .number()
         .default(3066),
