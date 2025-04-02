@@ -42,6 +42,9 @@ const browserClientEnvSchema = z.object({
     VRCA_CLIENT_WEB_BABYLON_JS_DEV_HOST: z.string().default("0.0.0.0"),
     VRCA_CLIENT_WEB_BABYLON_JS_DEV_PORT: z.coerce.number().default(3066),
     VRCA_CLIENT_WEB_BABYLON_JS_DEBUG_SESSION_TOKEN: z.string().default(""),
+    VRCA_CLIENT_WEB_BABYLON_JS_DEBUG_SESSION_TOKEN_PROVIDER: z
+        .string()
+        .default("system"),
 
     VRCA_CLIENT_WEB_BABYLON_JS_META_TITLE_BASE: z.string().default("Vircadia"),
     VRCA_CLIENT_WEB_BABYLON_JS_META_DESCRIPTION: z.string().default("..."),
@@ -75,5 +78,5 @@ const browserClientEnvSchema = z.object({
 
 // Parse client environment variables
 export const VircadiaConfig_BROWSER_CLIENT = browserClientEnvSchema.parse(
-    import.meta.env,
+    import.meta.env || {},
 );
