@@ -346,7 +346,9 @@ class AssetManager {
         if (!queryResponse.result.length)
             throw new Error(`Asset ${assetName} not found`);
 
+        // Convert the base64 string back to ArrayBuffer
         const asset = queryResponse.result[0];
+
         this.assets.set(assetName, asset);
         return asset;
     }
@@ -707,7 +709,10 @@ class EntityManager {
                     // First, check which scripts are available for our platform
                     const availableScripts =
                         await this.connectionManager.sendQueryAsync<
-                            { general__script_file_name: string }[]
+                            Pick<
+                                Entity.Script.I_Script,
+                                "general__script_file_name"
+                            >[]
                         >(
                             "SELECT DISTINCT general__script_file_name FROM entity.entity_scripts WHERE general__script_file_name = ANY($1) AND script__platform = $2",
                             [
@@ -715,6 +720,36 @@ class EntityManager {
                                 this.scriptManager.detectPlatform(),
                             ],
                         );
+
+                    // Load assets required by the entity
+                    const assets: Entity.Asset.I_Asset[] = [];
+                    if (entity.asset__names && entity.asset__names.length > 0) {
+                        for (const assetName of entity.asset__names) {
+                            try {
+                                // Try to get already loaded asset first
+                                let asset =
+                                    this.assetManager.getAsset(assetName);
+
+                                // If not loaded yet, load it from server
+                                if (!asset) {
+                                    asset =
+                                        await this.assetManager.loadAsset(
+                                            assetName,
+                                        );
+                                }
+
+                                assets.push(asset);
+                            } catch (error) {
+                                log({
+                                    message: `Error loading asset ${assetName} for entity ${entity.general__entity_id}:`,
+                                    type: "error",
+                                    error,
+                                    debug: this.config.debug,
+                                    suppress: this.config.suppress,
+                                });
+                            }
+                        }
+                    }
 
                     // Only process scripts that are available for our platform
                     for (const {
@@ -725,10 +760,7 @@ class EntityManager {
                             general__script_file_name,
                         );
 
-                        // Load any assets associated with the entity (placeholder for now)
-                        const assets: Entity.Asset.I_Asset[] = [];
-
-                        // Execute the script for this entity
+                        // Execute the script for this entity with the loaded assets
                         await this.scriptManager.executeScript(
                             script,
                             entity,
