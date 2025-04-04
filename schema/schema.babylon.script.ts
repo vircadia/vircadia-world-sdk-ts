@@ -2,6 +2,7 @@ import type { Scene } from "@babylonjs/core";
 import babylonPackageJson from "@babylonjs/core/package.json";
 import type { Communication, Entity } from "./schema.general";
 
+// TODO: Rename to VircadiaBabylonScript
 export namespace Babylon {
     export const VERSION = babylonPackageJson.version;
 
