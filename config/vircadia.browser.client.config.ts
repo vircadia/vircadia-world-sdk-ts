@@ -78,5 +78,5 @@ const browserClientEnvSchema = z.object({
 
 // Parse client environment variables
 export const VircadiaConfig_BROWSER_CLIENT = browserClientEnvSchema.parse(
-    import.meta.env,
+    import.meta.env ?? process.env,
 );
