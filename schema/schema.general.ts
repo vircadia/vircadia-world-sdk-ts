@@ -33,6 +33,11 @@ export namespace Entity {
     }
 
     export namespace Asset {
+        export type T_AssetOmitData = Omit<
+            I_Asset,
+            "asset__data__base64" | "asset__data__bytea"
+        >;
+
         export interface I_Asset {
             general__asset_file_name: string;
             general__created_at?: string;

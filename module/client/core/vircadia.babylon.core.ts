@@ -326,81 +326,76 @@ class ConnectionManager {
     }
 }
 
-// Handles asset loading and management
+// Handles asset metadata management and notifications
 class AssetManager {
-    private assets = new Map<string, Entity.Asset.I_Asset>();
-    private assetUpdateListeners: Array<(asset: Entity.Asset.I_Asset) => void> =
-        [];
-    private cachedBinaryData = new Map<string, ArrayBuffer>();
+    private assetMetadata = new Map<string, Entity.Asset.T_AssetOmitData>();
+    private assetUpdateListeners: Array<
+        (asset: Entity.Asset.T_AssetOmitData) => void
+    > = [];
 
     constructor(private connectionManager: ConnectionManager) {}
 
-    // Load an asset from the server
-    async loadAsset(assetName: string): Promise<Entity.Asset.I_Asset> {
+    // Load asset metadata from the server (omitting binary/base64 data)
+    async loadAssetMetadata(
+        assetName: string,
+    ): Promise<Entity.Asset.T_AssetOmitData> {
         const queryResponse = await this.connectionManager.sendQueryAsync<
-            Entity.Asset.I_Asset[]
+            Entity.Asset.T_AssetOmitData[]
         >(
-            "SELECT * FROM entity.entity_assets WHERE general__asset_file_name = $1",
+            `SELECT 
+                general__asset_file_name,
+                group__sync,
+                asset__type,
+                general__created_at,
+                general__created_by,
+                general__updated_at,
+                general__updated_by,
+                asset__data__base64_updated_at,
+                asset__data__bytea_updated_at
+            FROM entity.entity_assets 
+            WHERE general__asset_file_name = $1`,
             [assetName],
         );
 
-        if (!queryResponse.result.length)
+        if (!queryResponse.result.length) {
             throw new Error(`Asset ${assetName} not found`);
-
-        const asset = queryResponse.result[0];
-        this.assets.set(assetName, asset);
-
-        // Convert bytea to ArrayBuffer if present
-        if (asset.asset__data__bytea) {
-            // PostgreSQL BYTEA comes as base64 over JSON
-            const base64String = asset.asset__data__bytea.toString();
-            const binary = Buffer.from(base64String, "base64");
-            this.cachedBinaryData.set(
-                assetName,
-                binary.buffer.slice(
-                    binary.byteOffset,
-                    binary.byteOffset + binary.byteLength,
-                ),
-            );
         }
 
-        return asset;
+        const assetMetadata = queryResponse.result[0];
+        this.assetMetadata.set(assetName, assetMetadata);
+        return assetMetadata;
     }
 
-    // Get binary data for an asset
-    getBinaryData(assetName: string): ArrayBuffer | undefined {
-        return this.cachedBinaryData.get(assetName);
+    // Get already loaded asset metadata
+    getAssetMetadata(
+        assetName: string,
+    ): Entity.Asset.T_AssetOmitData | undefined {
+        return this.assetMetadata.get(assetName);
     }
 
     // Get asset type (GLB, PNG, etc.)
     getAssetType(assetName: string): string | undefined {
-        const asset = this.assets.get(assetName);
-        return asset?.asset__type;
-    }
-
-    // Reload an asset and notify listeners
-    async reloadAsset(assetName: string): Promise<void> {
-        const asset = await this.loadAsset(assetName);
-        this.notifyAssetUpdated(asset);
-    }
-
-    // Get an already loaded asset
-    getAsset(assetName: string): Entity.Asset.I_Asset | undefined {
-        return this.assets.get(assetName);
+        return this.assetMetadata.get(assetName)?.asset__type;
     }
 
     // Register for asset update notifications
     addAssetUpdateListener(
-        listener: (asset: Entity.Asset.I_Asset) => void,
+        listener: (asset: Entity.Asset.T_AssetOmitData) => void,
     ): void {
         this.assetUpdateListeners.push(listener);
     }
 
     // Notify all listeners about an asset update
-    private notifyAssetUpdated(asset: Entity.Asset.I_Asset): void {
+    private notifyAssetUpdated(asset: Entity.Asset.T_AssetOmitData): void {
         for (const listener of this.assetUpdateListeners) {
             listener(asset);
         }
+    }
+
+    // Reload asset metadata and notify listeners
+    async reloadAssetMetadata(assetName: string): Promise<void> {
+        const assetMetadata = await this.loadAssetMetadata(assetName);
+        this.notifyAssetUpdated(assetMetadata);
     }
 }
 
@@ -516,17 +511,6 @@ class ScriptManager {
                                 script.general__script_file_name,
                             );
                         },
-                    },
-
-                    // Asset management
-                    AssetManager: {
-                        getBinaryData: (assetName: string) =>
-                            this.assetManager.getBinaryData(assetName),
-                        getAssetType: (assetName: string) =>
-                            this.assetManager.getAssetType(assetName),
-                        loadAsset: this.assetManager.loadAsset.bind(
-                            this.assetManager,
-                        ),
                     },
                 },
                 Babylon: {
@@ -757,27 +741,32 @@ class EntityManager {
                             ],
                         );
 
-                    // Load assets required by the entity
-                    const assets: Entity.Asset.I_Asset[] = [];
+                    // Load asset metadata for the entity's assets
+                    const assetsMetadata: Omit<
+                        Entity.Asset.I_Asset,
+                        "asset__data__base64" | "asset__data__bytea"
+                    >[] = [];
                     if (entity.asset__names && entity.asset__names.length > 0) {
                         for (const assetName of entity.asset__names) {
                             try {
-                                // Try to get already loaded asset first
-                                let asset =
-                                    this.assetManager.getAsset(assetName);
+                                // Try to get already loaded asset metadata first
+                                let assetMetadata =
+                                    this.assetManager.getAssetMetadata(
+                                        assetName,
+                                    );
 
                                 // If not loaded yet, load it from server
-                                if (!asset) {
-                                    asset =
-                                        await this.assetManager.loadAsset(
+                                if (!assetMetadata) {
+                                    assetMetadata =
+                                        await this.assetManager.loadAssetMetadata(
                                             assetName,
                                         );
                                 }
 
-                                assets.push(asset);
+                                assetsMetadata.push(assetMetadata);
                             } catch (error) {
                                 log({
-                                    message: `Error loading asset ${assetName} for entity ${entity.general__entity_id}:`,
+                                    message: `Error loading asset metadata ${assetName} for entity ${entity.general__entity_id}:`,
                                     type: "error",
                                     error,
                                     debug: this.config.debug,
@@ -796,11 +785,11 @@ class EntityManager {
                             general__script_file_name,
                         );
 
-                        // Execute the script for this entity with the loaded assets
+                        // Execute the script for this entity with the loaded asset metadata
                         await this.scriptManager.executeScript(
                             script,
                             entity,
-                            assets,
+                            assetsMetadata,
                         );
                     }
 
@@ -869,7 +858,7 @@ export class VircadiaBabylonCore {
         // Create scene first
         const scene = config.scene;
 
-        // Create asset manager
+        // Create asset manager with scene
         this.assetManager = new AssetManager(this.connectionManager);
 
         // Create script manager with a temporary null entity manager

@@ -11,10 +11,10 @@ export namespace Babylon {
         // Script lifecycle hooks
         onScriptInitialize?: (
             entityData: Entity.I_Entity,
-            entityAssets: Entity.Asset.I_Asset[],
+            entityAssetsMetadata: Entity.Asset.T_AssetOmitData[],
         ) => void;
         onEntityUpdate?: (entityData: Entity.I_Entity) => void;
-        onAssetUpdate?: (assetData: Entity.Asset.I_Asset) => void;
+        onAssetUpdate?: (assetMetadata: Entity.Asset.T_AssetOmitData) => void;
         onScriptUpdate?: (scriptData: Entity.Script.I_Script) => void;
         onScriptTeardown?: () => void;
 
