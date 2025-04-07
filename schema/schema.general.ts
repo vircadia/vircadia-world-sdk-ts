@@ -94,11 +94,13 @@ export namespace Entity {
             group__sync: string;
 
             // Asset fields
-            asset__data?: string;
+            asset__data__base64?: string;
+            asset__data__bytea?: Buffer;
             asset__type?: E_AssetType;
 
             // Add timestamp tracking field for asset data
-            asset__data_updated_at: string;
+            asset__data__base64_updated_at: string;
+            asset__data__bytea_updated_at: string;
         }
     }
 

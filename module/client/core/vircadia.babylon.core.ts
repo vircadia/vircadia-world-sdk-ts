@@ -346,7 +346,6 @@ class AssetManager {
         if (!queryResponse.result.length)
             throw new Error(`Asset ${assetName} not found`);
 
-        // Convert the base64 string back to ArrayBuffer
         const asset = queryResponse.result[0];
 
         this.assets.set(assetName, asset);
