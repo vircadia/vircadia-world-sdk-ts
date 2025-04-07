@@ -33,58 +33,6 @@ export namespace Entity {
     }
 
     export namespace Asset {
-        export enum E_AssetType {
-            // 3D Models
-            GLB = "GLB",
-            GLTF = "GLTF",
-            OBJ = "OBJ",
-            FBX = "FBX",
-            DAE = "DAE",
-            STL = "STL",
-            STEP = "STEP",
-            IGES = "IGES",
-            BLEND = "BLEND",
-            X3D = "X3D",
-            VRML = "VRML",
-            BVH = "BVH",
-            // Textures
-            PNG = "PNG",
-            JPEG = "JPEG",
-            JPG = "JPG",
-            TIFF = "TIFF",
-            TIF = "TIF",
-            GIF = "GIF",
-            WEBP = "WEBP",
-            BMP = "BMP",
-            TGA = "TGA",
-            HDR = "HDR",
-            EXR = "EXR",
-            KTX2 = "KTX2",
-            // Video
-            WEBM = "WEBM",
-            MP4 = "MP4",
-            MOV = "MOV",
-            AVI = "AVI",
-            // Audio
-            MP3 = "MP3",
-            WAV = "WAV",
-            OGG = "OGG",
-            AAC = "AAC",
-            FLAC = "FLAC",
-            // Material
-            MTL = "MTL",
-            MAT = "MAT",
-            // Shaders
-            GLSL = "GLSL",
-            HLSL = "HLSL",
-            WGSL = "WGSL",
-            SPIRV = "SPIRV",
-            COMP = "COMP",
-            FRAG = "FRAG",
-            VERT = "VERT",
-            SHADERPAK = "SHADERPAK",
-        }
-
         export interface I_Asset {
             general__asset_file_name: string;
             general__created_at?: string;
@@ -96,7 +44,7 @@ export namespace Entity {
             // Asset fields
             asset__data__base64?: string;
             asset__data__bytea?: Buffer;
-            asset__type?: E_AssetType;
+            asset__type?: string;
 
             // Add timestamp tracking field for asset data
             asset__data__base64_updated_at: string;

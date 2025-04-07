@@ -331,6 +331,7 @@ class AssetManager {
     private assets = new Map<string, Entity.Asset.I_Asset>();
     private assetUpdateListeners: Array<(asset: Entity.Asset.I_Asset) => void> =
         [];
+    private cachedBinaryData = new Map<string, ArrayBuffer>();
 
     constructor(private connectionManager: ConnectionManager) {}
 
@@ -347,9 +348,34 @@ class AssetManager {
             throw new Error(`Asset ${assetName} not found`);
 
         const asset = queryResponse.result[0];
-
         this.assets.set(assetName, asset);
+
+        // Convert bytea to ArrayBuffer if present
+        if (asset.asset__data__bytea) {
+            // PostgreSQL BYTEA comes as base64 over JSON
+            const base64String = asset.asset__data__bytea.toString();
+            const binary = Buffer.from(base64String, "base64");
+            this.cachedBinaryData.set(
+                assetName,
+                binary.buffer.slice(
+                    binary.byteOffset,
+                    binary.byteOffset + binary.byteLength,
+                ),
+            );
+        }
+
         return asset;
+    }
+
+    // Get binary data for an asset
+    getBinaryData(assetName: string): ArrayBuffer | undefined {
+        return this.cachedBinaryData.get(assetName);
+    }
+
+    // Get asset type (GLB, PNG, etc.)
+    getAssetType(assetName: string): string | undefined {
+        const asset = this.assets.get(assetName);
+        return asset?.asset__type;
     }
 
     // Reload an asset and notify listeners
@@ -490,6 +516,17 @@ class ScriptManager {
                                 script.general__script_file_name,
                             );
                         },
+                    },
+
+                    // Asset management
+                    AssetManager: {
+                        getBinaryData: (assetName: string) =>
+                            this.assetManager.getBinaryData(assetName),
+                        getAssetType: (assetName: string) =>
+                            this.assetManager.getAssetType(assetName),
+                        loadAsset: this.assetManager.loadAsset.bind(
+                            this.assetManager,
+                        ),
                     },
                 },
                 Babylon: {
