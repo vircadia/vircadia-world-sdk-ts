@@ -85,17 +85,26 @@ export namespace Entity {
             script__source__updated_at: string;
 
             // Script type
-            script__platform: E_ScriptType;
+            script__platform: E_ScriptType[];
 
             // Compiled script fields
-            script__compiled__data: string;
-            script__compiled__status: E_CompilationStatus;
-            script__compiled__updated_at: string;
+            script__compiled__babylon_node__data: string;
+            script__compiled__babylon_node__status: E_CompilationStatus;
+            script__compiled__babylon_node__data_updated_at: string;
+            script__compiled__babylon_node__status_updated_at: string;
+
+            script__compiled__babylon_bun__data: string;
+            script__compiled__babylon_bun__status: E_CompilationStatus;
+            script__compiled__babylon_bun__data_updated_at: string;
+            script__compiled__babylon_bun__status_updated_at: string;
+
+            script__compiled__babylon_browser__data: string;
+            script__compiled__babylon_browser__status: E_CompilationStatus;
+            script__compiled__babylon_browser__data_updated_at: string;
+            script__compiled__babylon_browser__status_updated_at: string;
 
             // Timestamp tracking fields
             script__source__data_updated_at: string;
-            script__compiled__data_updated_at: string;
-            script__compiled__status_updated_at: string;
             script__source__repo__url_updated_at: string;
             script__source__repo__entry_path_updated_at: string;
         }

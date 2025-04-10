@@ -401,13 +401,14 @@ class EntityAndScriptManager {
         const queryResponse = await this.connectionManager.sendQueryAsync<
             Entity.Script.I_Script[]
         >(
-            "SELECT * FROM entity.entity_scripts WHERE general__script_file_name = $1 AND script__platform = $2",
+            "SELECT * FROM entity.entity_scripts WHERE general__script_file_name = $1 AND $2 = ANY(script__platform)",
             [scriptName, this.currentPlatform],
         );
 
         if (!queryResponse.result.length) {
             const availablePlatforms = allVariantsResponse.result
-                .map((r) => r.script__platform)
+                .flatMap((r) => r.script__platform)
+                .filter((v, i, a) => a.indexOf(v) === i) // Unique values
                 .join(", ");
 
             throw new Error(
@@ -460,8 +461,19 @@ class EntityAndScriptManager {
             // Execute script with enhanced support for the script definition utility
             try {
                 const funcBody =
-                    script.script__compiled__data ||
-                    script.script__source__data;
+                    this.currentPlatform ===
+                    Entity.Script.E_ScriptType.BABYLON_NODE
+                        ? script.script__compiled__babylon_node__data ||
+                          script.script__source__data
+                        : this.currentPlatform ===
+                            Entity.Script.E_ScriptType.BABYLON_BROWSER
+                          ? script.script__compiled__babylon_browser__data ||
+                            script.script__source__data
+                          : this.currentPlatform ===
+                              Entity.Script.E_ScriptType.BABYLON_BUN
+                            ? script.script__compiled__babylon_bun__data ||
+                              script.script__source__data
+                            : script.script__source__data;
 
                 // Store script name outside the function scope
                 const scriptName = script.general__script_file_name;
@@ -653,7 +665,7 @@ class EntityAndScriptManager {
                                 "general__script_file_name"
                             >[]
                         >(
-                            "SELECT DISTINCT general__script_file_name FROM entity.entity_scripts WHERE general__script_file_name = ANY($1) AND script__platform = $2",
+                            "SELECT DISTINCT general__script_file_name FROM entity.entity_scripts WHERE general__script_file_name = ANY($1) AND $2 = ANY(script__platform)",
                             [entity.script__names, this.currentPlatform],
                         );
 
@@ -746,7 +758,7 @@ class EntityAndScriptManager {
                     this.connectionManager.sendQueryAsync<
                         Entity.Script.I_Script[]
                     >(
-                        "SELECT * FROM entity.entity_scripts WHERE script__platform = $1",
+                        "SELECT * FROM entity.entity_scripts WHERE $1 = ANY(script__platform)",
                         [this.currentPlatform],
                     ),
                 ]);
