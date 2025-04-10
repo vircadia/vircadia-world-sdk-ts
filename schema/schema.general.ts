@@ -117,7 +117,6 @@ export namespace Tick {
         tick__duration_ms: number;
         tick__entity_states_processed: number;
         tick__script_states_processed: number;
-        tick__asset_states_processed: number;
         tick__is_delayed: boolean;
         tick__headroom_ms: number | null;
         tick__time_since_last_tick_ms: number | null;
@@ -175,11 +174,6 @@ export namespace Tick {
 
     export interface I_ScriptState extends Entity.Script.I_Script {
         general__script_state_id: string;
-        general__tick_id: string;
-    }
-
-    export interface I_AssetState extends Entity.Asset.I_Asset {
-        general__asset_state_id: string;
         general__tick_id: string;
     }
 
