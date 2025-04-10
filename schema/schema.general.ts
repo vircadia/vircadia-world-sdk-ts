@@ -65,7 +65,7 @@ export namespace Entity {
         }
 
         export enum E_CompilationStatus {
-            PENDING = "PENDING",
+            NOT_COMPILED = "NOT_COMPILED",
             COMPILING = "COMPILING",
             COMPILED = "COMPILED",
             FAILED = "FAILED",
