@@ -1,9 +1,9 @@
-import { Communication, Entity } from "../../../schema/schema.general";
-import type { Babylon } from "../../../schema/schema.babylon.script";
+import { Communication, Entity } from "../../schema/schema.general";
+import type { Babylon } from "../../schema/schema.babylon.script";
 
 import babylonPackageJson from "@babylonjs/core/package.json";
-import vircadiaSdkTsPackageJson from "../../../package.json";
-import { log } from "../../general/log";
+import vircadiaSdkTsPackageJson from "../../package.json";
+import { log } from "../general/log";
 import type { Scene } from "@babylonjs/core";
 
 // Error interface with originalMessage property
@@ -326,81 +326,13 @@ class ConnectionManager {
     }
 }
 
-// Handles asset metadata management and notifications
-class AssetManager {
-    private assetMetadata = new Map<string, Entity.Asset.T_AssetOmitData>();
-    private assetUpdateListeners: Array<
-        (asset: Entity.Asset.T_AssetOmitData) => void
-    > = [];
+// Manages entities, scripts, and their relationships
+class EntityAndScriptManager {
+    // Entity management
+    private entities = new Map<string, Entity.I_Entity>();
+    private lastEntityUpdateTimestamp: Date = new Date(0); // Initialize with epoch timestamp
 
-    constructor(private connectionManager: ConnectionManager) {}
-
-    // Load asset metadata from the server (omitting binary/base64 data)
-    async loadAssetMetadata(
-        assetName: string,
-    ): Promise<Entity.Asset.T_AssetOmitData> {
-        const queryResponse = await this.connectionManager.sendQueryAsync<
-            Entity.Asset.T_AssetOmitData[]
-        >(
-            `SELECT 
-                general__asset_file_name,
-                group__sync,
-                asset__type,
-                general__created_at,
-                general__created_by,
-                general__updated_at,
-                general__updated_by,
-                asset__data__base64_updated_at,
-                asset__data__bytea_updated_at
-            FROM entity.entity_assets 
-            WHERE general__asset_file_name = $1`,
-            [assetName],
-        );
-
-        if (!queryResponse.result.length) {
-            throw new Error(`Asset ${assetName} not found`);
-        }
-
-        const assetMetadata = queryResponse.result[0];
-        this.assetMetadata.set(assetName, assetMetadata);
-        return assetMetadata;
-    }
-
-    // Get already loaded asset metadata
-    getAssetMetadata(
-        assetName: string,
-    ): Entity.Asset.T_AssetOmitData | undefined {
-        return this.assetMetadata.get(assetName);
-    }
-
-    // Get asset type (GLB, PNG, etc.)
-    getAssetType(assetName: string): string | undefined {
-        return this.assetMetadata.get(assetName)?.asset__type;
-    }
-
-    // Register for asset update notifications
-    addAssetUpdateListener(
-        listener: (asset: Entity.Asset.T_AssetOmitData) => void,
-    ): void {
-        this.assetUpdateListeners.push(listener);
-    }
-
-    // Notify all listeners about an asset update
-    private notifyAssetUpdated(asset: Entity.Asset.T_AssetOmitData): void {
-        for (const listener of this.assetUpdateListeners) {
-            listener(asset);
-        }
-    }
-
-    // Reload asset metadata and notify listeners
-    async reloadAssetMetadata(assetName: string): Promise<void> {
-        const assetMetadata = await this.loadAssetMetadata(assetName);
-        this.notifyAssetUpdated(assetMetadata);
-    }
-}
-
-// Handles script loading, execution, and management
-class ScriptManager {
+    // Script management
     private scripts = new Map<string, Entity.Script.I_Script>();
     private scriptInstances = new Map<
         string,
@@ -409,7 +341,6 @@ class ScriptManager {
             hooks: Babylon.I_Hooks;
             context: Babylon.I_Context;
             entityId?: string;
-            assets?: Entity.Asset.I_Asset[];
         }
     >();
     private currentPlatform: Entity.Script.E_ScriptType;
@@ -418,31 +349,39 @@ class ScriptManager {
         private config: VircadiaBabylonCoreConfig,
         private connectionManager: ConnectionManager,
         private scene: Scene,
-        private entityManager: EntityManager,
-        private assetManager: AssetManager,
     ) {
-        // Determine the current platform
-        this.currentPlatform = this.detectPlatform();
-    }
-
-    // Detect the current platform
-    public detectPlatform(): Entity.Script.E_ScriptType {
+        // Check for Bun environment
         if (
             typeof process !== "undefined" &&
             process.versions &&
             process.versions.bun
         ) {
-            return Entity.Script.E_ScriptType.BABYLON_BUN;
+            this.currentPlatform = Entity.Script.E_ScriptType.BABYLON_BUN;
         }
-        if (
+        // Check for Node environment
+        else if (
             typeof process !== "undefined" &&
             process.versions &&
             process.versions.node
         ) {
-            return Entity.Script.E_ScriptType.BABYLON_NODE;
+            this.currentPlatform = Entity.Script.E_ScriptType.BABYLON_NODE;
         }
-        return Entity.Script.E_ScriptType.BABYLON_BROWSER;
+        // Check for Browser environment
+        else if (
+            typeof window !== "undefined" &&
+            typeof window.Bun !== "undefined"
+        ) {
+            this.currentPlatform = Entity.Script.E_ScriptType.BABYLON_BROWSER;
+        } else {
+            throw new Error("Unsupported platform");
+        }
     }
+
+    getCurrentPlatform(): Entity.Script.E_ScriptType {
+        return this.currentPlatform;
+    }
+
+    // SCRIPT MANAGEMENT FUNCTIONS
 
     // Load a script from the server, filtered by platform
     async loadScript(scriptName: string): Promise<Entity.Script.I_Script> {
@@ -486,7 +425,6 @@ class ScriptManager {
     async executeScript(
         script: Entity.Script.I_Script,
         entity: Entity.I_Entity,
-        assets: Entity.Asset.I_Asset[],
     ): Promise<void> {
         try {
             // Create script context with the simplified flat structure
@@ -578,12 +516,11 @@ class ScriptManager {
                     hooks: instance.hooks,
                     context,
                     entityId: entity.general__entity_id,
-                    assets,
                 });
 
                 // Initialize script
                 if (instance.hooks.onScriptInitialize) {
-                    await instance.hooks.onScriptInitialize(entity, assets);
+                    instance.hooks.onScriptInitialize(entity);
                 }
             } catch (error) {
                 log({
@@ -620,12 +557,12 @@ class ScriptManager {
 
             // Get entity and reinitialize
             if (instance.entityId) {
-                const entity = this.entityManager.getEntity(instance.entityId);
-                if (entity && instance.assets) {
-                    await this.executeScript(script, entity, instance.assets);
+                const entity = this.getEntity(instance.entityId);
+                if (entity) {
+                    await this.executeScript(script, entity);
                 } else {
                     log({
-                        message: `Could not reload script ${scriptName}: Entity or assets not found`,
+                        message: `Could not reload script ${scriptName}: Entity not found`,
                         type: "warn",
                         debug: this.config.debug,
                         suppress: this.config.suppress,
@@ -644,33 +581,12 @@ class ScriptManager {
         }
     }
 
-    // Set the entity manager reference
-    setEntityManager(entityManager: EntityManager): void {
-        this.entityManager = entityManager;
-    }
-
     // Get all script instances
     getScriptInstances(): typeof this.scriptInstances {
         return this.scriptInstances;
     }
-}
 
-// Manages entities and entity-related operations
-class EntityManager {
-    private entities = new Map<string, Entity.I_Entity>();
-    private scene: Scene;
-
-    constructor(
-        private config: VircadiaBabylonCoreConfig,
-        private connectionManager: ConnectionManager,
-        private scriptManager: ScriptManager,
-        private assetManager: AssetManager,
-    ) {
-        this.scene = config.scene;
-
-        // Complete the circular reference
-        scriptManager.setEntityManager(this);
-    }
+    // ENTITY MANAGEMENT FUNCTIONS
 
     // Load all entities from the server, sorted by priority
     async loadEntitiesByPriority(): Promise<void> {
@@ -684,6 +600,9 @@ class EntityManager {
                     COALESCE(group__load_priority, 2147483647),
                     general__created_at ASC
             `);
+
+            // Update last timestamp to now, as we have the latest entities
+            this.lastEntityUpdateTimestamp = new Date();
 
             // Group entities by priority
             const priorityGroups = new Map<number, Entity.I_Entity[]>();
@@ -735,62 +654,20 @@ class EntityManager {
                             >[]
                         >(
                             "SELECT DISTINCT general__script_file_name FROM entity.entity_scripts WHERE general__script_file_name = ANY($1) AND script__platform = $2",
-                            [
-                                entity.script__names,
-                                this.scriptManager.detectPlatform(),
-                            ],
+                            [entity.script__names, this.currentPlatform],
                         );
-
-                    // Load asset metadata for the entity's assets
-                    const assetsMetadata: Omit<
-                        Entity.Asset.I_Asset,
-                        "asset__data__base64" | "asset__data__bytea"
-                    >[] = [];
-                    if (entity.asset__names && entity.asset__names.length > 0) {
-                        for (const assetName of entity.asset__names) {
-                            try {
-                                // Try to get already loaded asset metadata first
-                                let assetMetadata =
-                                    this.assetManager.getAssetMetadata(
-                                        assetName,
-                                    );
-
-                                // If not loaded yet, load it from server
-                                if (!assetMetadata) {
-                                    assetMetadata =
-                                        await this.assetManager.loadAssetMetadata(
-                                            assetName,
-                                        );
-                                }
-
-                                assetsMetadata.push(assetMetadata);
-                            } catch (error) {
-                                log({
-                                    message: `Error loading asset metadata ${assetName} for entity ${entity.general__entity_id}:`,
-                                    type: "error",
-                                    error,
-                                    debug: this.config.debug,
-                                    suppress: this.config.suppress,
-                                });
-                            }
-                        }
-                    }
 
                     // Only process scripts that are available for our platform
                     for (const {
                         general__script_file_name,
                     } of availableScripts.result) {
                         // Load the script if not already loaded
-                        const script = await this.scriptManager.loadScript(
+                        const script = await this.loadScript(
                             general__script_file_name,
                         );
 
-                        // Execute the script for this entity with the loaded asset metadata
-                        await this.scriptManager.executeScript(
-                            script,
-                            entity,
-                            assetsMetadata,
-                        );
+                        // Execute the script for this entity
+                        await this.executeScript(script, entity);
                     }
 
                     // Log any scripts that were skipped due to platform incompatibility
@@ -839,43 +716,231 @@ class EntityManager {
     // Update an entity and notify scripts
     updateEntityAndNotifyScripts(entity: Entity.I_Entity): void {
         this.entities.set(entity.general__entity_id, entity);
-        this.scriptManager.notifyEntityUpdate(entity);
+        this.notifyEntityUpdate(entity);
+    }
+
+    // Poll for both entity and script updates in a single operation
+    async pollForUpdates(): Promise<{
+        entities: {
+            added: Entity.I_Entity[];
+            updated: Entity.I_Entity[];
+            deleted: string[];
+        };
+        scripts: {
+            added: Entity.Script.I_Script[];
+            updated: Entity.Script.I_Script[];
+            deleted: string[];
+        };
+    }> {
+        try {
+            // Format timestamp for SQL query (ISO format)
+            const timestamp = this.lastEntityUpdateTimestamp.toISOString();
+
+            // Get updated and new entities and scripts in parallel queries
+            const [updatedEntitiesResponse, allScriptsResponse] =
+                await Promise.all([
+                    this.connectionManager.sendQueryAsync<Entity.I_Entity[]>(
+                        "SELECT * FROM entity.entities WHERE general__updated_at > $1 ORDER BY general__created_at ASC",
+                        [timestamp],
+                    ),
+                    this.connectionManager.sendQueryAsync<
+                        Entity.Script.I_Script[]
+                    >(
+                        "SELECT * FROM entity.entity_scripts WHERE script__platform = $1",
+                        [this.currentPlatform],
+                    ),
+                ]);
+
+            // Update timestamp for next poll
+            this.lastEntityUpdateTimestamp = new Date();
+
+            // Process entities
+            const updatedEntities: Entity.I_Entity[] = [];
+            const newEntities: Entity.I_Entity[] = [];
+            const currentEntityIds = Array.from(this.entities.keys());
+            let deletedEntityIds: string[] = [];
+
+            // Process entity updates and additions
+            for (const entity of updatedEntitiesResponse.result) {
+                if (this.entities.has(entity.general__entity_id)) {
+                    updatedEntities.push(entity);
+                    this.updateEntityAndNotifyScripts(entity);
+                } else {
+                    newEntities.push(entity);
+                }
+            }
+
+            // Find deleted entities
+            if (currentEntityIds.length > 0) {
+                const deletedEntitiesResponse =
+                    await this.connectionManager.sendQueryAsync<
+                        { general__entity_id: string }[]
+                    >(
+                        "SELECT general__entity_id FROM UNNEST($1::uuid[]) AS general__entity_id WHERE general__entity_id NOT IN (SELECT general__entity_id FROM entity.entities)",
+                        [currentEntityIds],
+                    );
+                deletedEntityIds = deletedEntitiesResponse.result.map(
+                    (e) => e.general__entity_id,
+                );
+            }
+
+            // Process new entities grouped by priority
+            if (newEntities.length > 0) {
+                const priorityGroups = new Map<number, Entity.I_Entity[]>();
+                for (const entity of newEntities) {
+                    const priority =
+                        entity.group__load_priority ?? Number.MAX_SAFE_INTEGER;
+                    if (!priorityGroups.has(priority)) {
+                        priorityGroups.set(priority, []);
+                    }
+                    priorityGroups.get(priority)?.push(entity);
+                }
+
+                // Process each priority group in order
+                for (const [priority, entities] of [
+                    ...priorityGroups.entries(),
+                ].sort((a, b) => a[0] - b[0])) {
+                    await this.processEntityGroup(entities);
+                }
+            }
+
+            // Process deleted entities
+            for (const entityId of deletedEntityIds) {
+                // Clean up scripts associated with this entity
+                for (const [
+                    scriptName,
+                    instance,
+                ] of this.scriptInstances.entries()) {
+                    if (instance.entityId === entityId) {
+                        if (instance.hooks.onScriptTeardown) {
+                            try {
+                                await instance.hooks.onScriptTeardown();
+                            } catch (error) {
+                                log({
+                                    message: `Error in script teardown for ${scriptName}:`,
+                                    type: "error",
+                                    error,
+                                    debug: this.config.debug,
+                                    suppress: this.config.suppress,
+                                });
+                            }
+                        }
+                        this.scriptInstances.delete(scriptName);
+                    }
+                }
+                this.entities.delete(entityId);
+            }
+
+            // Process scripts
+            const currentScriptNames = Array.from(this.scripts.keys());
+            const updatedScripts: Entity.Script.I_Script[] = [];
+            const addedScripts: Entity.Script.I_Script[] = [];
+            const deletedScriptNames: string[] = [];
+
+            // Find deleted scripts
+            for (const scriptName of currentScriptNames) {
+                if (
+                    !allScriptsResponse.result.some(
+                        (s) => s.general__script_file_name === scriptName,
+                    )
+                ) {
+                    deletedScriptNames.push(scriptName);
+                    const instance = this.scriptInstances.get(scriptName);
+                    if (instance?.hooks.onScriptTeardown) {
+                        try {
+                            await instance.hooks.onScriptTeardown();
+                        } catch (error) {
+                            log({
+                                message: `Error in script teardown for ${scriptName}:`,
+                                type: "error",
+                                error,
+                                debug: this.config.debug,
+                                suppress: this.config.suppress,
+                            });
+                        }
+                    }
+                    this.scriptInstances.delete(scriptName);
+                    this.scripts.delete(scriptName);
+                }
+            }
+
+            // Process script updates and additions
+            for (const latestScript of allScriptsResponse.result) {
+                const currentScript = this.scripts.get(
+                    latestScript.general__script_file_name,
+                );
+                if (!currentScript) {
+                    addedScripts.push(latestScript);
+                    this.scripts.set(
+                        latestScript.general__script_file_name,
+                        latestScript,
+                    );
+                } else if (
+                    new Date(
+                        latestScript.general__updated_at as string,
+                    ).getTime() >
+                    new Date(
+                        currentScript.general__updated_at as string,
+                    ).getTime()
+                ) {
+                    updatedScripts.push(latestScript);
+                    this.scripts.set(
+                        latestScript.general__script_file_name,
+                        latestScript,
+                    );
+                    await this.reloadScript(
+                        latestScript.general__script_file_name,
+                    );
+                }
+            }
+
+            return {
+                entities: {
+                    added: newEntities,
+                    updated: updatedEntities,
+                    deleted: deletedEntityIds,
+                },
+                scripts: {
+                    added: addedScripts,
+                    updated: updatedScripts,
+                    deleted: deletedScriptNames,
+                },
+            };
+        } catch (error) {
+            log({
+                message: "Failed to poll for updates:",
+                type: "error",
+                error,
+                debug: this.config.debug,
+                suppress: this.config.suppress,
+            });
+
+            return {
+                entities: { added: [], updated: [], deleted: [] },
+                scripts: { added: [], updated: [], deleted: [] },
+            };
+        }
     }
 }
 
 // Main class that coordinates all components
 export class VircadiaBabylonCore {
     private connectionManager: ConnectionManager;
-    private entityManager: EntityManager;
-    private scriptManager: ScriptManager;
-    private assetManager: AssetManager;
+    private entityScriptManager: EntityAndScriptManager;
     private initialized = false;
+    private pollTimers: Map<string, Timer> = new Map();
+    private syncGroups: Map<string, { client__poll__rate_ms: number }> =
+        new Map();
 
     constructor(private config: VircadiaBabylonCoreConfig) {
         // Create components in the correct order to resolve dependencies
         this.connectionManager = new ConnectionManager(config);
 
-        // Create scene first
-        const scene = config.scene;
-
-        // Create asset manager with scene
-        this.assetManager = new AssetManager(this.connectionManager);
-
-        // Create script manager with a temporary null entity manager
-        this.scriptManager = new ScriptManager(
+        // Create the combined entity and script manager
+        this.entityScriptManager = new EntityAndScriptManager(
             config,
             this.connectionManager,
-            scene,
-            null as unknown as EntityManager, // Will be set after EntityManager is created
-            this.assetManager,
-        );
-
-        // Create entity manager with all dependencies
-        this.entityManager = new EntityManager(
-            config,
-            this.connectionManager,
-            this.scriptManager,
-            this.assetManager,
+            config.scene,
         );
     }
 
@@ -887,9 +952,112 @@ export class VircadiaBabylonCore {
         await this.connectionManager.connect();
 
         // Load initial entity data
-        await this.entityManager.loadEntitiesByPriority();
+        await this.entityScriptManager.loadEntitiesByPriority();
+
+        // Load sync groups configuration
+        await this.loadSyncGroups();
+
+        // Set up polling for entity updates
+        this.setupPolling();
 
         this.initialized = true;
+    }
+
+    // Load sync groups from the database
+    private async loadSyncGroups(): Promise<void> {
+        try {
+            const syncGroupsResponse =
+                await this.connectionManager.sendQueryAsync<
+                    {
+                        general__sync_group: string;
+                        client__poll__rate_ms: number;
+                    }[]
+                >(`
+                SELECT general__sync_group, client__poll__rate_ms
+                FROM auth.sync_groups
+            `);
+
+            for (const group of syncGroupsResponse.result) {
+                this.syncGroups.set(group.general__sync_group, {
+                    client__poll__rate_ms: group.client__poll__rate_ms,
+                });
+            }
+
+            log({
+                message: `Loaded ${syncGroupsResponse.result.length} sync groups`,
+                debug: this.config.debug,
+                suppress: this.config.suppress,
+            });
+        } catch (error) {
+            log({
+                message: "Failed to load sync groups:",
+                type: "error",
+                error,
+                debug: this.config.debug,
+                suppress: this.config.suppress,
+            });
+        }
+    }
+
+    // Set up polling intervals for each sync group
+    private setupPolling(): void {
+        // Clear any existing poll timers
+        for (const [syncGroup, timer] of this.pollTimers.entries()) {
+            clearInterval(timer);
+            this.pollTimers.delete(syncGroup);
+        }
+
+        // Set up a new poll timer for each sync group
+        for (const [syncGroup, config] of this.syncGroups.entries()) {
+            const pollRate = config.client__poll__rate_ms;
+
+            log({
+                message: `Setting up polling for sync group ${syncGroup} at ${pollRate}ms intervals`,
+                debug: this.config.debug,
+                suppress: this.config.suppress,
+            });
+
+            const timer = setInterval(async () => {
+                if (
+                    !this.initialized ||
+                    !this.connectionManager.isClientConnected()
+                ) {
+                    return;
+                }
+
+                try {
+                    // Use the combined polling method
+                    const updates =
+                        await this.entityScriptManager.pollForUpdates();
+
+                    // Log significant changes
+                    if (
+                        updates.entities.added.length > 0 ||
+                        updates.entities.updated.length > 0 ||
+                        updates.entities.deleted.length > 0 ||
+                        updates.scripts.added.length > 0 ||
+                        updates.scripts.updated.length > 0 ||
+                        updates.scripts.deleted.length > 0
+                    ) {
+                        log({
+                            message: `Updates: ${updates.entities.added.length} entities added, ${updates.entities.updated.length} entities updated, ${updates.entities.deleted.length} entities deleted, ${updates.scripts.added.length} scripts added, ${updates.scripts.updated.length} scripts updated, ${updates.scripts.deleted.length} scripts deleted`,
+                            debug: this.config.debug,
+                            suppress: this.config.suppress,
+                        });
+                    }
+                } catch (error) {
+                    log({
+                        message: `Error polling for updates in sync group ${syncGroup}:`,
+                        type: "error",
+                        error,
+                        debug: this.config.debug,
+                        suppress: this.config.suppress,
+                    });
+                }
+            }, pollRate);
+
+            this.pollTimers.set(syncGroup, timer);
+        }
     }
 
     // Check if initialized
@@ -902,20 +1070,18 @@ export class VircadiaBabylonCore {
         return this.connectionManager;
     }
 
-    getEntityManager(): EntityManager {
-        return this.entityManager;
-    }
-
-    getScriptManager(): ScriptManager {
-        return this.scriptManager;
-    }
-
-    getAssetManager(): AssetManager {
-        return this.assetManager;
+    getEntityAndScriptManager(): EntityAndScriptManager {
+        return this.entityScriptManager;
     }
 
     // Clean up resources
     dispose(): void {
+        // Clear all polling timers
+        for (const [syncGroup, timer] of this.pollTimers.entries()) {
+            clearInterval(timer);
+            this.pollTimers.delete(syncGroup);
+        }
+
         if (this.connectionManager) {
             this.connectionManager.disconnect();
         }

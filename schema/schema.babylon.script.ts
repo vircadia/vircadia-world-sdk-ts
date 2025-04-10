@@ -9,12 +9,8 @@ export namespace Babylon {
     // Script hooks container
     export interface I_Hooks {
         // Script lifecycle hooks
-        onScriptInitialize?: (
-            entityData: Entity.I_Entity,
-            entityAssetsMetadata: Entity.Asset.T_AssetOmitData[],
-        ) => void;
+        onScriptInitialize?: (entityData: Entity.I_Entity) => void;
         onEntityUpdate?: (entityData: Entity.I_Entity) => void;
-        onAssetUpdate?: (assetMetadata: Entity.Asset.T_AssetOmitData) => void;
         onScriptUpdate?: (scriptData: Entity.Script.I_Script) => void;
         onScriptTeardown?: () => void;
 
