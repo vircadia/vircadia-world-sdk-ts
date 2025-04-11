@@ -59,7 +59,6 @@ export namespace Entity {
 
     export namespace Script {
         export enum E_ScriptType {
-            BABYLON_NODE = "BABYLON_NODE",
             BABYLON_BUN = "BABYLON_BUN",
             BABYLON_BROWSER = "BABYLON_BROWSER",
         }
@@ -88,11 +87,6 @@ export namespace Entity {
             script__platform: E_ScriptType[];
 
             // Compiled script fields
-            script__compiled__babylon_node__data: string;
-            script__compiled__babylon_node__status: E_CompilationStatus;
-            script__compiled__babylon_node__data_updated_at: string;
-            script__compiled__babylon_node__status_updated_at: string;
-
             script__compiled__babylon_bun__data: string;
             script__compiled__babylon_bun__status: E_CompilationStatus;
             script__compiled__babylon_bun__data_updated_at: string;
