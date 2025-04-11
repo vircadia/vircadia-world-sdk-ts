@@ -5,9 +5,9 @@ import babylonPackageJson from "@babylonjs/core/package.json";
 import vircadiaSdkTsPackageJson from "../../package.json";
 import { log } from "../general/log";
 import type { ISceneLoaderAsyncResult, Scene } from "@babylonjs/core";
-import * as tmp from "tmp";
 import { ImportMeshAsync } from "@babylonjs/core";
 import { registerBuiltInLoaders } from "@babylonjs/loaders/dynamic";
+import "@babylonjs/loaders/glTF";
 
 export interface VircadiaBabylonCoreConfig {
     // Connection settings
@@ -32,8 +32,6 @@ export namespace Utilities {
         scene: Scene;
     }): Promise<ISceneLoaderAsyncResult> {
         const { asset, scene } = data;
-
-        registerBuiltInLoaders();
 
         let meshData: ArrayBuffer | null = null;
 
@@ -84,45 +82,34 @@ export namespace Utilities {
             );
         }
 
-        switch (asset.asset__type?.toLowerCase()) {
-            case "glb": {
-                log({
-                    message: "Loading GLB asset",
-                });
+        const pluginExtension =
+            asset.asset__type?.toLowerCase() === "glb" ? ".glb" : ".gltf";
+        const mimeType =
+            asset.asset__type?.toLowerCase() === "glb"
+                ? "model/glb"
+                : "model/gltf-binary";
 
-                const file = new File(
-                    [meshData],
-                    asset.general__asset_file_name,
-                    {
-                        type: "model/glb",
-                    },
-                );
+        log({
+            message: `Loading ${asset.asset__type} asset`,
+            data: {
+                mimeType,
+                pluginExtension,
+            },
+        });
 
-                return await ImportMeshAsync(file, scene, {
-                    // pluginExtension: ".glb",
-                });
-            }
-            case "gltf": {
-                log({
-                    message: "Loading GLTF asset",
-                });
+        // Create a blob from the mesh data and generate a URL
+        const blob = new Blob([meshData], {
+            type: mimeType,
+        });
+        const blobUrl = URL.createObjectURL(blob);
 
-                const file = new File(
-                    [meshData],
-                    asset.general__asset_file_name,
-                    {
-                        type: "model/gltf",
-                    },
-                );
-
-                return await ImportMeshAsync(file, scene, {
-                    // pluginExtension: ".gltf",
-                });
-            }
-            default:
-                throw new Error(
-                    `Unsupported asset type: ${asset.asset__type} for asset: ${asset.general__asset_file_name}`,
-                );
+        try {
+            return await ImportMeshAsync(blobUrl, scene, {
+                pluginExtension,
+            });
+        } finally {
+            // Clean up the blob URL after loading
+            URL.revokeObjectURL(blobUrl);
         }
     }
 
@@ -134,15 +121,8 @@ export namespace Utilities {
         const { assetName, connectionManager, context } = data;
 
         // Environment detection
-        const isNode =
-            typeof process !== "undefined" &&
-            process.versions &&
-            process.versions.node;
-        const isBun =
-            typeof process !== "undefined" &&
-            process.versions &&
-            process.versions.bun;
         const isBrowser = typeof window !== "undefined";
+        const isBun = typeof process !== "undefined" && process.versions?.bun;
 
         try {
             // Try to get from local storage first
@@ -151,9 +131,9 @@ export namespace Utilities {
             if (isBrowser) {
                 // Browser - use IndexedDB
                 assetFromStorage = await getAssetFromIndexedDB(assetName);
-            } else if (isBun || isNode) {
-                // Both Bun and Node - use tmp package
-                assetFromStorage = await getAssetFromTmpCache(assetName);
+            } else if (isBun) {
+                // Bun - use file system
+                assetFromStorage = await getAssetFromFileSystem(assetName);
             }
 
             // If found in local storage and not expired, return it
@@ -179,11 +159,11 @@ export namespace Utilities {
                 if (assetQuery?.result && assetQuery.result.length > 0) {
                     const asset = assetQuery.result[0];
 
-                    // Store in appropriate local storage for future use
+                    // Store in appropriate storage
                     if (isBrowser) {
                         await storeAssetInIndexedDB(asset);
-                    } else if (isBun || isNode) {
-                        await storeAssetInTmpCache(asset);
+                    } else if (isBun) {
+                        await storeAssetInFileSystem(asset);
                     }
 
                     log({
@@ -214,7 +194,7 @@ export namespace Utilities {
         }
     }
 
-    // Helper functions for different storage mechanisms
+    // Helper functions for browser storage
     async function getAssetFromIndexedDB(
         assetName: string,
     ): Promise<Entity.Asset.I_Asset | null> {
@@ -318,36 +298,31 @@ export namespace Utilities {
         }
     }
 
-    // New unified function for tmp-based caching for both Node and Bun
-    async function getAssetFromTmpCache(
+    // Helper functions for Bun file system storage
+    async function getAssetFromFileSystem(
         assetName: string,
     ): Promise<Entity.Asset.I_Asset | null> {
         try {
+            if (typeof process === "undefined" || !process.versions?.bun) {
+                return null;
+            }
+
+            const cacheDir = ".vircadia-cache";
             const fs = await import("node:fs/promises");
             const path = await import("node:path");
 
-            // Setup tmp directory if not already done (first time)
-            tmp.setGracefulCleanup(); // Ensure cleanup on process exit
-
-            // Create or get the cache directory
-            const cacheDir = path.join(tmp.tmpdir, ".vircadia-cache");
-
             try {
                 await fs.access(cacheDir);
-            } catch (err) {
+            } catch {
                 await fs.mkdir(cacheDir, { recursive: true });
             }
 
-            const assetPath = path.join(cacheDir, assetName);
+            const assetPath = path.join(cacheDir, `${assetName}.json`);
 
             try {
-                // Check if file exists
-                await fs.access(assetPath);
-
-                // Read file
-                const assetData = await fs.readFile(assetPath, "utf-8");
-                return JSON.parse(assetData);
-            } catch (err) {
+                const data = await fs.readFile(assetPath, "utf-8");
+                return JSON.parse(data);
+            } catch {
                 return null;
             }
         } catch (error) {
@@ -355,28 +330,27 @@ export namespace Utilities {
         }
     }
 
-    async function storeAssetInTmpCache(
+    async function storeAssetInFileSystem(
         asset: Entity.Asset.I_Asset,
     ): Promise<void> {
         try {
+            if (typeof process === "undefined" || !process.versions?.bun) {
+                return;
+            }
+
+            const cacheDir = ".vircadia-cache";
             const fs = await import("node:fs/promises");
             const path = await import("node:path");
 
-            // Setup tmp directory
-            tmp.setGracefulCleanup(); // Ensure cleanup on process exit
-
-            // Create or get the cache directory
-            const cacheDir = path.join(tmp.tmpdir, ".vircadia-cache");
-
             try {
                 await fs.access(cacheDir);
-            } catch (err) {
+            } catch {
                 await fs.mkdir(cacheDir, { recursive: true });
             }
 
             const assetPath = path.join(
                 cacheDir,
-                asset.general__asset_file_name,
+                `${asset.general__asset_file_name}.json`,
             );
             await fs.writeFile(assetPath, JSON.stringify(asset), "utf-8");
         } catch (error) {
@@ -715,23 +689,14 @@ class EntityAndScriptManager {
         ) {
             this.currentPlatform = Entity.Script.E_ScriptType.BABYLON_BUN;
         }
-        // Check for Node environment
-        else if (
-            typeof process !== "undefined" &&
-            process.versions &&
-            process.versions.node
-        ) {
-            this.currentPlatform = Entity.Script.E_ScriptType.BABYLON_NODE;
-        }
         // Check for Browser environment
-        else if (
-            typeof window !== "undefined" &&
-            typeof window.Bun !== "undefined"
-        ) {
+        else if (typeof window !== "undefined") {
             this.currentPlatform = Entity.Script.E_ScriptType.BABYLON_BROWSER;
         } else {
             throw new Error("Unsupported platform");
         }
+
+        registerBuiltInLoaders();
     }
 
     getCurrentPlatform(): Entity.Script.E_ScriptType {
@@ -841,15 +806,12 @@ class EntityAndScriptManager {
             try {
                 const funcBody: string | null =
                     this.currentPlatform ===
-                    Entity.Script.E_ScriptType.BABYLON_NODE
-                        ? script.script__compiled__babylon_node__data
+                    Entity.Script.E_ScriptType.BABYLON_BROWSER
+                        ? script.script__compiled__babylon_browser__data
                         : this.currentPlatform ===
-                            Entity.Script.E_ScriptType.BABYLON_BROWSER
-                          ? script.script__compiled__babylon_browser__data
-                          : this.currentPlatform ===
-                              Entity.Script.E_ScriptType.BABYLON_BUN
-                            ? script.script__compiled__babylon_bun__data
-                            : null;
+                            Entity.Script.E_ScriptType.BABYLON_BUN
+                          ? script.script__compiled__babylon_bun__data
+                          : null;
 
                 if (!funcBody) {
                     throw new Error(
@@ -1332,6 +1294,9 @@ export class VircadiaBabylonCore {
         new Map();
 
     constructor(private config: VircadiaBabylonCoreConfig) {
+        // Register Babylon.js loaders first
+        registerBuiltInLoaders();
+
         // Create components in the correct order to resolve dependencies
         this.connectionManager = new ConnectionManager(config);
 
