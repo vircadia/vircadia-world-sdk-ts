@@ -9,12 +9,14 @@
         "jsonwebtoken": "^9.0.2",
         "mobx": "latest",
         "postgres": "latest",
+        "tmp": "^0.2.3",
         "typescript": "latest",
         "zod": "latest"
     },
     "devDependencies": {
         "@types/jsonwebtoken": "latest",
         "@types/node": "^22.13.10",
+        "@types/tmp": "^0.2.6",
         "bun-types": "latest"
     },
     "scripts": {

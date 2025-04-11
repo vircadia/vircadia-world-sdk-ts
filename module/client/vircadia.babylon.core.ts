@@ -4,12 +4,10 @@ import type { Babylon } from "../../schema/schema.babylon.script";
 import babylonPackageJson from "@babylonjs/core/package.json";
 import vircadiaSdkTsPackageJson from "../../package.json";
 import { log } from "../general/log";
-import type { Scene } from "@babylonjs/core";
-
-// Error interface with originalMessage property
-interface ErrorWithOriginalMessage extends Error {
-    originalMessage: Communication.WebSocket.Message;
-}
+import type { ISceneLoaderAsyncResult, Scene } from "@babylonjs/core";
+import * as tmp from "tmp";
+import { ImportMeshAsync } from "@babylonjs/core";
+import { registerBuiltInLoaders } from "@babylonjs/loaders/dynamic";
 
 export interface VircadiaBabylonCoreConfig {
     // Connection settings
@@ -26,6 +24,365 @@ export interface VircadiaBabylonCoreConfig {
     // Debug settings
     debug?: boolean;
     suppress?: boolean;
+}
+
+export namespace Utilities {
+    export async function loadGLTFAssetAsMesh(data: {
+        asset: Entity.Asset.I_Asset;
+        scene: Scene;
+    }): Promise<ISceneLoaderAsyncResult> {
+        const { asset, scene } = data;
+
+        registerBuiltInLoaders();
+
+        let meshData: ArrayBuffer | null = null;
+
+        // Check if asset data is available and properly format it
+        if (asset.asset__data__bytea) {
+            try {
+                // We know the data is an object with a data property that's an array
+                const bytea = asset.asset__data__bytea as unknown as {
+                    data: number[];
+                };
+
+                if (!bytea.data || !Array.isArray(bytea.data)) {
+                    throw new Error(
+                        "Asset data is not in the expected format (object with data array)",
+                    );
+                }
+
+                meshData = new Uint8Array(bytea.data).buffer;
+
+                if (!meshData) {
+                    throw new Error(
+                        "Failed to convert asset data to ArrayBuffer",
+                    );
+                }
+            } catch (err) {
+                console.error(
+                    "Failed to process asset data:",
+                    err,
+                    "asset__data__bytea type:",
+                    typeof asset.asset__data__bytea,
+                    "isArray:",
+                    Array.isArray(asset.asset__data__bytea),
+                );
+                throw new Error(
+                    `Cannot convert asset data to usable format: ${asset.general__asset_file_name}`,
+                );
+            }
+        } else {
+            throw new Error(
+                `Binary data not available for asset: ${asset.general__asset_file_name}`,
+            );
+        }
+
+        // Load the mesh from memory using file URL
+        if (!meshData) {
+            throw new Error(
+                `Failed to process binary data for asset: ${asset.general__asset_file_name}`,
+            );
+        }
+
+        switch (asset.asset__type?.toLowerCase()) {
+            case "glb": {
+                log({
+                    message: "Loading GLB asset",
+                });
+
+                const file = new File(
+                    [meshData],
+                    asset.general__asset_file_name,
+                    {
+                        type: "model/glb",
+                    },
+                );
+
+                return await ImportMeshAsync(file, scene, {
+                    // pluginExtension: ".glb",
+                });
+            }
+            case "gltf": {
+                log({
+                    message: "Loading GLTF asset",
+                });
+
+                const file = new File(
+                    [meshData],
+                    asset.general__asset_file_name,
+                    {
+                        type: "model/gltf",
+                    },
+                );
+
+                return await ImportMeshAsync(file, scene, {
+                    // pluginExtension: ".gltf",
+                });
+            }
+            default:
+                throw new Error(
+                    `Unsupported asset type: ${asset.asset__type} for asset: ${asset.general__asset_file_name}`,
+                );
+        }
+    }
+
+    export async function getAsset(data: {
+        assetName: string;
+        connectionManager?: ConnectionManager;
+        context?: Babylon.I_Context;
+    }): Promise<Entity.Asset.I_Asset> {
+        const { assetName, connectionManager, context } = data;
+
+        // Environment detection
+        const isNode =
+            typeof process !== "undefined" &&
+            process.versions &&
+            process.versions.node;
+        const isBun =
+            typeof process !== "undefined" &&
+            process.versions &&
+            process.versions.bun;
+        const isBrowser = typeof window !== "undefined";
+
+        try {
+            // Try to get from local storage first
+            let assetFromStorage: Entity.Asset.I_Asset | null = null;
+
+            if (isBrowser) {
+                // Browser - use IndexedDB
+                assetFromStorage = await getAssetFromIndexedDB(assetName);
+            } else if (isBun || isNode) {
+                // Both Bun and Node - use tmp package
+                assetFromStorage = await getAssetFromTmpCache(assetName);
+            }
+
+            // If found in local storage and not expired, return it
+            if (assetFromStorage) {
+                log({
+                    message: `Asset ${assetName} retrieved from local storage`,
+                    debug: context?.Vircadia.Debug,
+                    suppress: context?.Vircadia.Suppress,
+                });
+
+                return assetFromStorage;
+            }
+
+            // If we have a connection manager, try to fetch from server
+            if (connectionManager) {
+                const assetQuery = await connectionManager.sendQueryAsync<
+                    Entity.Asset.I_Asset[]
+                >({
+                    query: "SELECT * FROM entity.entity_assets WHERE general__asset_file_name = $1",
+                    parameters: [assetName],
+                });
+
+                if (assetQuery?.result && assetQuery.result.length > 0) {
+                    const asset = assetQuery.result[0];
+
+                    // Store in appropriate local storage for future use
+                    if (isBrowser) {
+                        await storeAssetInIndexedDB(asset);
+                    } else if (isBun || isNode) {
+                        await storeAssetInTmpCache(asset);
+                    }
+
+                    log({
+                        message: `Asset ${assetName} fetched from server and stored locally`,
+                        debug: context?.Vircadia.Debug,
+                        suppress: context?.Vircadia.Suppress,
+                    });
+
+                    return asset;
+                }
+
+                throw new Error(`Asset ${assetName} not found on server`);
+            }
+
+            throw new Error(
+                `ConnectionManager required to fetch asset ${assetName} from server`,
+            );
+        } catch (error) {
+            log({
+                message: `Error retrieving asset ${assetName}:`,
+                type: "error",
+                error,
+                debug: context?.Vircadia.Debug,
+                suppress: context?.Vircadia.Suppress,
+            });
+
+            throw error;
+        }
+    }
+
+    // Helper functions for different storage mechanisms
+    async function getAssetFromIndexedDB(
+        assetName: string,
+    ): Promise<Entity.Asset.I_Asset | null> {
+        try {
+            return new Promise((resolve, reject) => {
+                if (!window.indexedDB) {
+                    resolve(null);
+                    return;
+                }
+
+                const request = window.indexedDB.open("VircadiaAssetStore", 1);
+
+                request.onupgradeneeded = (event) => {
+                    const db = (event.target as IDBOpenDBRequest).result;
+                    if (!db.objectStoreNames.contains("assets")) {
+                        db.createObjectStore("assets", {
+                            keyPath: "general__asset_file_name",
+                        });
+                    }
+                };
+
+                request.onsuccess = (event) => {
+                    const db = (event.target as IDBOpenDBRequest).result;
+                    const transaction = db.transaction(["assets"], "readonly");
+                    const store = transaction.objectStore("assets");
+                    const getRequest = store.get(assetName);
+
+                    getRequest.onsuccess = () => {
+                        if (getRequest.result) {
+                            resolve(getRequest.result);
+                        } else {
+                            resolve(null);
+                        }
+                    };
+
+                    getRequest.onerror = () => {
+                        resolve(null);
+                    };
+
+                    transaction.oncomplete = () => {
+                        db.close();
+                    };
+                };
+
+                request.onerror = () => {
+                    resolve(null);
+                };
+            });
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async function storeAssetInIndexedDB(
+        asset: Entity.Asset.I_Asset,
+    ): Promise<void> {
+        try {
+            return new Promise((resolve, reject) => {
+                if (!window.indexedDB) {
+                    resolve();
+                    return;
+                }
+
+                const request = window.indexedDB.open("VircadiaAssetStore", 1);
+
+                request.onupgradeneeded = (event) => {
+                    const db = (event.target as IDBOpenDBRequest).result;
+                    if (!db.objectStoreNames.contains("assets")) {
+                        db.createObjectStore("assets", {
+                            keyPath: "general__asset_file_name",
+                        });
+                    }
+                };
+
+                request.onsuccess = (event) => {
+                    const db = (event.target as IDBOpenDBRequest).result;
+                    const transaction = db.transaction(["assets"], "readwrite");
+                    const store = transaction.objectStore("assets");
+
+                    const putRequest = store.put(asset);
+
+                    putRequest.onsuccess = () => {
+                        resolve();
+                    };
+
+                    putRequest.onerror = () => {
+                        resolve(); // Still resolve to prevent blocking
+                    };
+
+                    transaction.oncomplete = () => {
+                        db.close();
+                    };
+                };
+
+                request.onerror = () => {
+                    resolve(); // Still resolve to prevent blocking
+                };
+            });
+        } catch (error) {
+            // Silently fail to prevent blocking the main flow
+        }
+    }
+
+    // New unified function for tmp-based caching for both Node and Bun
+    async function getAssetFromTmpCache(
+        assetName: string,
+    ): Promise<Entity.Asset.I_Asset | null> {
+        try {
+            const fs = await import("node:fs/promises");
+            const path = await import("node:path");
+
+            // Setup tmp directory if not already done (first time)
+            tmp.setGracefulCleanup(); // Ensure cleanup on process exit
+
+            // Create or get the cache directory
+            const cacheDir = path.join(tmp.tmpdir, ".vircadia-cache");
+
+            try {
+                await fs.access(cacheDir);
+            } catch (err) {
+                await fs.mkdir(cacheDir, { recursive: true });
+            }
+
+            const assetPath = path.join(cacheDir, assetName);
+
+            try {
+                // Check if file exists
+                await fs.access(assetPath);
+
+                // Read file
+                const assetData = await fs.readFile(assetPath, "utf-8");
+                return JSON.parse(assetData);
+            } catch (err) {
+                return null;
+            }
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async function storeAssetInTmpCache(
+        asset: Entity.Asset.I_Asset,
+    ): Promise<void> {
+        try {
+            const fs = await import("node:fs/promises");
+            const path = await import("node:path");
+
+            // Setup tmp directory
+            tmp.setGracefulCleanup(); // Ensure cleanup on process exit
+
+            // Create or get the cache directory
+            const cacheDir = path.join(tmp.tmpdir, ".vircadia-cache");
+
+            try {
+                await fs.access(cacheDir);
+            } catch (err) {
+                await fs.mkdir(cacheDir, { recursive: true });
+            }
+
+            const assetPath = path.join(
+                cacheDir,
+                asset.general__asset_file_name,
+            );
+            await fs.writeFile(assetPath, JSON.stringify(asset), "utf-8");
+        } catch (error) {
+            // Silently fail to prevent blocking the main flow
+        }
+    }
 }
 
 // Script Helper Functions - Vue-inspired Composition API
@@ -162,19 +519,19 @@ class ConnectionManager {
     }
 
     // Send a query to the server and wait for response
-    async sendQueryAsync<T = unknown>(
-        query: string,
-        parameters: unknown[] = [],
-        timeoutMs = 10000,
-    ): Promise<Communication.WebSocket.QueryResponseMessage<T>> {
+    async sendQueryAsync<T = unknown>(data: {
+        query: string;
+        parameters?: unknown[];
+        timeoutMs?: number;
+    }): Promise<Communication.WebSocket.QueryResponseMessage<T>> {
         if (!this.isClientConnected()) {
             throw new Error("Not connected to server");
         }
 
         const requestId = crypto.randomUUID();
         const message = new Communication.WebSocket.QueryRequestMessage({
-            query,
-            parameters,
+            query: data.query,
+            parameters: data.parameters,
             requestId,
             errorMessage: null,
         });
@@ -184,7 +541,7 @@ class ConnectionManager {
                 const timeout = setTimeout(() => {
                     this.pendingRequests.delete(requestId);
                     reject(new Error("Request timeout"));
-                }, timeoutMs);
+                }, data.timeoutMs ?? 10000);
 
                 this.pendingRequests.set(requestId, {
                     resolve: resolve as (value: unknown) => void,
@@ -388,10 +745,10 @@ class EntityAndScriptManager {
         // First check if any variants of this script exist
         const allVariantsResponse = await this.connectionManager.sendQueryAsync<
             Entity.Script.I_Script[]
-        >(
-            "SELECT DISTINCT script__platform FROM entity.entity_scripts WHERE general__script_file_name = $1",
-            [scriptName],
-        );
+        >({
+            query: "SELECT DISTINCT script__platform FROM entity.entity_scripts WHERE general__script_file_name = $1",
+            parameters: [scriptName],
+        });
 
         if (!allVariantsResponse.result.length) {
             throw new Error(`Script ${scriptName} not found in any platform`);
@@ -400,10 +757,10 @@ class EntityAndScriptManager {
         // Then try to get the specific platform version
         const queryResponse = await this.connectionManager.sendQueryAsync<
             Entity.Script.I_Script[]
-        >(
-            "SELECT * FROM entity.entity_scripts WHERE general__script_file_name = $1 AND $2 = ANY(script__platform)",
-            [scriptName, this.currentPlatform],
-        );
+        >({
+            query: "SELECT * FROM entity.entity_scripts WHERE general__script_file_name = $1 AND $2 = ANY(script__platform)",
+            parameters: [scriptName, this.currentPlatform],
+        });
 
         if (!queryResponse.result.length) {
             const availablePlatforms = allVariantsResponse.result
@@ -436,19 +793,41 @@ class EntityAndScriptManager {
                     Debug: this.config.debug ?? false,
                     Suppress: this.config.suppress ?? false,
 
-                    // Core APIs with flat structure
-                    Query: {
-                        execute: this.connectionManager.sendQueryAsync.bind(
-                            this.connectionManager,
-                        ),
-                    },
-
                     // Script management
                     Script: {
                         reload: async () => {
                             await this.reloadScript(
                                 script.general__script_file_name,
                             );
+                        },
+                    },
+
+                    // Utilities for scripts
+                    Utilities: {
+                        Asset: {
+                            getAsset: async (data: {
+                                assetName: string;
+                            }) => {
+                                return Utilities.getAsset({
+                                    assetName: data.assetName,
+                                    connectionManager: this.connectionManager,
+                                    context,
+                                });
+                            },
+                            loadGLTFAssetAsMesh: async (data: {
+                                asset: Entity.Asset.I_Asset;
+                                scene: Scene;
+                            }) => {
+                                return Utilities.loadGLTFAssetAsMesh({
+                                    asset: data.asset,
+                                    scene: data.scene,
+                                });
+                            },
+                        },
+                        Query: {
+                            execute: this.connectionManager.sendQueryAsync.bind(
+                                this.connectionManager,
+                            ),
                         },
                     },
                 },
@@ -460,20 +839,23 @@ class EntityAndScriptManager {
 
             // Execute script with enhanced support for the script definition utility
             try {
-                const funcBody =
+                const funcBody: string | null =
                     this.currentPlatform ===
                     Entity.Script.E_ScriptType.BABYLON_NODE
-                        ? script.script__compiled__babylon_node__data ||
-                          script.script__source__data
+                        ? script.script__compiled__babylon_node__data
                         : this.currentPlatform ===
                             Entity.Script.E_ScriptType.BABYLON_BROWSER
-                          ? script.script__compiled__babylon_browser__data ||
-                            script.script__source__data
+                          ? script.script__compiled__babylon_browser__data
                           : this.currentPlatform ===
                               Entity.Script.E_ScriptType.BABYLON_BUN
-                            ? script.script__compiled__babylon_bun__data ||
-                              script.script__source__data
-                            : script.script__source__data;
+                            ? script.script__compiled__babylon_bun__data
+                            : null;
+
+                if (!funcBody) {
+                    throw new Error(
+                        `Script ${script.general__script_file_name} not compiled for platform ${this.currentPlatform}`,
+                    );
+                }
 
                 // Store script name outside the function scope
                 const scriptName = script.general__script_file_name;
@@ -605,13 +987,15 @@ class EntityAndScriptManager {
         try {
             const queryResponse = await this.connectionManager.sendQueryAsync<
                 Entity.I_Entity[]
-            >(`
+            >({
+                query: `
                 SELECT *
                 FROM entity.entities
                 ORDER BY 
                     COALESCE(group__load_priority, 2147483647),
                     general__created_at ASC
-            `);
+            `,
+            });
 
             // Update last timestamp to now, as we have the latest entities
             this.lastEntityUpdateTimestamp = new Date();
@@ -664,10 +1048,13 @@ class EntityAndScriptManager {
                                 Entity.Script.I_Script,
                                 "general__script_file_name"
                             >[]
-                        >(
-                            "SELECT DISTINCT general__script_file_name FROM entity.entity_scripts WHERE general__script_file_name = ANY($1) AND $2 = ANY(script__platform)",
-                            [entity.script__names, this.currentPlatform],
-                        );
+                        >({
+                            query: "SELECT DISTINCT general__script_file_name FROM entity.entity_scripts WHERE general__script_file_name = ANY($1) AND $2 = ANY(script__platform)",
+                            parameters: [
+                                entity.script__names,
+                                this.currentPlatform,
+                            ],
+                        });
 
                     // Only process scripts that are available for our platform
                     for (const {
@@ -751,16 +1138,16 @@ class EntityAndScriptManager {
             // Get updated and new entities and scripts in parallel queries
             const [updatedEntitiesResponse, allScriptsResponse] =
                 await Promise.all([
-                    this.connectionManager.sendQueryAsync<Entity.I_Entity[]>(
-                        "SELECT * FROM entity.entities WHERE general__updated_at > $1 ORDER BY general__created_at ASC",
-                        [timestamp],
-                    ),
+                    this.connectionManager.sendQueryAsync<Entity.I_Entity[]>({
+                        query: "SELECT * FROM entity.entities WHERE general__updated_at > $1 ORDER BY general__created_at ASC",
+                        parameters: [timestamp],
+                    }),
                     this.connectionManager.sendQueryAsync<
                         Entity.Script.I_Script[]
-                    >(
-                        "SELECT * FROM entity.entity_scripts WHERE $1 = ANY(script__platform)",
-                        [this.currentPlatform],
-                    ),
+                    >({
+                        query: "SELECT * FROM entity.entity_scripts WHERE $1 = ANY(script__platform)",
+                        parameters: [this.currentPlatform],
+                    }),
                 ]);
 
             // Update timestamp for next poll
@@ -787,10 +1174,10 @@ class EntityAndScriptManager {
                 const deletedEntitiesResponse =
                     await this.connectionManager.sendQueryAsync<
                         { general__entity_id: string }[]
-                    >(
-                        "SELECT general__entity_id FROM UNNEST($1::uuid[]) AS general__entity_id WHERE general__entity_id NOT IN (SELECT general__entity_id FROM entity.entities)",
-                        [currentEntityIds],
-                    );
+                    >({
+                        query: "SELECT general__entity_id FROM UNNEST($1::uuid[]) AS general__entity_id WHERE general__entity_id NOT IN (SELECT general__entity_id FROM entity.entities)",
+                        parameters: [currentEntityIds],
+                    });
                 deletedEntityIds = deletedEntitiesResponse.result.map(
                     (e) => e.general__entity_id,
                 );
@@ -969,7 +1356,7 @@ export class VircadiaBabylonCore {
         // Load sync groups configuration
         await this.loadSyncGroups();
 
-        // Set up polling for entity updates
+        // Set up polling for entity and script updates
         this.setupPolling();
 
         this.initialized = true;
@@ -984,10 +1371,12 @@ export class VircadiaBabylonCore {
                         general__sync_group: string;
                         client__poll__rate_ms: number;
                     }[]
-                >(`
-                SELECT general__sync_group, client__poll__rate_ms
-                FROM auth.sync_groups
-            `);
+                >({
+                    query: `
+                        SELECT general__sync_group, client__poll__rate_ms
+                        FROM auth.sync_groups
+                    `,
+                });
 
             for (const group of syncGroupsResponse.result) {
                 this.syncGroups.set(group.general__sync_group, {

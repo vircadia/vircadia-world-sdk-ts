@@ -1,4 +1,4 @@
-import type { Scene } from "@babylonjs/core";
+import type { ISceneLoaderAsyncResult, Scene } from "@babylonjs/core";
 import babylonPackageJson from "@babylonjs/core/package.json";
 import type { Communication, Entity } from "./schema.general";
 
@@ -28,17 +28,30 @@ export namespace Babylon {
             // Top-level version identifier
             Version: string;
 
-            // Core APIs with flat structure
-            Query: {
-                execute<T = unknown>(
-                    query: string,
-                    parameters?: unknown[],
-                ): Promise<Communication.WebSocket.QueryResponseMessage<T>>;
-            };
-
             // Script management
             Script: {
                 reload: () => Promise<void>;
+            };
+
+            // Utilities for asset and resource management
+            Utilities: {
+                Asset: {
+                    getAsset: (data: {
+                        assetName: string;
+                    }) => Promise<Entity.Asset.I_Asset>;
+                    loadGLTFAssetAsMesh: (data: {
+                        asset: Entity.Asset.I_Asset;
+                        scene: Scene;
+                    }) => Promise<ISceneLoaderAsyncResult>;
+                };
+                Query: {
+                    execute: (data: {
+                        query: string;
+                        parameters?: unknown[];
+                    }) => Promise<
+                        Communication.WebSocket.QueryResponseMessage<unknown>
+                    >;
+                };
             };
         };
         Babylon: {
