@@ -5,6 +5,7 @@
     "dependencies": {
         "@babylonjs/core": "8.2.0",
         "@babylonjs/loaders": "8.2.0",
+        "@babylonjs/inspector": "8.2.0",
         "console-log-colors": "latest",
         "eight-colors": "latest",
         "jsonwebtoken": "^9.0.2",
