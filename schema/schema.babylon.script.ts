@@ -36,16 +36,28 @@ export namespace Babylon {
             // Utilities for asset and resource management
             Utilities: {
                 Asset: {
-                    getAsset: (data: {
-                        assetName: string;
-                    }) => Promise<{
-                        asset: Entity.Asset.I_Asset;
-                        status: "downloading" | "downloaded";
-                    }>;
                     loadGLTFAssetAsMesh: (data: {
                         asset: Entity.Asset.I_Asset;
                         scene: Scene;
                     }) => Promise<ISceneLoaderAsyncResult>;
+                    getAssetFromServer: (data: {
+                        assetName: string;
+                    }) => Promise<Entity.Asset.I_Asset | null>;
+                    getAssetHashFromServer: (data: {
+                        assetName: string;
+                    }) => Promise<string | null>;
+                    storeAssetInIndexedDB: (data: {
+                        asset: Entity.Asset.I_Asset;
+                    }) => Promise<boolean>;
+                    getAssetFromIndexedDB: (data: {
+                        assetName: string;
+                    }) => Promise<Entity.Asset.I_Asset | null>;
+                    storeAssetInFileSystem: (data: {
+                        asset: Entity.Asset.I_Asset;
+                    }) => Promise<boolean>;
+                    getAssetFromFileSystem: (data: {
+                        assetName: string;
+                    }) => Promise<Entity.Asset.I_Asset | null>;
                 };
                 Query: {
                     execute: (data: {

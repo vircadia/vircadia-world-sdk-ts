@@ -239,40 +239,16 @@ export namespace Utilities {
         }
     }
 
-    export async function getAsset(data: {
+    // New methods to split retrieval into smaller steps
+    export async function getAssetFromServer(data: {
         assetName: string;
-        connectionManager?: ConnectionManager;
+        connectionManager: ConnectionManager;
         context?: Babylon.I_Context;
-    }): Promise<{
-        asset: Entity.Asset.I_Asset;
-        status: "downloading" | "downloaded";
-    }> {
+    }): Promise<Entity.Asset.I_Asset | null> {
         const { assetName, connectionManager, context } = data;
 
-        // Environment detection
-        const isBrowser = typeof window !== "undefined";
-        const isBun = typeof process !== "undefined" && process.versions?.bun;
-
-        // Check if this asset is actively downloading
-        if (activeDownloads.has(assetName)) {
-            const downloadPromise = activeDownloads.get(assetName);
-            if (downloadPromise) {
-                const result = await downloadPromise;
-                return {
-                    ...result,
-                    status: "downloading",
-                };
-            }
-        }
-
         try {
-            if (!connectionManager) {
-                throw new Error(
-                    `ConnectionManager required to fetch asset ${assetName} from server`,
-                );
-            }
-
-            // First try to get the asset details from server
+            // Get the asset details from server
             const assetQuery = await connectionManager.sendQueryAsync<
                 Entity.Asset.I_Asset[]
             >({
@@ -288,139 +264,124 @@ export namespace Utilities {
                     debug: context?.Vircadia.Debug,
                     suppress: context?.Vircadia.Suppress,
                 });
-                throw new Error(`Asset ${assetName} not found on server`);
+                return null;
             }
 
-            const asset = assetQuery.result[0];
-
-            // Log asset properties for debugging
-            log({
-                message: `Found asset ${assetName}`,
-                data: {
-                    name: asset.general__asset_file_name,
-                    type: asset.asset__type,
-                    hasData:
-                        !!asset.asset__data__bytea ||
-                        !!asset.asset__data__base64,
-                },
-                debug: context?.Vircadia.Debug,
-                suppress: context?.Vircadia.Suppress,
-            });
-
-            // Check local storage first before starting any download
-            let localAsset: Entity.Asset.I_Asset | null = null;
-
-            if (isBrowser) {
-                localAsset = await getAssetFromIndexedDB(
-                    asset.general__asset_file_name,
-                );
-            } else if (isBun) {
-                localAsset = await getAssetFromFileSystem(
-                    asset.general__asset_file_name,
-                );
-            }
-
-            // If we have a valid asset from local storage, return it immediately
-            if (localAsset?.asset__data__bytea) {
-                // Now get hash to verify the asset is current
-                const hashQuery = await connectionManager.sendQueryAsync<
-                    [{ current_hash: string }]
-                >({
-                    query: "SELECT encode(digest(asset__data__bytea, 'sha256'), 'hex') as current_hash FROM entity.entity_assets WHERE general__asset_file_name = $1",
-                    parameters: [asset.general__asset_file_name],
-                    timeoutMs: 15000, // Increase timeout
-                });
-
-                const serverHash = hashQuery?.result?.[0]?.current_hash;
-
-                if (serverHash && localAsset.asset__data_hash === serverHash) {
-                    return {
-                        asset: localAsset,
-                        status: "downloaded",
-                    };
-                }
-            }
-
-            // If we reach here, we need to download - create download promise
-            const downloadPromise = (async (): Promise<{
-                asset: Entity.Asset.I_Asset;
-                status: "downloading" | "downloaded";
-            }> => {
-                try {
-                    // Get the hash for this specific asset
-                    const hashQuery = await connectionManager.sendQueryAsync<
-                        [{ current_hash: string }]
-                    >({
-                        query: "SELECT encode(digest(asset__data__bytea, 'sha256'), 'hex') as current_hash FROM entity.entity_assets WHERE general__asset_file_name = $1",
-                        parameters: [asset.general__asset_file_name],
-                        timeoutMs: 15000, // Increase timeout
-                    });
-
-                    if (!hashQuery?.result?.[0]) {
-                        throw new Error(
-                            `Could not calculate hash for asset ${assetName}`,
-                        );
-                    }
-
-                    const serverHash = hashQuery.result[0].current_hash;
-
-                    // Store the server hash with the asset
-                    asset.asset__data_hash = serverHash;
-
-                    // Store in appropriate storage
-                    if (isBrowser) {
-                        await storeAssetInIndexedDB(asset);
-                    } else if (isBun) {
-                        await storeAssetInFileSystem(asset);
-                    }
-
-                    log({
-                        message: `Asset ${assetName} fetched from server and stored locally`,
-                        data: {
-                            assetName: asset.general__asset_file_name,
-                            hash: serverHash,
-                        },
-                        debug: context?.Vircadia.Debug,
-                        suppress: context?.Vircadia.Suppress,
-                    });
-
-                    return {
-                        asset,
-                        status: "downloaded",
-                    };
-                } finally {
-                    // Remove from active downloads once complete
-                    activeDownloads.delete(assetName);
-                }
-            })();
-
-            // Register this as an active download
-            activeDownloads.set(assetName, downloadPromise);
-
-            // Return with downloading status
-            return {
-                ...(await downloadPromise),
-                status: "downloading",
-            };
+            return assetQuery.result[0];
         } catch (error) {
-            // Clean up in case of error
-            activeDownloads.delete(assetName);
-
             log({
-                message: `Error retrieving asset ${assetName}:`,
+                message: `Error retrieving asset details from server for ${assetName}:`,
                 type: "error",
                 error,
                 debug: context?.Vircadia.Debug,
                 suppress: context?.Vircadia.Suppress,
             });
-
-            throw error;
+            return null;
         }
     }
 
-    // Helper functions for browser storage
-    async function getAssetFromIndexedDB(
+    export async function getAssetHashFromServer(data: {
+        assetName: string;
+        connectionManager: ConnectionManager;
+        context?: Babylon.I_Context;
+    }): Promise<string | null> {
+        const { assetName, connectionManager, context } = data;
+
+        try {
+            // Get hash for the asset
+            const hashQuery = await connectionManager.sendQueryAsync<
+                [{ current_hash: string }]
+            >({
+                query: "SELECT encode(digest(asset__data__bytea, 'sha256'), 'hex') as current_hash FROM entity.entity_assets WHERE general__asset_file_name = $1",
+                parameters: [assetName],
+                timeoutMs: 15000, // Increase timeout
+            });
+
+            if (!hashQuery?.result?.[0]) {
+                log({
+                    message: `Could not calculate hash for asset ${assetName}`,
+                    type: "error",
+                    debug: context?.Vircadia.Debug,
+                    suppress: context?.Vircadia.Suppress,
+                });
+                return null;
+            }
+
+            return hashQuery.result[0].current_hash;
+        } catch (error) {
+            log({
+                message: `Error retrieving asset hash from server: ${assetName}`,
+                type: "error",
+                error,
+                debug: context?.Vircadia.Debug,
+                suppress: context?.Vircadia.Suppress,
+            });
+            return null;
+        }
+    }
+
+    // Expose browser-specific IndexedDB functions
+    export async function storeAssetInIndexedDB(
+        asset: Entity.Asset.I_Asset,
+        context?: Babylon.I_Context,
+    ): Promise<boolean> {
+        try {
+            return new Promise((resolve, reject) => {
+                if (!window.indexedDB) {
+                    resolve(false);
+                    return;
+                }
+
+                const request = window.indexedDB.open("VircadiaAssetStore", 1);
+
+                request.onupgradeneeded = (event) => {
+                    const db = (event.target as IDBOpenDBRequest).result;
+                    if (!db.objectStoreNames.contains("assets")) {
+                        db.createObjectStore("assets", {
+                            keyPath: "general__asset_file_name",
+                        });
+                    }
+                };
+
+                request.onsuccess = (event) => {
+                    const db = (event.target as IDBOpenDBRequest).result;
+                    const transaction = db.transaction(["assets"], "readwrite");
+                    const store = transaction.objectStore("assets");
+
+                    const putRequest = store.put(asset);
+
+                    putRequest.onsuccess = () => {
+                        resolve(true);
+                    };
+
+                    putRequest.onerror = () => {
+                        resolve(false); // Still resolve to prevent blocking
+                    };
+
+                    transaction.oncomplete = () => {
+                        db.close();
+                    };
+                };
+
+                request.onerror = () => {
+                    resolve(false); // Still resolve to prevent blocking
+                };
+            });
+        } catch (error) {
+            log({
+                message: "Error storing asset in indexedDB:",
+                type: "error",
+                error,
+                debug: context?.Vircadia.Debug,
+                suppress: context?.Vircadia.Suppress,
+            });
+            return false;
+        }
+    }
+
+    export async function getAssetFromIndexedDB(
         assetName: string,
+        context?: Babylon.I_Context,
     ): Promise<Entity.Asset.I_Asset | null> {
         try {
             return new Promise((resolve, reject) => {
@@ -468,63 +429,58 @@ export namespace Utilities {
                 };
             });
         } catch (error) {
+            log({
+                message: "Error retrieving asset from indexedDB:",
+                type: "error",
+                error,
+                debug: context?.Vircadia.Debug,
+                suppress: context?.Vircadia.Suppress,
+            });
             return null;
         }
     }
 
-    async function storeAssetInIndexedDB(
+    // Expose Bun/Node filesystem functions
+    export async function storeAssetInFileSystem(
         asset: Entity.Asset.I_Asset,
-    ): Promise<void> {
+        context?: Babylon.I_Context,
+    ): Promise<boolean> {
         try {
-            return new Promise((resolve, reject) => {
-                if (!window.indexedDB) {
-                    resolve();
-                    return;
-                }
+            if (typeof process === "undefined" || !process.versions?.bun) {
+                return false;
+            }
 
-                const request = window.indexedDB.open("VircadiaAssetStore", 1);
+            const cacheDir = ".vircadia-cache";
+            const fs = await import("node:fs/promises");
+            const path = await import("node:path");
 
-                request.onupgradeneeded = (event) => {
-                    const db = (event.target as IDBOpenDBRequest).result;
-                    if (!db.objectStoreNames.contains("assets")) {
-                        db.createObjectStore("assets", {
-                            keyPath: "general__asset_file_name",
-                        });
-                    }
-                };
+            try {
+                await fs.access(cacheDir);
+            } catch {
+                await fs.mkdir(cacheDir, { recursive: true });
+            }
 
-                request.onsuccess = (event) => {
-                    const db = (event.target as IDBOpenDBRequest).result;
-                    const transaction = db.transaction(["assets"], "readwrite");
-                    const store = transaction.objectStore("assets");
-
-                    const putRequest = store.put(asset);
-
-                    putRequest.onsuccess = () => {
-                        resolve();
-                    };
-
-                    putRequest.onerror = () => {
-                        resolve(); // Still resolve to prevent blocking
-                    };
-
-                    transaction.oncomplete = () => {
-                        db.close();
-                    };
-                };
-
-                request.onerror = () => {
-                    resolve(); // Still resolve to prevent blocking
-                };
-            });
+            const assetPath = path.join(
+                cacheDir,
+                `${asset.general__asset_file_name}.json`,
+            );
+            await fs.writeFile(assetPath, JSON.stringify(asset), "utf-8");
+            return true;
         } catch (error) {
-            // Silently fail to prevent blocking the main flow
+            log({
+                message: "Error storing asset in file system:",
+                type: "error",
+                error,
+                debug: context?.Vircadia.Debug,
+                suppress: context?.Vircadia.Suppress,
+            });
+            return false;
         }
     }
 
-    // Helper functions for Bun file system storage
-    async function getAssetFromFileSystem(
+    export async function getAssetFromFileSystem(
         assetName: string,
+        context?: Babylon.I_Context,
     ): Promise<Entity.Asset.I_Asset | null> {
         try {
             if (typeof process === "undefined" || !process.versions?.bun) {
@@ -550,35 +506,14 @@ export namespace Utilities {
                 return null;
             }
         } catch (error) {
+            log({
+                message: "Error retrieving asset from file system:",
+                type: "error",
+                error,
+                debug: context?.Vircadia.Debug,
+                suppress: context?.Vircadia.Suppress,
+            });
             return null;
-        }
-    }
-
-    async function storeAssetInFileSystem(
-        asset: Entity.Asset.I_Asset,
-    ): Promise<void> {
-        try {
-            if (typeof process === "undefined" || !process.versions?.bun) {
-                return;
-            }
-
-            const cacheDir = ".vircadia-cache";
-            const fs = await import("node:fs/promises");
-            const path = await import("node:path");
-
-            try {
-                await fs.access(cacheDir);
-            } catch {
-                await fs.mkdir(cacheDir, { recursive: true });
-            }
-
-            const assetPath = path.join(
-                cacheDir,
-                `${asset.general__asset_file_name}.json`,
-            );
-            await fs.writeFile(assetPath, JSON.stringify(asset), "utf-8");
-        } catch (error) {
-            // Silently fail to prevent blocking the main flow
         }
     }
 }
@@ -992,15 +927,6 @@ class EntityAndScriptManager {
                     // Utilities for scripts
                     Utilities: {
                         Asset: {
-                            getAsset: async (data: {
-                                assetName: string;
-                            }) => {
-                                return Utilities.getAsset({
-                                    assetName: data.assetName,
-                                    connectionManager: this.connectionManager,
-                                    context,
-                                });
-                            },
                             loadGLTFAssetAsMesh: async (data: {
                                 asset: Entity.Asset.I_Asset;
                                 scene: Scene;
@@ -1009,6 +935,56 @@ class EntityAndScriptManager {
                                     asset: data.asset,
                                     scene: data.scene,
                                 });
+                            },
+                            getAssetFromServer: async (data: {
+                                assetName: string;
+                            }) => {
+                                return Utilities.getAssetFromServer({
+                                    assetName: data.assetName,
+                                    connectionManager: this.connectionManager,
+                                    context,
+                                });
+                            },
+                            getAssetHashFromServer: async (data: {
+                                assetName: string;
+                            }) => {
+                                return Utilities.getAssetHashFromServer({
+                                    assetName: data.assetName,
+                                    connectionManager: this.connectionManager,
+                                    context,
+                                });
+                            },
+                            storeAssetInIndexedDB: async (data: {
+                                asset: Entity.Asset.I_Asset;
+                            }) => {
+                                return Utilities.storeAssetInIndexedDB(
+                                    data.asset,
+                                    context,
+                                );
+                            },
+                            getAssetFromIndexedDB: async (data: {
+                                assetName: string;
+                            }) => {
+                                return Utilities.getAssetFromIndexedDB(
+                                    data.assetName,
+                                    context,
+                                );
+                            },
+                            storeAssetInFileSystem: async (data: {
+                                asset: Entity.Asset.I_Asset;
+                            }) => {
+                                return Utilities.storeAssetInFileSystem(
+                                    data.asset,
+                                    context,
+                                );
+                            },
+                            getAssetFromFileSystem: async (data: {
+                                assetName: string;
+                            }) => {
+                                return Utilities.getAssetFromFileSystem(
+                                    data.assetName,
+                                    context,
+                                );
                             },
                         },
                         Query: {
