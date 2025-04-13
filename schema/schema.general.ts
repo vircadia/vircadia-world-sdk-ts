@@ -61,6 +61,8 @@ export namespace Entity {
         export enum E_ScriptType {
             BABYLON_BUN = "BABYLON_BUN",
             BABYLON_BROWSER = "BABYLON_BROWSER",
+            THREE_BUN = "THREE_BUN",
+            THREE_BROWSER = "THREE_BROWSER",
         }
 
         export enum E_CompilationStatus {
@@ -96,6 +98,16 @@ export namespace Entity {
             script__compiled__babylon_browser__status: E_CompilationStatus;
             script__compiled__babylon_browser__data_updated_at: string;
             script__compiled__babylon_browser__status_updated_at: string;
+
+            script__compiled__three_bun__data: string;
+            script__compiled__three_bun__status: E_CompilationStatus;
+            script__compiled__three_bun__data_updated_at: string;
+            script__compiled__three_bun__status_updated_at: string;
+
+            script__compiled__three_browser__data: string;
+            script__compiled__three_browser__status: E_CompilationStatus;
+            script__compiled__three_browser__data_updated_at: string;
+            script__compiled__three_browser__status_updated_at: string;
 
             // Timestamp tracking fields
             script__source__data_updated_at: string;
@@ -565,6 +577,7 @@ export namespace Service {
 export namespace Client {
     export enum E_Client {
         WEB_BABYLON_JS = "web_babylon_js",
+        WEB_THREE_JS = "web_three_js",
     }
 }
 
