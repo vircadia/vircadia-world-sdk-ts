@@ -1,4 +1,4 @@
-import type { Scene } from "three";
+import type { Scene, Camera } from "three";
 import vircadiaWorldSdkTsPackageJson from "../package.json";
 import type { Communication, Entity } from "./schema.general";
 
@@ -47,6 +47,8 @@ export namespace VircadiaThreeScript {
         Three: {
             Version: typeof VERSION;
             Scene: Scene;
+            SetActiveCamera: (camera: Camera) => void;
+            activeCamera?: Camera;
         };
     }
 

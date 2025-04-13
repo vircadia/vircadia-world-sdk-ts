@@ -141,14 +141,14 @@ const browserClientEnvSchema = z.object({
         .default("0.0.0.0"),
     VRCA_CLIENT_WEB_THREE_JS_PRODUCTION_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
         .number()
-        .default(3025),
+        .default(3035),
     VRCA_CLIENT_WEB_THREE_JS_PRODUCTION_PORT_CONTAINER_BIND_INTERNAL: z.coerce
         .number()
-        .default(3025),
+        .default(3035),
 
     // Development Web Three JS Client
     VRCA_CLIENT_WEB_THREE_JS_DEV_HOST: z.string().default("0.0.0.0"),
-    VRCA_CLIENT_WEB_THREE_JS_DEV_PORT: z.coerce.number().default(3066),
+    VRCA_CLIENT_WEB_THREE_JS_DEV_PORT: z.coerce.number().default(3076),
 });
 
 // Parse client environment variables

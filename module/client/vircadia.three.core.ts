@@ -3,7 +3,7 @@ import type { VircadiaThreeScript } from "../../schema/schema.three.script";
 
 import vircadiaSdkTsPackageJson from "../../package.json";
 import { log } from "../general/log";
-import type { Scene } from "three";
+import type { Scene, Camera } from "three";
 
 export interface VircadiaThreeCoreConfig {
     // Connection settings
@@ -37,6 +37,12 @@ export function createVircadiaScript(
             context.Three = {
                 Version: vircadiaSdkTsPackageJson.dependencies.three,
                 Scene: null as unknown as Scene, // Will be properly set by caller
+                SetActiveCamera: (camera: Camera) => {
+                    console.warn(
+                        "SetActiveCamera called before context is fully initialized",
+                    );
+                },
+                activeCamera: undefined,
             };
         }
 
@@ -340,6 +346,7 @@ class EntityAndScriptManager {
         }
     >();
     private currentPlatform: Entity.Script.E_ScriptType;
+    private activeCamera: Camera | null = null;
 
     constructor(
         private config: VircadiaThreeCoreConfig,
@@ -360,6 +367,15 @@ class EntityAndScriptManager {
         } else {
             throw new Error("Unsupported platform");
         }
+    }
+
+    // Camera management methods
+    SetActiveCamera(camera: Camera): void {
+        this.activeCamera = camera;
+    }
+
+    getActiveCamera(): Camera | null {
+        return this.activeCamera;
     }
 
     getCurrentPlatform(): Entity.Script.E_ScriptType {
@@ -442,6 +458,10 @@ class EntityAndScriptManager {
                 Three: {
                     Version: vircadiaSdkTsPackageJson.dependencies.three,
                     Scene: this.scene,
+                    SetActiveCamera: (camera: Camera) => {
+                        this.SetActiveCamera(camera);
+                    },
+                    activeCamera: this.activeCamera || undefined,
                 },
             };
 
@@ -946,6 +966,15 @@ export class VircadiaThreeCore {
             this.connectionManager,
             config.scene,
         );
+    }
+
+    // Camera management - delegate to EntityAndScriptManager
+    SetActiveCamera(camera: Camera): void {
+        this.entityScriptManager.SetActiveCamera(camera);
+    }
+
+    getActiveCamera(): Camera | null {
+        return this.entityScriptManager.getActiveCamera();
     }
 
     // Initialize the system
