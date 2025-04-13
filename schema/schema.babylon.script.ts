@@ -38,7 +38,10 @@ export namespace Babylon {
                 Asset: {
                     getAsset: (data: {
                         assetName: string;
-                    }) => Promise<Entity.Asset.I_Asset>;
+                    }) => Promise<{
+                        asset: Entity.Asset.I_Asset;
+                        status: "downloading" | "downloaded";
+                    }>;
                     loadGLTFAssetAsMesh: (data: {
                         asset: Entity.Asset.I_Asset;
                         scene: Scene;

@@ -6,8 +6,19 @@ import vircadiaSdkTsPackageJson from "../../package.json";
 import { log } from "../general/log";
 import type { ISceneLoaderAsyncResult, Scene } from "@babylonjs/core";
 import { ImportMeshAsync } from "@babylonjs/core";
+import "@babylonjs/loaders";
 import { registerBuiltInLoaders } from "@babylonjs/loaders/dynamic";
-import "@babylonjs/loaders/glTF";
+
+// Extend the Entity.Asset.I_Asset interface to include the hash property
+declare module "../../schema/schema.general" {
+    namespace Entity {
+        namespace Asset {
+            interface I_Asset {
+                asset__data_hash?: string;
+            }
+        }
+    }
+}
 
 export interface VircadiaBabylonCoreConfig {
     // Connection settings
@@ -27,6 +38,15 @@ export interface VircadiaBabylonCoreConfig {
 }
 
 export namespace Utilities {
+    // Track only in-progress downloads (not completed ones)
+    const activeDownloads = new Map<
+        string,
+        Promise<{
+            asset: Entity.Asset.I_Asset;
+            status: "downloading" | "downloaded";
+        }>
+    >();
+
     export async function loadGLTFAssetAsMesh(data: {
         asset: Entity.Asset.I_Asset;
         scene: Scene;
@@ -35,7 +55,16 @@ export namespace Utilities {
 
         let meshData: ArrayBuffer | null = null;
 
-        // Check if asset data is available and properly format it
+        log({
+            message: `Attempting to load asset: ${asset.general__asset_file_name}`,
+            data: {
+                type: asset.asset__type,
+                hasBytea: !!asset.asset__data__bytea,
+                hasBase64: !!asset.asset__data__base64,
+            },
+        });
+
+        // First attempt: Try to load from bytea data
         if (asset.asset__data__bytea) {
             try {
                 // We know the data is an object with a data property that's an array
@@ -51,6 +80,11 @@ export namespace Utilities {
 
                 meshData = new Uint8Array(bytea.data).buffer;
 
+                log({
+                    message: `Successfully converted bytea data for ${asset.general__asset_file_name}`,
+                    data: { bufferSize: bytea.data.length },
+                });
+
                 if (!meshData) {
                     throw new Error(
                         "Failed to convert asset data to ArrayBuffer",
@@ -58,42 +92,122 @@ export namespace Utilities {
                 }
             } catch (err) {
                 console.error(
-                    "Failed to process asset data:",
+                    "Failed to process bytea asset data:",
                     err,
                     "asset__data__bytea type:",
                     typeof asset.asset__data__bytea,
                     "isArray:",
                     Array.isArray(asset.asset__data__bytea),
                 );
+                // Don't throw, try base64 next
+                meshData = null;
+            }
+        }
+
+        // Second attempt: Try to load from base64 data if bytea failed
+        if (!meshData && asset.asset__data__base64) {
+            try {
+                log({
+                    message: "Falling back to base64 data for asset:",
+                    data: { assetName: asset.general__asset_file_name },
+                });
+
+                // Convert base64 to array buffer
+                const base64 = asset.asset__data__base64 as string;
+                const binaryString = atob(base64);
+                const bytes = new Uint8Array(binaryString.length);
+
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+
+                meshData = bytes.buffer;
+
+                log({
+                    message: `Successfully converted base64 data for ${asset.general__asset_file_name}`,
+                    data: { bufferSize: bytes.length },
+                });
+
+                if (!meshData) {
+                    throw new Error(
+                        "Failed to convert base64 data to ArrayBuffer",
+                    );
+                }
+            } catch (err) {
+                console.error(
+                    "Failed to process base64 asset data:",
+                    err,
+                    "asset__data__base64 type:",
+                    typeof asset.asset__data__base64,
+                );
+                // Both attempts failed
                 throw new Error(
                     `Cannot convert asset data to usable format: ${asset.general__asset_file_name}`,
                 );
             }
-        } else {
+        }
+
+        // If we still don't have data, throw an error
+        if (!meshData) {
             throw new Error(
-                `Binary data not available for asset: ${asset.general__asset_file_name}`,
+                `No usable data available for asset: ${asset.general__asset_file_name}. Neither bytea nor base64 data was found or could be processed.`,
             );
         }
 
-        // Load the mesh from memory using file URL
-        if (!meshData) {
-            throw new Error(
-                `Failed to process binary data for asset: ${asset.general__asset_file_name}`,
-            );
+        // Determine format from asset type with fallbacks
+        let assetType = (asset.asset__type || "").toLowerCase();
+
+        // Handle MIME types
+        if (assetType === "model/gltf-binary") {
+            assetType = "glb";
+        } else if (
+            assetType === "model/gltf+json" ||
+            assetType === "model/gltf"
+        ) {
+            assetType = "gltf";
+        }
+
+        // Default to GLB if type is unknown
+        if (
+            assetType !== "glb" &&
+            assetType !== "gltf" &&
+            assetType !== "obj"
+        ) {
+            // Try to guess from filename
+            const fileName = asset.general__asset_file_name.toLowerCase();
+            if (fileName.endsWith(".glb")) {
+                assetType = "glb";
+            } else if (fileName.endsWith(".gltf")) {
+                assetType = "gltf";
+            } else if (fileName.endsWith(".obj")) {
+                assetType = "obj";
+            } else {
+                // Default fallback
+                assetType = "glb";
+            }
         }
 
         const pluginExtension =
-            asset.asset__type?.toLowerCase() === "glb" ? ".glb" : ".gltf";
+            assetType === "glb"
+                ? ".glb"
+                : assetType === "gltf"
+                  ? ".gltf"
+                  : ".obj";
+
         const mimeType =
-            asset.asset__type?.toLowerCase() === "glb"
-                ? "model/glb"
-                : "model/gltf-binary";
+            assetType === "glb"
+                ? "model/gltf-binary"
+                : assetType === "gltf"
+                  ? "model/gltf+json"
+                  : "model/obj";
 
         log({
-            message: `Loading ${asset.asset__type} asset`,
+            message: `Loading ${assetType} asset`,
             data: {
                 mimeType,
                 pluginExtension,
+                assetName: asset.general__asset_file_name,
+                bufferSize: meshData.byteLength,
             },
         });
 
@@ -104,9 +218,21 @@ export namespace Utilities {
         const blobUrl = URL.createObjectURL(blob);
 
         try {
+            // Load the mesh using the appropriate loader
+            log({
+                message: `Importing mesh from ${blobUrl} with extension ${pluginExtension}`,
+            });
+
             return await ImportMeshAsync(blobUrl, scene, {
                 pluginExtension,
             });
+        } catch (error) {
+            log({
+                message: `Error importing mesh: ${error instanceof Error ? error.message : "Unknown error"}`,
+                type: "error",
+                error,
+            });
+            throw error;
         } finally {
             // Clean up the blob URL after loading
             URL.revokeObjectURL(blobUrl);
@@ -117,47 +243,129 @@ export namespace Utilities {
         assetName: string;
         connectionManager?: ConnectionManager;
         context?: Babylon.I_Context;
-    }): Promise<Entity.Asset.I_Asset> {
+    }): Promise<{
+        asset: Entity.Asset.I_Asset;
+        status: "downloading" | "downloaded";
+    }> {
         const { assetName, connectionManager, context } = data;
 
         // Environment detection
         const isBrowser = typeof window !== "undefined";
         const isBun = typeof process !== "undefined" && process.versions?.bun;
 
-        try {
-            // Try to get from local storage first
-            let assetFromStorage: Entity.Asset.I_Asset | null = null;
+        // Check if this asset is actively downloading
+        if (activeDownloads.has(assetName)) {
+            const downloadPromise = activeDownloads.get(assetName);
+            if (downloadPromise) {
+                const result = await downloadPromise;
+                return {
+                    ...result,
+                    status: "downloading",
+                };
+            }
+        }
 
-            if (isBrowser) {
-                // Browser - use IndexedDB
-                assetFromStorage = await getAssetFromIndexedDB(assetName);
-            } else if (isBun) {
-                // Bun - use file system
-                assetFromStorage = await getAssetFromFileSystem(assetName);
+        try {
+            if (!connectionManager) {
+                throw new Error(
+                    `ConnectionManager required to fetch asset ${assetName} from server`,
+                );
             }
 
-            // If found in local storage and not expired, return it
-            if (assetFromStorage) {
+            // First try to get the asset details from server
+            const assetQuery = await connectionManager.sendQueryAsync<
+                Entity.Asset.I_Asset[]
+            >({
+                query: "SELECT * FROM entity.entity_assets WHERE general__asset_file_name LIKE $1",
+                parameters: [`%${assetName}%`],
+                timeoutMs: 20000, // Increase timeout to 20 seconds
+            });
+
+            if (!assetQuery?.result?.[0]) {
                 log({
-                    message: `Asset ${assetName} retrieved from local storage`,
+                    message: `No matching assets found for ${assetName}`,
+                    type: "error",
                     debug: context?.Vircadia.Debug,
                     suppress: context?.Vircadia.Suppress,
                 });
-
-                return assetFromStorage;
+                throw new Error(`Asset ${assetName} not found on server`);
             }
 
-            // If we have a connection manager, try to fetch from server
-            if (connectionManager) {
-                const assetQuery = await connectionManager.sendQueryAsync<
-                    Entity.Asset.I_Asset[]
+            const asset = assetQuery.result[0];
+
+            // Log asset properties for debugging
+            log({
+                message: `Found asset ${assetName}`,
+                data: {
+                    name: asset.general__asset_file_name,
+                    type: asset.asset__type,
+                    hasData:
+                        !!asset.asset__data__bytea ||
+                        !!asset.asset__data__base64,
+                },
+                debug: context?.Vircadia.Debug,
+                suppress: context?.Vircadia.Suppress,
+            });
+
+            // Check local storage first before starting any download
+            let localAsset: Entity.Asset.I_Asset | null = null;
+
+            if (isBrowser) {
+                localAsset = await getAssetFromIndexedDB(
+                    asset.general__asset_file_name,
+                );
+            } else if (isBun) {
+                localAsset = await getAssetFromFileSystem(
+                    asset.general__asset_file_name,
+                );
+            }
+
+            // If we have a valid asset from local storage, return it immediately
+            if (localAsset?.asset__data__bytea) {
+                // Now get hash to verify the asset is current
+                const hashQuery = await connectionManager.sendQueryAsync<
+                    [{ current_hash: string }]
                 >({
-                    query: "SELECT * FROM entity.entity_assets WHERE general__asset_file_name = $1",
-                    parameters: [assetName],
+                    query: "SELECT encode(digest(asset__data__bytea, 'sha256'), 'hex') as current_hash FROM entity.entity_assets WHERE general__asset_file_name = $1",
+                    parameters: [asset.general__asset_file_name],
+                    timeoutMs: 15000, // Increase timeout
                 });
 
-                if (assetQuery?.result && assetQuery.result.length > 0) {
-                    const asset = assetQuery.result[0];
+                const serverHash = hashQuery?.result?.[0]?.current_hash;
+
+                if (serverHash && localAsset.asset__data_hash === serverHash) {
+                    return {
+                        asset: localAsset,
+                        status: "downloaded",
+                    };
+                }
+            }
+
+            // If we reach here, we need to download - create download promise
+            const downloadPromise = (async (): Promise<{
+                asset: Entity.Asset.I_Asset;
+                status: "downloading" | "downloaded";
+            }> => {
+                try {
+                    // Get the hash for this specific asset
+                    const hashQuery = await connectionManager.sendQueryAsync<
+                        [{ current_hash: string }]
+                    >({
+                        query: "SELECT encode(digest(asset__data__bytea, 'sha256'), 'hex') as current_hash FROM entity.entity_assets WHERE general__asset_file_name = $1",
+                        parameters: [asset.general__asset_file_name],
+                        timeoutMs: 15000, // Increase timeout
+                    });
+
+                    if (!hashQuery?.result?.[0]) {
+                        throw new Error(
+                            `Could not calculate hash for asset ${assetName}`,
+                        );
+                    }
+
+                    const serverHash = hashQuery.result[0].current_hash;
+
+                    // Store the server hash with the asset
+                    asset.asset__data_hash = serverHash;
 
                     // Store in appropriate storage
                     if (isBrowser) {
@@ -168,20 +376,36 @@ export namespace Utilities {
 
                     log({
                         message: `Asset ${assetName} fetched from server and stored locally`,
+                        data: {
+                            assetName: asset.general__asset_file_name,
+                            hash: serverHash,
+                        },
                         debug: context?.Vircadia.Debug,
                         suppress: context?.Vircadia.Suppress,
                     });
 
-                    return asset;
+                    return {
+                        asset,
+                        status: "downloaded",
+                    };
+                } finally {
+                    // Remove from active downloads once complete
+                    activeDownloads.delete(assetName);
                 }
+            })();
 
-                throw new Error(`Asset ${assetName} not found on server`);
-            }
+            // Register this as an active download
+            activeDownloads.set(assetName, downloadPromise);
 
-            throw new Error(
-                `ConnectionManager required to fetch asset ${assetName} from server`,
-            );
+            // Return with downloading status
+            return {
+                ...(await downloadPromise),
+                status: "downloading",
+            };
         } catch (error) {
+            // Clean up in case of error
+            activeDownloads.delete(assetName);
+
             log({
                 message: `Error retrieving asset ${assetName}:`,
                 type: "error",
@@ -695,8 +919,6 @@ class EntityAndScriptManager {
         } else {
             throw new Error("Unsupported platform");
         }
-
-        registerBuiltInLoaders();
     }
 
     getCurrentPlatform(): Entity.Script.E_ScriptType {
