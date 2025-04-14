@@ -26,8 +26,6 @@ export namespace VircadiaBabylonScript {
     export interface I_Hooks {
         // Script lifecycle hooks
         onScriptInitialize?: (entityData: Entity.I_Entity) => void;
-        onEntityUpdate?: (entityData: Entity.I_Entity) => void;
-        onScriptUpdate?: (scriptData: Entity.Script.I_Script) => void;
         onScriptTeardown?: () => void;
 
         // Network state hooks
@@ -658,15 +656,6 @@ class EntityAndScriptManager {
         }
     }
 
-    // Notify all scripts about an entity update
-    notifyEntityUpdate(entity: Entity.I_Entity): void {
-        for (const instance of this.scriptInstances.values()) {
-            if (instance.hooks.onEntityUpdate) {
-                instance.hooks.onEntityUpdate(entity);
-            }
-        }
-    }
-
     // Get all script instances
     getScriptInstances(): typeof this.scriptInstances {
         return this.scriptInstances;
@@ -803,215 +792,6 @@ class EntityAndScriptManager {
     getEntities(): Map<string, Entity.I_Entity> {
         return this.entities;
     }
-
-    // Update an entity and notify scripts
-    updateEntityAndNotifyScripts(entity: Entity.I_Entity): void {
-        this.entities.set(entity.general__entity_id, entity);
-        this.notifyEntityUpdate(entity);
-    }
-
-    // Poll for both entity and script updates in a single operation
-    async pollForUpdates(): Promise<{
-        entities: {
-            added: Entity.I_Entity[];
-            updated: Entity.I_Entity[];
-            deleted: string[];
-        };
-        scripts: {
-            added: Entity.Script.I_Script[];
-            updated: Entity.Script.I_Script[];
-            deleted: string[];
-        };
-    }> {
-        try {
-            // Format timestamp for SQL query (ISO format)
-            const timestamp = this.lastEntityUpdateTimestamp.toISOString();
-
-            // Get updated and new entities and scripts in parallel queries
-            const [updatedEntitiesResponse, allScriptsResponse] =
-                await Promise.all([
-                    this.connectionManager.sendQueryAsync<Entity.I_Entity[]>({
-                        query: "SELECT * FROM entity.entities WHERE general__updated_at > $1 ORDER BY general__created_at ASC",
-                        parameters: [timestamp],
-                    }),
-                    this.connectionManager.sendQueryAsync<
-                        Entity.Script.I_Script[]
-                    >({
-                        query: "SELECT * FROM entity.entity_scripts WHERE $1 = ANY(script__platform)",
-                        parameters: [this.currentPlatform],
-                    }),
-                ]);
-
-            // Update timestamp for next poll
-            this.lastEntityUpdateTimestamp = new Date();
-
-            // Process entities
-            const updatedEntities: Entity.I_Entity[] = [];
-            const newEntities: Entity.I_Entity[] = [];
-            const currentEntityIds = Array.from(this.entities.keys());
-            let deletedEntityIds: string[] = [];
-
-            // Process entity updates and additions
-            for (const entity of updatedEntitiesResponse.result) {
-                if (this.entities.has(entity.general__entity_id)) {
-                    updatedEntities.push(entity);
-                    this.updateEntityAndNotifyScripts(entity);
-                } else {
-                    newEntities.push(entity);
-                }
-            }
-
-            // Find deleted entities
-            if (currentEntityIds.length > 0) {
-                const deletedEntitiesResponse =
-                    await this.connectionManager.sendQueryAsync<
-                        { general__entity_id: string }[]
-                    >({
-                        query: "SELECT general__entity_id FROM UNNEST($1::uuid[]) AS general__entity_id WHERE general__entity_id NOT IN (SELECT general__entity_id FROM entity.entities)",
-                        parameters: [currentEntityIds],
-                    });
-                deletedEntityIds = deletedEntitiesResponse.result.map(
-                    (e) => e.general__entity_id,
-                );
-            }
-
-            // Process new entities grouped by priority
-            if (newEntities.length > 0) {
-                const priorityGroups = new Map<number, Entity.I_Entity[]>();
-                for (const entity of newEntities) {
-                    const priority =
-                        entity.group__load_priority ?? Number.MAX_SAFE_INTEGER;
-                    if (!priorityGroups.has(priority)) {
-                        priorityGroups.set(priority, []);
-                    }
-                    priorityGroups.get(priority)?.push(entity);
-                }
-
-                // Process each priority group in order
-                for (const [priority, entities] of [
-                    ...priorityGroups.entries(),
-                ].sort((a, b) => a[0] - b[0])) {
-                    await this.processEntityGroup(entities);
-                }
-            }
-
-            // Process deleted entities
-            for (const entityId of deletedEntityIds) {
-                // Clean up scripts associated with this entity
-                for (const [
-                    scriptName,
-                    instance,
-                ] of this.scriptInstances.entries()) {
-                    if (instance.entityId === entityId) {
-                        if (instance.hooks.onScriptTeardown) {
-                            try {
-                                await instance.hooks.onScriptTeardown();
-                            } catch (error) {
-                                log({
-                                    message: `Error in script teardown for ${scriptName}:`,
-                                    type: "error",
-                                    error,
-                                    debug: this.config.debug,
-                                    suppress: this.config.suppress,
-                                });
-                            }
-                        }
-                        this.scriptInstances.delete(scriptName);
-                    }
-                }
-                this.entities.delete(entityId);
-            }
-
-            // Process scripts
-            const currentScriptNames = Array.from(this.scripts.keys());
-            const updatedScripts: Entity.Script.I_Script[] = [];
-            const addedScripts: Entity.Script.I_Script[] = [];
-            const deletedScriptNames: string[] = [];
-
-            // Find deleted scripts
-            for (const scriptName of currentScriptNames) {
-                if (
-                    !allScriptsResponse.result.some(
-                        (s) => s.general__script_file_name === scriptName,
-                    )
-                ) {
-                    deletedScriptNames.push(scriptName);
-                    const instance = this.scriptInstances.get(scriptName);
-                    if (instance?.hooks.onScriptTeardown) {
-                        try {
-                            await instance.hooks.onScriptTeardown();
-                        } catch (error) {
-                            log({
-                                message: `Error in script teardown for ${scriptName}:`,
-                                type: "error",
-                                error,
-                                debug: this.config.debug,
-                                suppress: this.config.suppress,
-                            });
-                        }
-                    }
-                    this.scriptInstances.delete(scriptName);
-                    this.scripts.delete(scriptName);
-                }
-            }
-
-            // Process script updates and additions
-            for (const latestScript of allScriptsResponse.result) {
-                const currentScript = this.scripts.get(
-                    latestScript.general__script_file_name,
-                );
-                if (!currentScript) {
-                    addedScripts.push(latestScript);
-                    this.scripts.set(
-                        latestScript.general__script_file_name,
-                        latestScript,
-                    );
-                } else if (
-                    new Date(
-                        latestScript.general__updated_at as string,
-                    ).getTime() >
-                    new Date(
-                        currentScript.general__updated_at as string,
-                    ).getTime()
-                ) {
-                    updatedScripts.push(latestScript);
-                    this.scripts.set(
-                        latestScript.general__script_file_name,
-                        latestScript,
-                    );
-                    await this.reloadScript(
-                        latestScript.general__script_file_name,
-                    );
-                }
-            }
-
-            return {
-                entities: {
-                    added: newEntities,
-                    updated: updatedEntities,
-                    deleted: deletedEntityIds,
-                },
-                scripts: {
-                    added: addedScripts,
-                    updated: updatedScripts,
-                    deleted: deletedScriptNames,
-                },
-            };
-        } catch (error) {
-            log({
-                message: "Failed to poll for updates:",
-                type: "error",
-                error,
-                debug: this.config.debug,
-                suppress: this.config.suppress,
-            });
-
-            return {
-                entities: { added: [], updated: [], deleted: [] },
-                scripts: { added: [], updated: [], deleted: [] },
-            };
-        }
-    }
 }
 
 // Main class that coordinates all components
@@ -1019,9 +799,6 @@ export class VircadiaBabylonCore {
     private connectionManager: ConnectionManager;
     private entityScriptManager: EntityAndScriptManager;
     private initialized = false;
-    private pollTimers: Map<string, Timer> = new Map();
-    private syncGroups: Map<string, { client__poll__rate_ms: number }> =
-        new Map();
 
     constructor(private config: VircadiaBabylonCoreConfig) {
         // Register Babylon.js loaders first
@@ -1048,112 +825,7 @@ export class VircadiaBabylonCore {
         // Load initial entity data
         await this.entityScriptManager.loadEntitiesByPriority();
 
-        // Load sync groups configuration
-        await this.loadSyncGroups();
-
-        // Set up polling for entity and script updates
-        this.setupPolling();
-
         this.initialized = true;
-    }
-
-    // Load sync groups from the database
-    private async loadSyncGroups(): Promise<void> {
-        try {
-            const syncGroupsResponse =
-                await this.connectionManager.sendQueryAsync<
-                    {
-                        general__sync_group: string;
-                        client__poll__rate_ms: number;
-                    }[]
-                >({
-                    query: `
-                        SELECT general__sync_group, client__poll__rate_ms
-                        FROM auth.sync_groups
-                    `,
-                });
-
-            for (const group of syncGroupsResponse.result) {
-                this.syncGroups.set(group.general__sync_group, {
-                    client__poll__rate_ms: group.client__poll__rate_ms,
-                });
-            }
-
-            log({
-                message: `Loaded ${syncGroupsResponse.result.length} sync groups`,
-                debug: this.config.debug,
-                suppress: this.config.suppress,
-            });
-        } catch (error) {
-            log({
-                message: "Failed to load sync groups:",
-                type: "error",
-                error,
-                debug: this.config.debug,
-                suppress: this.config.suppress,
-            });
-        }
-    }
-
-    // Set up polling intervals for each sync group
-    private setupPolling(): void {
-        // Clear any existing poll timers
-        for (const [syncGroup, timer] of this.pollTimers.entries()) {
-            clearInterval(timer);
-            this.pollTimers.delete(syncGroup);
-        }
-
-        // Set up a new poll timer for each sync group
-        for (const [syncGroup, config] of this.syncGroups.entries()) {
-            const pollRate = config.client__poll__rate_ms;
-
-            log({
-                message: `Setting up polling for sync group ${syncGroup} at ${pollRate}ms intervals`,
-                debug: this.config.debug,
-                suppress: this.config.suppress,
-            });
-
-            const timer = setInterval(async () => {
-                if (
-                    !this.initialized ||
-                    !this.connectionManager.isClientConnected()
-                ) {
-                    return;
-                }
-
-                try {
-                    // Use the combined polling method
-                    const updates =
-                        await this.entityScriptManager.pollForUpdates();
-
-                    // Log significant changes
-                    if (
-                        updates.entities.added.length > 0 ||
-                        updates.entities.updated.length > 0 ||
-                        updates.entities.deleted.length > 0 ||
-                        updates.scripts.added.length > 0 ||
-                        updates.scripts.updated.length > 0 ||
-                        updates.scripts.deleted.length > 0
-                    ) {
-                        log({
-                            message: `Updates: ${updates.entities.added.length} entities added, ${updates.entities.updated.length} entities updated, ${updates.entities.deleted.length} entities deleted, ${updates.scripts.added.length} scripts added, ${updates.scripts.updated.length} scripts updated, ${updates.scripts.deleted.length} scripts deleted`,
-                            debug: this.config.debug,
-                            suppress: this.config.suppress,
-                        });
-                    }
-                } catch (error) {
-                    log({
-                        message: `Error polling for updates in sync group ${syncGroup}:`,
-                        type: "error",
-                        error,
-                        debug: this.config.debug,
-                        suppress: this.config.suppress,
-                    });
-                }
-            }, pollRate);
-
-            this.pollTimers.set(syncGroup, timer);
-        }
     }
 
     // Check if initialized
@@ -1172,12 +844,6 @@ export class VircadiaBabylonCore {
 
     // Clean up resources
     dispose(): void {
-        // Clear all polling timers
-        for (const [syncGroup, timer] of this.pollTimers.entries()) {
-            clearInterval(timer);
-            this.pollTimers.delete(syncGroup);
-        }
-
         if (this.connectionManager) {
             this.connectionManager.disconnect();
         }
