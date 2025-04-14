@@ -1,9 +1,83 @@
 import { Communication, Entity } from "../../schema/schema.general";
-import type { VircadiaThreeScript } from "../../schema/schema.three.script";
 
 import vircadiaSdkTsPackageJson from "../../package.json";
 import { log } from "../general/log";
 import type { Scene, Camera } from "three";
+
+// Export the VircadiaThreeScript namespace for script usage.
+export namespace VircadiaThreeScript {
+    export const VERSION = vircadiaSdkTsPackageJson.dependencies.three;
+
+    // Script hooks container
+    export interface I_Hooks {
+        // Script lifecycle hooks
+        onScriptInitialize?: (entityData: Entity.I_Entity) => void;
+        onEntityUpdate?: (entityData: Entity.I_Entity) => void;
+        onScriptUpdate?: (scriptData: Entity.Script.I_Script) => void;
+        onScriptTeardown?: () => void;
+
+        // Network state hooks
+        onConnected?: () => void;
+        onDisconnected?: (reason?: string) => void;
+    }
+
+    // The context provided to scripts
+    export interface I_Context {
+        Vircadia: {
+            Debug: boolean;
+            Suppress: boolean;
+
+            // Top-level version identifier
+            Version: string;
+
+            // Script management
+            Script: {
+                reload: () => Promise<void>;
+            };
+
+            // Utilities for asset and resource management
+            Utilities: {
+                Query: {
+                    execute: <T>(data: {
+                        query: string;
+                        parameters?: unknown[];
+                    }) => Promise<
+                        Communication.WebSocket.QueryResponseMessage<T>
+                    >;
+                };
+            };
+        };
+        Three: {
+            Version: typeof VERSION;
+            Scene: Scene;
+            SetActiveCamera: (camera: Camera) => void;
+            activeCamera?: Camera;
+        };
+    }
+
+    // Script API interface - to be used with the setup function
+    export interface ScriptAPI {
+        // Context properties
+        context: I_Context;
+
+        // Direct access to hooks for registration
+        hooks: I_Hooks;
+
+        // Method chaining support for fluent API
+        register: (hooks: Partial<I_Hooks>) => ScriptAPI;
+    }
+
+    // Script function expected return type
+    export interface ScriptReturn {
+        hooks: I_Hooks;
+    }
+
+    // Type for the script setup function
+    export type ScriptSetupFunction = (api: ScriptAPI) => void;
+
+    // Type for the main entry function in scripts
+    export type VircadiaScriptFunction = (context: I_Context) => ScriptReturn;
+}
 
 export interface VircadiaThreeCoreConfig {
     // Connection settings
@@ -35,7 +109,7 @@ export function createVircadiaScript(
         // Ensure Three context exists
         if (!context.Three) {
             context.Three = {
-                Version: vircadiaSdkTsPackageJson.dependencies.three,
+                Version: VircadiaThreeScript.VERSION,
                 Scene: null as unknown as Scene, // Will be properly set by caller
                 SetActiveCamera: (camera: Camera) => {
                     console.warn(
@@ -456,7 +530,7 @@ class EntityAndScriptManager {
                     },
                 },
                 Three: {
-                    Version: vircadiaSdkTsPackageJson.dependencies.three,
+                    Version: VircadiaThreeScript.VERSION,
                     Scene: this.scene,
                     SetActiveCamera: (camera: Camera) => {
                         this.SetActiveCamera(camera);

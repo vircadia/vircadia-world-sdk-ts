@@ -1,5 +1,4 @@
 import { Communication, Entity } from "../../schema/schema.general";
-import type { Babylon } from "../../schema/schema.babylon.script";
 
 import babylonPackageJson from "@babylonjs/core/package.json";
 import vircadiaSdkTsPackageJson from "../../package.json";
@@ -18,6 +17,103 @@ declare module "../../schema/schema.general" {
             }
         }
     }
+}
+
+// Babylon Script
+export namespace VircadiaBabylonScript {
+    export const VERSION = babylonPackageJson.version;
+
+    // Script hooks container
+    export interface I_Hooks {
+        // Script lifecycle hooks
+        onScriptInitialize?: (entityData: Entity.I_Entity) => void;
+        onEntityUpdate?: (entityData: Entity.I_Entity) => void;
+        onScriptUpdate?: (scriptData: Entity.Script.I_Script) => void;
+        onScriptTeardown?: () => void;
+
+        // Network state hooks
+        onConnected?: () => void;
+        onDisconnected?: (reason?: string) => void;
+    }
+
+    // The context provided to scripts
+    export interface I_Context {
+        Vircadia: {
+            Debug: boolean;
+            Suppress: boolean;
+
+            // Top-level version identifier
+            Version: string;
+
+            // Script management
+            Script: {
+                reload: () => Promise<void>;
+            };
+
+            // Utilities for asset and resource management
+            Utilities: {
+                Asset: {
+                    loadGLTFAssetAsMesh: (data: {
+                        asset: Entity.Asset.I_Asset;
+                        scene: Scene;
+                    }) => Promise<ISceneLoaderAsyncResult>;
+                    getAssetFromServer: (data: {
+                        assetName: string;
+                    }) => Promise<Entity.Asset.I_Asset | null>;
+                    getAssetHashFromServer: (data: {
+                        assetName: string;
+                    }) => Promise<string | null>;
+                    storeAssetInIndexedDB: (data: {
+                        asset: Entity.Asset.I_Asset;
+                    }) => Promise<boolean>;
+                    getAssetFromIndexedDB: (data: {
+                        assetName: string;
+                    }) => Promise<Entity.Asset.I_Asset | null>;
+                    storeAssetInFileSystem: (data: {
+                        asset: Entity.Asset.I_Asset;
+                    }) => Promise<boolean>;
+                    getAssetFromFileSystem: (data: {
+                        assetName: string;
+                    }) => Promise<Entity.Asset.I_Asset | null>;
+                };
+                Query: {
+                    execute: <T>(data: {
+                        query: string;
+                        parameters?: unknown[];
+                    }) => Promise<
+                        Communication.WebSocket.QueryResponseMessage<T>
+                    >;
+                };
+            };
+        };
+        Babylon: {
+            Version: typeof VERSION;
+            Scene: Scene;
+        };
+    }
+
+    // Script API interface - to be used with the setup function
+    export interface ScriptAPI {
+        // Context properties
+        context: I_Context;
+
+        // Direct access to hooks for registration
+        hooks: I_Hooks;
+
+        // Method chaining support for fluent API
+        register: (hooks: Partial<I_Hooks>) => ScriptAPI;
+    }
+
+    // Script function expected return type
+    export interface ScriptReturn {
+        hooks: I_Hooks;
+    }
+
+    // Type for the script setup function
+    export type ScriptSetupFunction = (api: ScriptAPI) => void;
+
+    // Type for the main entry function in scripts
+    export type VircadiaScriptFunction = (context: I_Context) => ScriptReturn;
 }
 
 export interface VircadiaBabylonCoreConfig {
@@ -243,7 +339,7 @@ export namespace Utilities {
     export async function getAssetFromServer(data: {
         assetName: string;
         connectionManager: ConnectionManager;
-        context?: Babylon.I_Context;
+        context?: VircadiaBabylonScript.I_Context;
     }): Promise<Entity.Asset.I_Asset | null> {
         const { assetName, connectionManager, context } = data;
 
@@ -283,7 +379,7 @@ export namespace Utilities {
     export async function getAssetHashFromServer(data: {
         assetName: string;
         connectionManager: ConnectionManager;
-        context?: Babylon.I_Context;
+        context?: VircadiaBabylonScript.I_Context;
     }): Promise<string | null> {
         const { assetName, connectionManager, context } = data;
 
@@ -323,7 +419,7 @@ export namespace Utilities {
     // Expose browser-specific IndexedDB functions
     export async function storeAssetInIndexedDB(
         asset: Entity.Asset.I_Asset,
-        context?: Babylon.I_Context,
+        context?: VircadiaBabylonScript.I_Context,
     ): Promise<boolean> {
         try {
             return new Promise((resolve, reject) => {
@@ -381,7 +477,7 @@ export namespace Utilities {
 
     export async function getAssetFromIndexedDB(
         assetName: string,
-        context?: Babylon.I_Context,
+        context?: VircadiaBabylonScript.I_Context,
     ): Promise<Entity.Asset.I_Asset | null> {
         try {
             return new Promise((resolve, reject) => {
@@ -443,7 +539,7 @@ export namespace Utilities {
     // Expose Bun/Node filesystem functions
     export async function storeAssetInFileSystem(
         asset: Entity.Asset.I_Asset,
-        context?: Babylon.I_Context,
+        context?: VircadiaBabylonScript.I_Context,
     ): Promise<boolean> {
         try {
             if (typeof process === "undefined" || !process.versions?.bun) {
@@ -480,7 +576,7 @@ export namespace Utilities {
 
     export async function getAssetFromFileSystem(
         assetName: string,
-        context?: Babylon.I_Context,
+        context?: VircadiaBabylonScript.I_Context,
     ): Promise<Entity.Asset.I_Asset | null> {
         try {
             if (typeof process === "undefined" || !process.versions?.bun) {
@@ -520,11 +616,13 @@ export namespace Utilities {
 
 // Script Helper Functions - Vue-inspired Composition API
 export function createVircadiaScript(
-    setupFn: Babylon.ScriptSetupFunction,
-): Babylon.VircadiaScriptFunction {
-    return (context: Babylon.I_Context): Babylon.ScriptReturn => {
+    setupFn: VircadiaBabylonScript.ScriptSetupFunction,
+): VircadiaBabylonScript.VircadiaScriptFunction {
+    return (
+        context: VircadiaBabylonScript.I_Context,
+    ): VircadiaBabylonScript.ScriptReturn => {
         // Create hooks container
-        const hooks: Babylon.I_Hooks = {};
+        const hooks: VircadiaBabylonScript.I_Hooks = {};
 
         // Ensure Babylon context exists
         if (!context.Babylon) {
@@ -535,7 +633,7 @@ export function createVircadiaScript(
         }
 
         // Create the composable API using the new pattern
-        const api: Babylon.ScriptAPI = {
+        const api: VircadiaBabylonScript.ScriptAPI = {
             // Full context access
             context,
 
@@ -543,7 +641,7 @@ export function createVircadiaScript(
             hooks,
 
             // Method chaining support for fluent API
-            register: (hookUpdates: Partial<Babylon.I_Hooks>) => {
+            register: (hookUpdates: Partial<VircadiaBabylonScript.I_Hooks>) => {
                 // Apply hook updates to the hooks object
                 Object.assign(hooks, hookUpdates);
                 return api;
@@ -828,8 +926,8 @@ class EntityAndScriptManager {
         string,
         {
             script: Entity.Script.I_Script;
-            hooks: Babylon.I_Hooks;
-            context: Babylon.I_Context;
+            hooks: VircadiaBabylonScript.I_Hooks;
+            context: VircadiaBabylonScript.I_Context;
             entityId?: string;
         }
     >();
@@ -908,7 +1006,7 @@ class EntityAndScriptManager {
     ): Promise<void> {
         try {
             // Create script context with the simplified flat structure
-            const context: Babylon.I_Context = {
+            const context: VircadiaBabylonScript.I_Context = {
                 Vircadia: {
                     // Top-level version identifier
                     Version: vircadiaSdkTsPackageJson.version,
@@ -1051,7 +1149,7 @@ class EntityAndScriptManager {
                 const instance = scriptFunc(
                     context,
                     createVircadiaScript,
-                ) as Babylon.ScriptReturn;
+                ) as VircadiaBabylonScript.ScriptReturn;
 
                 // Validate returned structure
                 if (
