@@ -278,63 +278,6 @@ export namespace Communication {
     export const WS_UPGRADE_PATH = "/world/ws";
     export const REST_BASE_PATH = "/world/rest";
 
-    export namespace BufferUtils {
-        /**
-         * Detects if an object is a serialized Buffer in the form { type: "Buffer", data: [...] }
-         * and converts it back to a Buffer
-         */
-        export function restoreBuffers<T>(obj: T): T {
-            if (!obj) return obj;
-
-            // Handle direct Buffer object case
-            if (isSerializedBuffer(obj)) {
-                return Buffer.from(
-                    (obj as unknown as { data: number[] }).data,
-                ) as unknown as T;
-            }
-
-            // If array, map each element
-            if (Array.isArray(obj)) {
-                return obj.map((item) => restoreBuffers(item)) as unknown as T;
-            }
-
-            // If object, process each property
-            if (typeof obj === "object") {
-                const result = { ...obj };
-                for (const key in result) {
-                    result[key] = restoreBuffers(result[key]);
-                }
-                return result as T;
-            }
-
-            return obj;
-        }
-
-        /**
-         * Checks if an object is a serialized Buffer (has structure { type: "Buffer", data: [...] })
-         */
-        export function isSerializedBuffer(obj: unknown): boolean {
-            return (
-                obj !== null &&
-                typeof obj === "object" &&
-                "type" in obj &&
-                "data" in obj &&
-                (obj as { type: string }).type === "Buffer" &&
-                Array.isArray((obj as { data: unknown }).data)
-            );
-        }
-
-        /**
-         * Convert bytea response fields into Buffer objects in WebSocket responses
-         * Specifically for Entity.Asset.I_Asset responses
-         */
-        export function processAssetResponse<
-            T extends Entity.Asset.I_Asset | Entity.Asset.I_Asset[],
-        >(response: T): T {
-            return restoreBuffers(response);
-        }
-    }
-
     export namespace WebSocket {
         export enum MessageType {
             GENERAL_ERROR_RESPONSE = "GENERAL_ERROR_RESPONSE",
@@ -406,7 +349,7 @@ export namespace Communication {
                 this.timestamp = Date.now();
                 this.requestId = data.requestId;
                 this.errorMessage = data.errorMessage;
-                this.result = BufferUtils.restoreBuffers(data.result);
+                this.result = data.result;
             }
         }
 
