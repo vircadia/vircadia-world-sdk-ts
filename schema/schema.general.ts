@@ -450,7 +450,7 @@ export namespace Service {
     export namespace API {
         export const Stats_Endpoint = {
             path: "/stats",
-            method: "POST",
+            method: "GET",
             createRequest: (): string => "",
             createSuccess: (data: {
                 uptime: number;
@@ -513,7 +513,7 @@ export namespace Service {
 
     export namespace Tick {
         export const Stats_Endpoint = {
-            method: "POST",
+            method: "GET",
             path: "/stats",
             createRequest: (): string => "",
             createSuccess: (data: {
