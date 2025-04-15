@@ -3,11 +3,6 @@ export namespace Config {
 }
 
 export namespace Entity {
-    export type T_EntityScriptStatus =
-        | "ACTIVE"
-        | "AWAITING_SCRIPTS"
-        | "INACTIVE";
-
     export interface I_Entity {
         general__entity_id: string;
         general__entity_name: string;
@@ -21,13 +16,11 @@ export namespace Entity {
         general__initialized_by?: string;
         // biome-ignore lint/suspicious/noExplicitAny: Anything is allowed as a value.
         meta__data: Record<string, { value: any }>;
-        script__names: string[];
         asset__names: string[];
         group__sync: string;
 
         // Add timestamp tracking fields for specific properties
         meta_data_updated_at: string;
-        script_names_updated_at: string;
         asset_names_updated_at: string;
         position_updated_at: string;
     }
@@ -56,70 +49,6 @@ export namespace Entity {
             asset__data__bytea_updated_at?: string;
         }
     }
-
-    export namespace Script {
-        export enum E_ScriptType {
-            BABYLON_BUN = "BABYLON_BUN",
-            BABYLON_BROWSER = "BABYLON_BROWSER",
-            THREE_BUN = "THREE_BUN",
-            THREE_BROWSER = "THREE_BROWSER",
-        }
-
-        export enum E_CompilationStatus {
-            NOT_COMPILED = "NOT_COMPILED",
-            COMPILING = "COMPILING",
-            COMPILED = "COMPILED",
-            FAILED = "FAILED",
-        }
-
-        export interface I_Script {
-            general__script_file_name: string;
-            general__created_at?: string;
-            general__created_by?: string;
-            general__updated_at?: string;
-            general__updated_by?: string;
-            group__sync: string;
-
-            script__source__repo__entry_path: string;
-            script__source__repo__url: string;
-            script__source__data: string;
-            script__source__updated_at: string;
-
-            // Script type
-            script__platform: E_ScriptType[];
-
-            // Compiled script fields
-            script__compiled__babylon_bun__data: string;
-            script__compiled__babylon_bun__status: E_CompilationStatus;
-            script__compiled__babylon_bun__data_updated_at: string;
-            script__compiled__babylon_bun__status_updated_at: string;
-
-            script__compiled__babylon_browser__data: string;
-            script__compiled__babylon_browser__status: E_CompilationStatus;
-            script__compiled__babylon_browser__data_updated_at: string;
-            script__compiled__babylon_browser__status_updated_at: string;
-
-            script__compiled__three_bun__data: string;
-            script__compiled__three_bun__status: E_CompilationStatus;
-            script__compiled__three_bun__data_updated_at: string;
-            script__compiled__three_bun__status_updated_at: string;
-
-            script__compiled__three_browser__data: string;
-            script__compiled__three_browser__status: E_CompilationStatus;
-            script__compiled__three_browser__data_updated_at: string;
-            script__compiled__three_browser__status_updated_at: string;
-
-            // Timestamp tracking fields
-            script__source__data_updated_at: string;
-            script__source__repo__url_updated_at: string;
-            script__source__repo__entry_path_updated_at: string;
-        }
-
-        export interface SourceInfo {
-            repo_entry_path?: string;
-            repo_url?: string;
-        }
-    }
 }
 
 export namespace Tick {
@@ -131,7 +60,6 @@ export namespace Tick {
         tick__end_time: Date;
         tick__duration_ms: number;
         tick__entity_states_processed: number;
-        tick__script_states_processed: number;
         tick__is_delayed: boolean;
         tick__headroom_ms: number | null;
         tick__time_since_last_tick_ms: number | null;
@@ -147,49 +75,6 @@ export namespace Tick {
         tick__manager__end_time: Date | null;
         tick__manager__duration_ms: number | null;
         tick__manager__is_delayed: boolean | null;
-    }
-
-    export interface I_EntityUpdate {
-        general__entity_id: Pick<
-            Entity.I_Entity,
-            "general__entity_id"
-        >["general__entity_id"];
-        operation: Config.E_OperationType;
-        changes: Config.E_OperationType extends "INSERT"
-            ? Entity.I_Entity
-            : DeepPartial<Entity.I_Entity>;
-    }
-
-    export interface I_ScriptUpdate {
-        general__script_file_name: Pick<
-            Entity.Script.I_Script,
-            "general__script_file_name"
-        >["general__script_file_name"];
-        operation: Config.E_OperationType;
-        changes: Config.E_OperationType extends "INSERT"
-            ? Entity.Script.I_Script
-            : DeepPartial<Entity.Script.I_Script>;
-    }
-
-    export interface I_AssetUpdate {
-        general__asset_file_name: Pick<
-            Entity.Asset.I_Asset,
-            "general__asset_file_name"
-        >["general__asset_file_name"];
-        operation: Config.E_OperationType;
-        changes: Config.E_OperationType extends "INSERT"
-            ? Entity.Asset.I_Asset
-            : DeepPartial<Entity.Asset.I_Asset>;
-    }
-
-    export interface I_EntityState extends Entity.I_Entity {
-        general__entity_state_id: string;
-        general__tick_id: string;
-    }
-
-    export interface I_ScriptState extends Entity.Script.I_Script {
-        general__script_state_id: string;
-        general__tick_id: string;
     }
 
     export interface I_TickNotification {

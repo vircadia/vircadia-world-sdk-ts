@@ -6,7 +6,6 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 
-import babylonScriptSchema from '!!raw-loader!./schema.babylon.script.ts';
 import generalSchema from '!!raw-loader!./schema.general.ts';
 
 # Typescript Schemas
@@ -14,17 +13,6 @@ import generalSchema from '!!raw-loader!./schema.general.ts';
 These schema files are used throughout the Vircadia World SDK to provide TypeScript type safety and documentation for developers building on the platform. 
 
 <Tabs>
-  <TabItem value="babylon-script" label="Babylon Script Schema">
-    <p>
-        The Babylon Script schema defines interfaces and types used for scripting with Babylon.js in Vircadia World. It includes:
-        - Script hooks for lifecycle events
-        - Context interfaces for script execution
-        - API interfaces for script interaction
-    </p>
-    <CodeBlock language="typescript" title="schema.babylon.script.ts">
-      {babylonScriptSchema}
-    </CodeBlock>
-  </TabItem>
   <TabItem value="general" label="General Schema">
     <p>
         The General Schema defines the core data structures used in the Vircadia World PostgreSQL database:

@@ -89,32 +89,12 @@ const cliEnvSchema = z.object({
         .string()
         .nullable()
         .default(null),
-    VRCA_CLI_SERVICE_POSTGRES_SEED_SYSTEM_SCRIPT_DIR: z
-        .string()
-        .default(
-            path.join(
-                dirname(fileURLToPath(import.meta.url)),
-                "../../../cli/database/seed/script/",
-            ),
-        ),
-    VRCA_CLI_SERVICE_POSTGRES_SEED_USER_SCRIPT_DIR: z
-        .string()
-        .nullable()
-        .default(null),
     VRCA_CLI_SERVICE_POSTGRES_SYNC_ASSET_DIR: z
         .string()
         .default(
             path.join(
                 dirname(fileURLToPath(import.meta.url)),
                 "../../../cli/database/seed/asset/babylon_js",
-            ),
-        ),
-    VRCA_CLI_SERVICE_POSTGRES_SYNC_SCRIPT_DIR: z
-        .string()
-        .default(
-            path.join(
-                dirname(fileURLToPath(import.meta.url)),
-                "../../../cli/database/seed/script/babylon_js",
             ),
         ),
 
