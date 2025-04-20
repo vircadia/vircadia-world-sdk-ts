@@ -1,14 +1,19 @@
-import { Communication } from "../../schema/schema.general";
-import { log } from "../general/log";
-import type { Scene, Camera } from "three";
+import { Communication } from "../../../schema/schema.general";
+import { log } from "../../general/log";
 
-export interface VircadiaThreeCoreConfig {
+// Define event types
+type ConnectionStatusEvent =
+    | "connected"
+    | "connecting"
+    | "reconnecting"
+    | "disconnected";
+type ConnectionEventListener = () => void;
+
+export interface VircadiaClientCoreConfig {
     // Connection settings
     serverUrl: string;
     authToken: string;
     authProvider: string;
-
-    scene: Scene;
 
     // Reconnection settings
     reconnectAttempts?: number;
@@ -32,8 +37,41 @@ class ConnectionManager {
             timeout: Timer;
         }
     >();
+    private eventListeners = new Map<string, Set<ConnectionEventListener>>();
+    private lastStatus: ConnectionStatusEvent = "disconnected";
 
-    constructor(private config: VircadiaThreeCoreConfig) {}
+    constructor(private config: VircadiaClientCoreConfig) {}
+
+    // Event handling methods
+    addEventListener(event: string, listener: ConnectionEventListener): void {
+        if (!this.eventListeners.has(event)) {
+            this.eventListeners.set(event, new Set());
+        }
+        this.eventListeners.get(event)?.add(listener);
+    }
+
+    removeEventListener(
+        event: string,
+        listener: ConnectionEventListener,
+    ): void {
+        this.eventListeners.get(event)?.delete(listener);
+    }
+
+    private emitEvent(event: string): void {
+        const listeners = this.eventListeners.get(event);
+        if (listeners) {
+            for (const listener of listeners) {
+                listener();
+            }
+        }
+    }
+
+    private updateConnectionStatus(status: ConnectionStatusEvent): void {
+        if (this.lastStatus !== status) {
+            this.lastStatus = status;
+            this.emitEvent("statusChange");
+        }
+    }
 
     // Connect to the server and handle authentication
     async connect(): Promise<boolean> {
@@ -41,6 +79,8 @@ class ConnectionManager {
             return this.isClientConnected();
 
         try {
+            this.updateConnectionStatus("connecting");
+
             const url = new URL(this.config.serverUrl);
             url.searchParams.set("token", this.config.authToken);
             url.searchParams.set("provider", this.config.authProvider);
@@ -64,6 +104,7 @@ class ConnectionManager {
                         errorMessage = event.reason;
                     }
 
+                    this.updateConnectionStatus("disconnected");
                     reject(
                         new Error(
                             `WebSocket connection failed: ${errorMessage}`,
@@ -74,11 +115,13 @@ class ConnectionManager {
                 this.ws.onopen = () => {
                     // Remove the error handler once connected
                     if (this.ws) this.ws.onclose = this.handleClose.bind(this);
+                    this.updateConnectionStatus("connected");
                     resolve();
                 };
 
                 // Enhanced error handling
                 this.ws.onerror = (err) => {
+                    this.updateConnectionStatus("disconnected");
                     reject(
                         new Error(
                             `WebSocket error: ${err instanceof Error ? err.message : "Unknown error"}`,
@@ -192,6 +235,8 @@ class ConnectionManager {
             }
             this.ws = null;
         }
+
+        this.updateConnectionStatus("disconnected");
     }
 
     // Private methods for WebSocket handling
@@ -220,6 +265,7 @@ class ConnectionManager {
     }
 
     private handleClose(event: CloseEvent): void {
+        this.updateConnectionStatus("disconnected");
         this.attemptReconnect();
     }
 
@@ -232,6 +278,8 @@ class ConnectionManager {
         } else if (event instanceof CloseEvent) {
             errorMessage = event.reason || `Code: ${event.code}`;
         }
+
+        this.updateConnectionStatus("disconnected");
 
         log({
             message: "WebSocket error:",
@@ -258,6 +306,8 @@ class ConnectionManager {
             return;
         }
 
+        this.updateConnectionStatus("reconnecting");
+
         this.reconnectTimer = setTimeout(async () => {
             this.reconnectTimer = null;
             this.reconnectCount++;
@@ -278,10 +328,10 @@ class ConnectionManager {
 }
 
 // Main class that coordinates all components and exposes utilities
-export class VircadiaThreeCore {
+export class VircadiaClientCore {
     private connectionManager: ConnectionManager;
 
-    constructor(private config: VircadiaThreeCoreConfig) {
+    constructor(private config: VircadiaClientCoreConfig) {
         this.connectionManager = new ConnectionManager(config);
     }
 
@@ -304,6 +354,18 @@ export class VircadiaThreeCore {
                 },
                 isReconnecting: (): boolean => {
                     return this.connectionManager.isReconnecting();
+                },
+                addEventListener: (
+                    event: string,
+                    listener: ConnectionEventListener,
+                ): void => {
+                    this.connectionManager.addEventListener(event, listener);
+                },
+                removeEventListener: (
+                    event: string,
+                    listener: ConnectionEventListener,
+                ): void => {
+                    this.connectionManager.removeEventListener(event, listener);
                 },
                 query: async <T>(data: {
                     query: string;
