@@ -16,13 +16,10 @@ export namespace Entity {
         general__initialized_by?: string;
         // biome-ignore lint/suspicious/noExplicitAny: Anything is allowed as a value.
         meta__data: Record<string, { value: any }>;
-        asset__names: string[];
         group__sync: string;
 
         // Add timestamp tracking fields for specific properties
         meta_data_updated_at: string;
-        asset_names_updated_at: string;
-        position_updated_at: string;
     }
 
     export namespace Asset {
