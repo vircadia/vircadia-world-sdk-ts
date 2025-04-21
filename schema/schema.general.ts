@@ -23,10 +23,7 @@ export namespace Entity {
     }
 
     export namespace Asset {
-        export type T_AssetOmitData = Omit<
-            I_Asset,
-            "asset__data__base64" | "asset__data__bytea"
-        >;
+        export type T_AssetOmitData = Omit<I_Asset, "asset__data__bytea">;
 
         export interface I_Asset {
             general__asset_file_name: string;
@@ -37,12 +34,8 @@ export namespace Entity {
             group__sync?: string;
 
             // Asset fields
-            asset__data__base64?: string;
             asset__data__bytea?: Buffer;
             asset__mime_type?: string;
-
-            // Add timestamp tracking field for asset data - make optional
-            asset__data__base64_updated_at?: string;
             asset__data__bytea_updated_at?: string;
         }
     }
