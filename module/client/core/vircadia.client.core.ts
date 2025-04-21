@@ -2,11 +2,19 @@ import { Communication } from "../../../schema/schema.general";
 import { log } from "../../general/log";
 
 // Define event types
-type ConnectionStatusEvent =
+export type ConnectionStatus =
     | "connected"
     | "connecting"
     | "reconnecting"
     | "disconnected";
+
+export type ConnectionStats = {
+    status: ConnectionStatus;
+    isConnected: boolean;
+    isConnecting: boolean;
+    isReconnecting: boolean;
+    connectionDuration?: number;
+};
 type ConnectionEventListener = () => void;
 
 export interface VircadiaClientCoreConfig {
@@ -38,7 +46,8 @@ class ConnectionManager {
         }
     >();
     private eventListeners = new Map<string, Set<ConnectionEventListener>>();
-    private lastStatus: ConnectionStatusEvent = "disconnected";
+    private lastStatus: ConnectionStatus = "disconnected";
+    private connectionStartTime: number | null = null;
 
     constructor(private config: VircadiaClientCoreConfig) {}
 
@@ -66,7 +75,7 @@ class ConnectionManager {
         }
     }
 
-    private updateConnectionStatus(status: ConnectionStatusEvent): void {
+    private updateConnectionStatus(status: ConnectionStatus): void {
         if (this.lastStatus !== status) {
             this.lastStatus = status;
             this.emitEvent("statusChange");
@@ -116,6 +125,7 @@ class ConnectionManager {
                     // Remove the error handler once connected
                     if (this.ws) this.ws.onclose = this.handleClose.bind(this);
                     this.updateConnectionStatus("connected");
+                    this.connectionStartTime = Date.now();
                     resolve();
                 };
 
@@ -190,17 +200,38 @@ class ConnectionManager {
         );
     }
 
-    // Connection state methods
-    isConnecting(): boolean {
+    // Connection state methods - keep these as internal methods
+    private isConnecting(): boolean {
         return this.ws !== null && this.ws.readyState === WebSocket.CONNECTING;
     }
 
-    isClientConnected(): boolean {
+    private isClientConnected(): boolean {
         return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
     }
 
-    isReconnecting(): boolean {
+    private isReconnecting(): boolean {
         return this.reconnectTimer !== null;
+    }
+
+    // Enhanced connection status method that replaces individual status methods
+    getConnectionStatus(): {
+        status: ConnectionStatus;
+        isConnected: boolean;
+        isConnecting: boolean;
+        isReconnecting: boolean;
+        connectionDuration?: number;
+    } {
+        const connectionDuration = this.connectionStartTime
+            ? Date.now() - this.connectionStartTime
+            : undefined;
+
+        return {
+            status: this.lastStatus,
+            isConnected: this.isClientConnected(),
+            isConnecting: this.isConnecting(),
+            isReconnecting: this.isReconnecting(),
+            connectionDuration,
+        };
     }
 
     // Clean up and disconnect
@@ -237,6 +268,7 @@ class ConnectionManager {
         }
 
         this.updateConnectionStatus("disconnected");
+        this.connectionStartTime = null;
     }
 
     // Private methods for WebSocket handling
@@ -325,6 +357,36 @@ class ConnectionManager {
             }
         }, delay);
     }
+
+    // New methods for debugging and monitoring
+    getPendingRequests(): {
+        requestId: string;
+        elapsedMs: number;
+        query?: string;
+    }[] {
+        const now = Date.now();
+        return Array.from(this.pendingRequests.entries()).map(
+            ([requestId, request]) => {
+                const elapsedMs = now - (request.timeout as unknown as number);
+                return { requestId, elapsedMs };
+            },
+        );
+    }
+
+    getConnectionStats(): {
+        reconnectAttempts: number;
+        pendingRequestsCount: number;
+        connectionDuration?: number;
+    } {
+        const connectionDuration = this.connectionStartTime
+            ? Date.now() - this.connectionStartTime
+            : undefined;
+        return {
+            reconnectAttempts: this.reconnectCount,
+            pendingRequestsCount: this.pendingRequests.size,
+            connectionDuration,
+        };
+    }
 }
 
 // Main class that coordinates all components and exposes utilities
@@ -346,15 +408,6 @@ export class VircadiaClientCore {
                 disconnect: (): void => {
                     this.connectionManager.disconnect();
                 },
-                isConnected: (): boolean => {
-                    return this.connectionManager.isClientConnected();
-                },
-                isConnecting: (): boolean => {
-                    return this.connectionManager.isConnecting();
-                },
-                isReconnecting: (): boolean => {
-                    return this.connectionManager.isReconnecting();
-                },
                 addEventListener: (
                     event: string,
                     listener: ConnectionEventListener,
@@ -375,6 +428,36 @@ export class VircadiaClientCore {
                     Communication.WebSocket.QueryResponseMessage<T>
                 > => {
                     return this.connectionManager.sendQueryAsync<T>(data);
+                },
+                // Debug monitoring
+                getPendingRequests: (): {
+                    requestId: string;
+                    elapsedMs: number;
+                    query?: string;
+                }[] => {
+                    return this.connectionManager.getPendingRequests();
+                },
+                getConnectionStatus: (): {
+                    status: ConnectionStatus;
+                    isConnected: boolean;
+                    isConnecting: boolean;
+                    isReconnecting: boolean;
+                    connectionDuration?: number;
+                } => {
+                    return this.connectionManager.getConnectionStatus();
+                },
+                getConnectionStats: (): {
+                    reconnectAttempts: number;
+                    pendingRequestsCount: number;
+                } => {
+                    return {
+                        reconnectAttempts:
+                            this.connectionManager.getConnectionStats()
+                                .reconnectAttempts,
+                        pendingRequestsCount:
+                            this.connectionManager.getConnectionStats()
+                                .pendingRequestsCount,
+                    };
                 },
             },
         };
