@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useVircadiaQuery } from "../hook/useVircadiaQuery";
+import { useVircadiaQuery } from "./useVircadiaQuery";
 
 export interface VircadiaAssetData {
     arrayBuffer: ArrayBuffer;
@@ -8,17 +8,7 @@ export interface VircadiaAssetData {
     url: string;
 }
 
-interface VircadiaAssetProps {
-    assetFileName: string;
-    onLoad?: (data: VircadiaAssetData) => void;
-    onError?: (error: Error) => void;
-}
-
-export const VircadiaAsset: React.FC<VircadiaAssetProps> = ({
-    assetFileName,
-    onLoad,
-    onError,
-}) => {
+export function useVircadiaAsset(assetFileName: string) {
     const [assetData, setAssetData] = useState<VircadiaAssetData | null>(null);
     const [error, setError] = useState<Error | null>(null);
     const [loading, setLoading] = useState(true);
@@ -57,9 +47,9 @@ export const VircadiaAsset: React.FC<VircadiaAssetProps> = ({
                     rawData &&
                     typeof rawData === "object" &&
                     "data" in rawData &&
-                    Array.isArray((rawData as any).data)
+                    Array.isArray((rawData as unknown as any).data)
                 ) {
-                    byteArray = (rawData as any).data;
+                    byteArray = (rawData as unknown as any).data;
                 } else if (Array.isArray(rawData)) {
                     byteArray = rawData;
                 }
@@ -78,14 +68,12 @@ export const VircadiaAsset: React.FC<VircadiaAssetProps> = ({
                 };
 
                 setAssetData(data);
-                onLoad?.(data);
             } catch (err) {
                 const error =
                     err instanceof Error
                         ? err
                         : new Error("Failed to load asset");
                 setError(error);
-                onError?.(error);
             } finally {
                 setLoading(false);
             }
@@ -98,7 +86,7 @@ export const VircadiaAsset: React.FC<VircadiaAssetProps> = ({
                 URL.revokeObjectURL(assetData.url);
             }
         };
-    }, [assetFileName, executeQuery, onLoad, onError, assetData]);
+    }, [assetFileName, executeQuery]);
 
-    return null;
-};
+    return { assetData, error, loading };
+}

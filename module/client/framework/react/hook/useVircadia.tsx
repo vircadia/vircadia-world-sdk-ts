@@ -1,3 +1,5 @@
+import { useContext } from "react";
+
 import React, {
     createContext,
     useState,
@@ -9,8 +11,8 @@ import React, {
 import type {
     VircadiaClientCore,
     VircadiaClientCoreConfig,
-} from "../core/vircadia.client.core";
-import { VircadiaClientCore as VircadiaClientCoreImpl } from "../core/vircadia.client.core";
+} from "../../../core/vircadia.client.core";
+import { VircadiaClientCore as VircadiaClientCoreImpl } from "../../../core/vircadia.client.core";
 
 // Define types for our context
 interface VircadiaContextType {
@@ -200,3 +202,5 @@ export const VircadiaProvider = ({
         </VircadiaContext.Provider>
     );
 };
+
+export const useVircadia = () => useContext(VircadiaContext);

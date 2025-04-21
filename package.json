@@ -11,6 +11,7 @@
         "jsonwebtoken": "^9.0.2",
         "mobx": "latest",
         "postgres": "latest",
+        "solid-js": "^1.9.5",
         "three": "^0.175.0",
         "tmp": "^0.2.3",
         "typescript": "latest",
