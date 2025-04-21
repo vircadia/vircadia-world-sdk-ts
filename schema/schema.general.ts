@@ -39,7 +39,7 @@ export namespace Entity {
             // Asset fields
             asset__data__base64?: string;
             asset__data__bytea?: Buffer;
-            asset__type?: string;
+            asset__mime_type?: string;
 
             // Add timestamp tracking field for asset data - make optional
             asset__data__base64_updated_at?: string;

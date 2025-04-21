@@ -3,7 +3,6 @@ import { useVircadiaQuery } from "../hook/useVircadiaQuery";
 
 export interface VircadiaAssetData {
     arrayBuffer: ArrayBuffer;
-    base64: string;
     blob: Blob;
     type: string;
     url: string;
@@ -33,11 +32,11 @@ export const VircadiaAsset: React.FC<VircadiaAssetProps> = ({
 
                 // Fetch from database
                 const result = await executeQuery<{
-                    asset__data__base64: string;
-                    asset__type: string;
+                    asset__data__bytea: any;
+                    asset__mime_type: string;
                 }>({
                     query: `
-                        SELECT asset__data__base64, asset__type
+                        SELECT asset__data__bytea, asset__mime_type
                         FROM entity.entity_assets
                         WHERE general__asset_file_name = $1
                     `,
@@ -48,26 +47,33 @@ export const VircadiaAsset: React.FC<VircadiaAssetProps> = ({
                     throw new Error(`Asset ${assetFileName} not found`);
                 }
 
-                // Convert base64 to various formats
-                const base64 = result[0].asset__data__base64;
-                const type = result[0].asset__type.toLowerCase();
-                const binaryData = atob(base64);
-                const arrayBuffer = new ArrayBuffer(binaryData.length);
-                const view = new Uint8Array(arrayBuffer);
+                // Process bytea data
+                const rawData = result[0].asset__data__bytea;
+                const mimeType = result[0].asset__mime_type;
 
-                for (let i = 0; i < binaryData.length; i++) {
-                    view[i] = binaryData.charCodeAt(i);
+                // Handle bytea data in different formats
+                let byteArray: number[] = [];
+                if (
+                    rawData &&
+                    typeof rawData === "object" &&
+                    "data" in rawData &&
+                    Array.isArray((rawData as any).data)
+                ) {
+                    byteArray = (rawData as any).data;
+                } else if (Array.isArray(rawData)) {
+                    byteArray = rawData;
                 }
 
-                const mimeType = getMimeType(type);
-                const blob = new Blob([arrayBuffer], { type: mimeType });
+                // Convert to array buffer and blob
+                const uint8Array = new Uint8Array(byteArray);
+                const arrayBuffer = uint8Array.buffer;
+                const blob = new Blob([uint8Array], { type: mimeType });
                 const url = URL.createObjectURL(blob);
 
                 const data: VircadiaAssetData = {
                     arrayBuffer,
-                    base64,
                     blob,
-                    type,
+                    type: mimeType,
                     url,
                 };
 
@@ -95,13 +101,4 @@ export const VircadiaAsset: React.FC<VircadiaAssetProps> = ({
     }, [assetFileName, executeQuery, onLoad, onError, assetData]);
 
     return null;
-};
-
-const getMimeType = (extension: string): string => {
-    const mimeTypes: Record<string, string> = {
-        gltf: "model/gltf+json",
-        glb: "model/gltf-binary",
-        // Add more mime types as needed
-    };
-    return mimeTypes[extension.toLowerCase()] || "application/octet-stream";
 };
