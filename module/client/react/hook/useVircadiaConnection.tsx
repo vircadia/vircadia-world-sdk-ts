@@ -1,5 +1,3 @@
-import { useCallback, useContext } from "react";
-import { VircadiaContext } from "../VircadiaProvider";
 import { useVircadia } from "./useVircadia";
 
 export const useVircadiaConnection = () => {
