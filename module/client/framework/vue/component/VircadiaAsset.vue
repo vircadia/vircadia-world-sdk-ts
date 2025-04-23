@@ -41,9 +41,14 @@ const loadAsset = async (assetFileName: string) => {
         console.log(`Starting to load asset: ${assetFileName}`);
 
         // Fetch from database
-        const queryResult = await vircadia.query<
+        const queryResult = await vircadia.client.Utilities.Connection.query<
             {
-                asset__data__bytea: any;
+                asset__data__bytea:
+                    | ArrayBufferLike
+                    | {
+                          type: string;
+                          data: number[];
+                      };
                 asset__mime_type: string;
             }[]
         >({
@@ -70,8 +75,10 @@ const loadAsset = async (assetFileName: string) => {
             rawData &&
             typeof rawData === "object" &&
             "data" in rawData &&
+            // biome-ignore lint/suspicious/noExplicitAny: Data can be of any type potentially.
             Array.isArray((rawData as unknown as any).data)
         ) {
+            // biome-ignore lint/suspicious/noExplicitAny: Data can be of any type potentially.
             byteArray = (rawData as unknown as any).data;
         } else if (Array.isArray(rawData)) {
             byteArray = rawData;

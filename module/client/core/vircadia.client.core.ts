@@ -2,18 +2,23 @@ import { Communication } from "../../../schema/schema.general";
 import { log } from "../../general/log";
 
 // Define event types
-export type ConnectionStatus =
+export type ConnectionState =
     | "connected"
     | "connecting"
     | "reconnecting"
     | "disconnected";
 
-export type ConnectionStats = {
-    status: ConnectionStatus;
+export type ConnectionInfo = {
+    status: ConnectionState;
     isConnected: boolean;
     isConnecting: boolean;
     isReconnecting: boolean;
     connectionDuration?: number;
+    reconnectAttempts: number;
+    pendingRequests: Array<{
+        requestId: string;
+        elapsedMs: number;
+    }>;
 };
 type ConnectionEventListener = () => void;
 
@@ -46,8 +51,9 @@ class ConnectionManager {
         }
     >();
     private eventListeners = new Map<string, Set<ConnectionEventListener>>();
-    private lastStatus: ConnectionStatus = "disconnected";
+    private lastStatus: ConnectionState = "disconnected";
     private connectionStartTime: number | null = null;
+    private connectionPromise: Promise<ConnectionInfo> | null = null;
 
     constructor(private config: VircadiaClientCoreConfig) {}
 
@@ -75,7 +81,7 @@ class ConnectionManager {
         }
     }
 
-    private updateConnectionStatus(status: ConnectionStatus): void {
+    private updateConnectionStatus(status: ConnectionState): void {
         if (this.lastStatus !== status) {
             this.lastStatus = status;
             this.emitEvent("statusChange");
@@ -83,90 +89,113 @@ class ConnectionManager {
     }
 
     // Connect to the server and handle authentication
-    async connect(): Promise<boolean> {
-        if (this.isClientConnected() || this.isConnecting())
-            return this.isClientConnected();
-
-        try {
-            this.updateConnectionStatus("connecting");
-
-            const url = new URL(this.config.serverUrl);
-            url.searchParams.set("token", this.config.authToken);
-            url.searchParams.set("provider", this.config.authProvider);
-
-            this.ws = new WebSocket(url);
-            this.ws.onmessage = this.handleMessage.bind(this);
-            this.ws.onclose = this.handleClose.bind(this);
-            this.ws.onerror = this.handleError.bind(this);
-
-            await new Promise<void>((resolve, reject) => {
-                if (!this.ws)
-                    return reject(new Error("WebSocket not initialized"));
-
-                // Define a handler for connection errors
-                const handleConnectionError = (event: CloseEvent) => {
-                    // Try to extract detailed error information from the close event
-                    let errorMessage = "Connection failed";
-
-                    // If there's a meaningful reason phrase
-                    if (event.reason) {
-                        errorMessage = event.reason;
-                    }
-
-                    this.updateConnectionStatus("disconnected");
-                    reject(
-                        new Error(
-                            `WebSocket connection failed: ${errorMessage}`,
-                        ),
-                    );
-                };
-
-                this.ws.onopen = () => {
-                    // Remove the error handler once connected
-                    if (this.ws) this.ws.onclose = this.handleClose.bind(this);
-                    this.updateConnectionStatus("connected");
-                    this.connectionStartTime = Date.now();
-                    resolve();
-                };
-
-                // Enhanced error handling
-                this.ws.onerror = (err) => {
-                    this.updateConnectionStatus("disconnected");
-                    reject(
-                        new Error(
-                            `WebSocket error: ${err instanceof Error ? err.message : "Unknown error"}`,
-                        ),
-                    );
-                };
-
-                // Temporarily override onclose to catch authentication failures
-                this.ws.onclose = handleConnectionError;
-            });
-
-            this.reconnectCount = 0;
-            return true;
-        } catch (error) {
-            // Attempt reconnection
-            this.attemptReconnect();
-
-            // Re-throw with enhanced error info if possible
-            if (error instanceof Error) {
-                // Check if this is an authentication error
-                if (
-                    error.message.includes("401") ||
-                    error.message.includes("Invalid token") ||
-                    error.message.includes("Authentication")
-                ) {
-                    throw new Error(`Authentication failed: ${error.message}`);
-                }
-            }
-
-            throw error;
+    async connect(options?: { timeoutMs?: number }): Promise<ConnectionInfo> {
+        // If already connected, return immediately
+        if (this.isClientConnected()) {
+            return this.getConnectionInfo();
         }
+
+        // If connection is in progress, return the existing promise
+        if (this.connectionPromise && this.isConnecting()) {
+            return this.connectionPromise;
+        }
+
+        // Create new connection promise
+        this.connectionPromise = (async () => {
+            try {
+                this.updateConnectionStatus("connecting");
+
+                const url = new URL(this.config.serverUrl);
+                url.searchParams.set("token", this.config.authToken);
+                url.searchParams.set("provider", this.config.authProvider);
+
+                this.ws = new WebSocket(url);
+                this.ws.onmessage = this.handleMessage.bind(this);
+                this.ws.onclose = this.handleClose.bind(this);
+                this.ws.onerror = this.handleError.bind(this);
+
+                // Add timeout for connection
+                const connectionTimeoutMs = options?.timeoutMs || 30000; // Default 30 seconds timeout
+
+                await Promise.race([
+                    new Promise<void>((resolve, reject) => {
+                        if (!this.ws)
+                            return reject(
+                                new Error("WebSocket not initialized"),
+                            );
+
+                        // Define a handler for connection errors
+                        const handleConnectionError = (event: CloseEvent) => {
+                            let errorMessage = "Connection failed";
+                            if (event.reason) {
+                                errorMessage = event.reason;
+                            }
+                            this.updateConnectionStatus("disconnected");
+                            reject(
+                                new Error(
+                                    `WebSocket connection failed: ${errorMessage}`,
+                                ),
+                            );
+                        };
+
+                        this.ws.onopen = () => {
+                            if (this.ws)
+                                this.ws.onclose = this.handleClose.bind(this);
+                            this.updateConnectionStatus("connected");
+                            this.connectionStartTime = Date.now();
+                            resolve();
+                        };
+
+                        this.ws.onerror = (err) => {
+                            this.updateConnectionStatus("disconnected");
+                            reject(
+                                new Error(
+                                    `WebSocket error: ${err instanceof Error ? err.message : "Unknown error"}`,
+                                ),
+                            );
+                        };
+
+                        this.ws.onclose = handleConnectionError;
+                    }),
+                    new Promise<never>((_, reject) => {
+                        setTimeout(
+                            () => reject(new Error("Connection timeout")),
+                            connectionTimeoutMs,
+                        );
+                    }),
+                ]);
+
+                this.reconnectCount = 0;
+                return this.getConnectionInfo();
+            } catch (error) {
+                // Attempt reconnection
+                this.attemptReconnect();
+
+                // Re-throw with enhanced error info if possible
+                if (error instanceof Error) {
+                    if (
+                        error.message.includes("401") ||
+                        error.message.includes("Invalid token") ||
+                        error.message.includes("Authentication")
+                    ) {
+                        throw new Error(
+                            `Authentication failed: ${error.message}`,
+                        );
+                    }
+                }
+
+                throw error;
+            } finally {
+                // Clear the promise reference to allow future connect attempts
+                this.connectionPromise = null;
+            }
+        })();
+
+        return this.connectionPromise;
     }
 
     // Send a query to the server and wait for response
-    async sendQueryAsync<T = unknown>(data: {
+    async query<T = unknown>(data: {
         query: string;
         parameters?: unknown[];
         timeoutMs?: number;
@@ -214,16 +243,19 @@ class ConnectionManager {
     }
 
     // Enhanced connection status method that replaces individual status methods
-    getConnectionStatus(): {
-        status: ConnectionStatus;
-        isConnected: boolean;
-        isConnecting: boolean;
-        isReconnecting: boolean;
-        connectionDuration?: number;
-    } {
+    getConnectionInfo(): ConnectionInfo {
+        const now = Date.now();
+
         const connectionDuration = this.connectionStartTime
-            ? Date.now() - this.connectionStartTime
+            ? now - this.connectionStartTime
             : undefined;
+
+        const pendingRequests = Array.from(this.pendingRequests.entries()).map(
+            ([requestId, request]) => {
+                const elapsedMs = now - (request.timeout as unknown as number);
+                return { requestId, elapsedMs };
+            },
+        );
 
         return {
             status: this.lastStatus,
@@ -231,6 +263,8 @@ class ConnectionManager {
             isConnecting: this.isConnecting(),
             isReconnecting: this.isReconnecting(),
             connectionDuration,
+            reconnectAttempts: this.reconnectCount,
+            pendingRequests,
         };
     }
 
@@ -357,36 +391,6 @@ class ConnectionManager {
             }
         }, delay);
     }
-
-    // New methods for debugging and monitoring
-    getPendingRequests(): {
-        requestId: string;
-        elapsedMs: number;
-        query?: string;
-    }[] {
-        const now = Date.now();
-        return Array.from(this.pendingRequests.entries()).map(
-            ([requestId, request]) => {
-                const elapsedMs = now - (request.timeout as unknown as number);
-                return { requestId, elapsedMs };
-            },
-        );
-    }
-
-    getConnectionStats(): {
-        reconnectAttempts: number;
-        pendingRequestsCount: number;
-        connectionDuration?: number;
-    } {
-        const connectionDuration = this.connectionStartTime
-            ? Date.now() - this.connectionStartTime
-            : undefined;
-        return {
-            reconnectAttempts: this.reconnectCount,
-            pendingRequestsCount: this.pendingRequests.size,
-            connectionDuration,
-        };
-    }
 }
 
 // Main class that coordinates all components and exposes utilities
@@ -399,66 +403,17 @@ export class VircadiaClientCore {
 
     // Expose utilities
     get Utilities() {
+        const cm = this.connectionManager;
+
         return {
             Connection: {
-                // Connection methods
-                connect: async (): Promise<boolean> => {
-                    return this.connectionManager.connect();
-                },
-                disconnect: (): void => {
-                    this.connectionManager.disconnect();
-                },
-                addEventListener: (
-                    event: string,
-                    listener: ConnectionEventListener,
-                ): void => {
-                    this.connectionManager.addEventListener(event, listener);
-                },
-                removeEventListener: (
-                    event: string,
-                    listener: ConnectionEventListener,
-                ): void => {
-                    this.connectionManager.removeEventListener(event, listener);
-                },
-                query: async <T>(data: {
-                    query: string;
-                    parameters?: unknown[];
-                    timeoutMs?: number;
-                }): Promise<
-                    Communication.WebSocket.QueryResponseMessage<T>
-                > => {
-                    return this.connectionManager.sendQueryAsync<T>(data);
-                },
-                // Debug monitoring
-                getPendingRequests: (): {
-                    requestId: string;
-                    elapsedMs: number;
-                    query?: string;
-                }[] => {
-                    return this.connectionManager.getPendingRequests();
-                },
-                getConnectionStatus: (): {
-                    status: ConnectionStatus;
-                    isConnected: boolean;
-                    isConnecting: boolean;
-                    isReconnecting: boolean;
-                    connectionDuration?: number;
-                } => {
-                    return this.connectionManager.getConnectionStatus();
-                },
-                getConnectionStats: (): {
-                    reconnectAttempts: number;
-                    pendingRequestsCount: number;
-                } => {
-                    return {
-                        reconnectAttempts:
-                            this.connectionManager.getConnectionStats()
-                                .reconnectAttempts,
-                        pendingRequestsCount:
-                            this.connectionManager.getConnectionStats()
-                                .pendingRequestsCount,
-                    };
-                },
+                // Direct method bindings for 1:1 mappings
+                connect: cm.connect.bind(cm),
+                disconnect: cm.disconnect.bind(cm),
+                addEventListener: cm.addEventListener.bind(cm),
+                removeEventListener: cm.removeEventListener.bind(cm),
+                query: cm.query.bind(cm),
+                getConnectionInfo: cm.getConnectionInfo.bind(cm),
             },
         };
     }

@@ -7,12 +7,12 @@ import { provide, onUnmounted, ref, readonly } from "vue";
 import {
     VircadiaClientCore,
     type VircadiaClientCoreConfig,
-    type ConnectionStats,
+    type ConnectionInfo,
 } from "../../../core/vircadia.client.core";
 // Import the shared keys
 import {
     VIRCADIA_CLIENT_KEY,
-    VIRCADIA_CONNECTION_STATUS_KEY,
+    VIRCADIA_CONNECTION_INFO_KEY,
 } from "./injectionKeys";
 
 // Props definition
@@ -22,16 +22,22 @@ const props = defineProps<{
 
 // Initialize client with provided config
 const client = new VircadiaClientCore(props.config);
-const connectionStatus = ref<ConnectionStats>({
+const connectionInfo = ref<ConnectionInfo>({
     status: "disconnected",
     isConnected: false,
     isConnecting: false,
     isReconnecting: false,
+    connectionDuration: 0,
+    reconnectAttempts: 0,
+    pendingRequests: Array<{
+        requestId: string;
+        elapsedMs: number;
+    }>(),
 });
 
 // Update connection status when it changes
 const updateConnectionStatus = () => {
-    connectionStatus.value = client.Utilities.Connection.getConnectionStatus();
+    connectionInfo.value = client.Utilities.Connection.getConnectionInfo();
 };
 
 // Listen for status changes
@@ -42,7 +48,7 @@ client.Utilities.Connection.addEventListener(
 
 // Provide the client and connection status to child components using imported keys
 provide(VIRCADIA_CLIENT_KEY, client);
-provide(VIRCADIA_CONNECTION_STATUS_KEY, readonly(connectionStatus)); // Keep readonly for safety if desired
+provide(VIRCADIA_CONNECTION_INFO_KEY, readonly(connectionInfo)); // Keep readonly for safety if desired
 
 // Clean up resources when component is unmounted
 onUnmounted(() => {
@@ -51,7 +57,7 @@ onUnmounted(() => {
         updateConnectionStatus,
     );
     // Ensure disconnection happens before disposal if connected
-    if (connectionStatus.value.isConnected) {
+    if (connectionInfo.value.isConnected) {
         client.Utilities.Connection.disconnect();
     }
     client.dispose();
