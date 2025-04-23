@@ -9,14 +9,15 @@ import {
     type VircadiaClientCoreConfig,
     type ConnectionStats,
 } from "../../../core/vircadia.client.core";
-
-const VIRCADIA_CLIENT_KEY = Symbol("vircadiaClient");
-const VIRCADIA_CONNECTION_STATUS_KEY = Symbol("vircadiaConnectionStatus");
+// Import the shared keys
+import {
+    VIRCADIA_CLIENT_KEY,
+    VIRCADIA_CONNECTION_STATUS_KEY,
+} from "./injectionKeys";
 
 // Props definition
 const props = defineProps<{
     config: VircadiaClientCoreConfig;
-    autoConnect?: boolean;
 }>();
 
 // Initialize client with provided config
@@ -39,16 +40,9 @@ client.Utilities.Connection.addEventListener(
     updateConnectionStatus,
 );
 
-// Set up auto-connect if enabled
-if (props.autoConnect) {
-    client.Utilities.Connection.connect().catch((error) => {
-        console.error("Failed to auto-connect to Vircadia server:", error);
-    });
-}
-
-// Provide the client and connection status to child components
+// Provide the client and connection status to child components using imported keys
 provide(VIRCADIA_CLIENT_KEY, client);
-provide(VIRCADIA_CONNECTION_STATUS_KEY, readonly(connectionStatus));
+provide(VIRCADIA_CONNECTION_STATUS_KEY, readonly(connectionStatus)); // Keep readonly for safety if desired
 
 // Clean up resources when component is unmounted
 onUnmounted(() => {
@@ -56,20 +50,10 @@ onUnmounted(() => {
         "statusChange",
         updateConnectionStatus,
     );
+    // Ensure disconnection happens before disposal if connected
+    if (connectionStatus.value.isConnected) {
+        client.Utilities.Connection.disconnect();
+    }
     client.dispose();
-});
-
-// Expose useful methods and properties for composition API usage
-const connect = () => client.Utilities.Connection.connect();
-const disconnect = () => client.Utilities.Connection.disconnect();
-const query = client.Utilities.Connection.query;
-
-// Export composition API
-defineExpose({
-    client,
-    connectionStatus: readonly(connectionStatus),
-    connect,
-    disconnect,
-    query,
 });
 </script>
