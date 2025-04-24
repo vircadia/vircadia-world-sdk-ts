@@ -4,19 +4,23 @@ import type { Entity } from "../../../../../schema/schema.general"; // Import th
 
 export interface UseVircadiaEntityOptions {
     /**
+     * A Ref containing the ID (general__entity_id) of the entity to manage.
+     * If both entityId and entityName are provided, entityId takes precedence.
+     */
+    entityId?: Ref<string | null | undefined>;
+    /**
+     * A Ref containing the name of the entity to manage.
+     * If both entityId and entityName are provided, entityId takes precedence.
+     * The name is looked up in the 'general__entity_name' column.
+     */
+    entityName?: Ref<string | null | undefined>;
+    /**
      * The SQL SELECT clause string (e.g., "*", "name, description", "general__position").
      * Determines which properties are fetched. Defaults to "*".
      */
     selectClause?: string;
     /** Interval in milliseconds to automatically refresh data. Set to null or 0 to disable polling. */
     pollIntervalMs?: number | null;
-    /**
-     * A Ref containing the name of the entity to manage.
-     * If both entityId and entityName are provided, entityId takes precedence.
-     */
-    entityName?: Ref<string | null | undefined>;
-    /** The name of the column used for identifying the entity by name. Defaults to 'general__entity_name'. */
-    nameColumnName?: string;
     /** If true, automatically create the entity if it doesn't exist when fetching by ID or name. Defaults to false. */
     createIfNotExist?: boolean;
     /** Default properties to set when creating a new entity. The identifying property (ID or name) will be added automatically. */
@@ -27,8 +31,8 @@ export interface UseVircadiaEntityOptions {
 function getIdentifierDetails(
     idRef: Ref<string | null | undefined>,
     nameRef: Ref<string | null | undefined>,
-    idColumn: string,
-    nameColumn: string,
+    idColumn: string, // Keep parameters for clarity within the helper
+    nameColumn: string, // Keep parameter name for clarity, but value is hardcoded
 ): { identifier: string; column: string; value: string } | null {
     const id = idRef.value;
     const name = nameRef.value;
@@ -37,7 +41,12 @@ function getIdentifierDetails(
         return { identifier: "id", column: idColumn, value: id };
     }
     if (name) {
-        return { identifier: "name", column: nameColumn, value: name };
+        // Use hardcoded name column here
+        return {
+            identifier: "name",
+            column: "general__entity_name",
+            value: name,
+        };
     }
     return null;
 }
@@ -49,26 +58,22 @@ function getIdentifierDetails(
  * executing updates via a custom SET clause string, and optionally creating
  * the entity if it does not exist.
  *
- * @param entityId - A Ref containing the ID (general__entity_id) of the entity to manage. Takes precedence over entityName in options.
- * @param options - Configuration options including entityName, SELECT clause, creation behavior, and polling.
+ * @param options - Configuration options including entityId, entityName, SELECT clause, creation behavior, and polling.
  * @returns Reactive refs for entity data, retrieving/updating/creating state, errors, and update/refresh functions.
  */
-export function useVircadiaEntity(
-    entityId: Ref<string | null | undefined>,
-    options: UseVircadiaEntityOptions = {},
-) {
+export function useVircadiaEntity(options: UseVircadiaEntityOptions = {}) {
     const {
+        entityId = ref(null), // Now part of options
+        entityName = ref(null),
         selectClause = "*",
         pollIntervalMs = null,
-        entityName = ref(null), // Use a default ref if not provided in options
-        nameColumnName = "general__entity_name", // Default to the schema name column
         createIfNotExist = false,
         defaultCreateProperties = {},
     } = options;
 
-    // Hardcoded table and ID column names based on schema
-    const tableName = "entity.entities";
-    const idColumnName = "general__entity_id"; // Use the schema ID column
+    // Hardcoded table and ID/Name column names based on schema are now directly in queries/helpers
+    const ID_COLUMN = "general__entity_id";
+    const NAME_COLUMN = "general__entity_name";
 
     const entityData = shallowRef<Entity.I_Entity | null>(null); // Use I_Entity
     const retrieving = ref(false);
@@ -100,10 +105,10 @@ export function useVircadiaEntity(
 
         // Ensure ID is included if it's the identifier and not already in defaults
         if (
-            identifierDetails.column === idColumnName &&
-            !(idColumnName in propertiesToInsert)
+            identifierDetails.column === ID_COLUMN &&
+            !(ID_COLUMN in propertiesToInsert)
         ) {
-            propertiesToInsert[idColumnName] = identifierDetails.value;
+            propertiesToInsert.general__entity_id = identifierDetails.value;
         }
 
         // Filter out undefined values before creating columns/placeholders
@@ -115,7 +120,7 @@ export function useVircadiaEntity(
         const values = validProperties.map(([, value]) => value);
 
         // Assumes INSERT...RETURNING general__entity_id is supported.
-        const query = `INSERT INTO ${tableName} (${columns.join(", ")}) VALUES (${placeholders}) RETURNING ${idColumnName}`;
+        const query = `INSERT INTO entity.entities (${columns.join(", ")}) VALUES (${placeholders}) RETURNING ${ID_COLUMN}`;
 
         try {
             // Specify return type expecting an object with the correct ID property
@@ -132,9 +137,9 @@ export function useVircadiaEntity(
 
             if (
                 createResult.result.length > 0 &&
-                createResult.result[0][idColumnName]
+                createResult.result[0].general__entity_id
             ) {
-                const createdId = createResult.result[0][idColumnName];
+                const createdId = createResult.result[0].general__entity_id;
                 console.log(
                     `Successfully created entity with ID: ${createdId}`,
                 );
@@ -145,7 +150,7 @@ export function useVircadiaEntity(
                 "Entity possibly created, but failed to retrieve ID immediately via RETURNING.",
             );
             // If we created by ID, that ID is the one we used.
-            return identifierDetails.column === idColumnName
+            return identifierDetails.column === ID_COLUMN
                 ? identifierDetails.value
                 : null;
         } catch (err) {
@@ -178,12 +183,11 @@ export function useVircadiaEntity(
         try {
             // Ensure the ID column is always selected for consistency
             const effectiveSelectClause =
-                selectClause.includes(idColumnName) ||
-                selectClause.trim() === "*"
+                selectClause.includes(ID_COLUMN) || selectClause.trim() === "*"
                     ? selectClause
-                    : `${selectClause}, ${idColumnName}`;
+                    : `${selectClause}, ${ID_COLUMN}`;
 
-            const query = `SELECT ${effectiveSelectClause} FROM ${tableName} WHERE ${column} = $1`;
+            const query = `SELECT ${effectiveSelectClause} FROM entity.entities WHERE ${column} = $1`;
             console.log(
                 `Fetching entity by ${column} = ${value} with clause: ${effectiveSelectClause}`,
             );
@@ -218,7 +222,7 @@ export function useVircadiaEntity(
                         // This ensures we get all columns specified by selectClause.
                         await fetchData({
                             identifier: "id",
-                            column: idColumnName,
+                            column: ID_COLUMN, // Use hardcoded ID column
                             value: createdId,
                         });
                         // Note: The original entityId ref passed by the consumer is NOT updated here.
@@ -256,7 +260,7 @@ export function useVircadiaEntity(
     // biome-ignore lint/suspicious/noExplicitAny: Parameters can be of any type
     const performUpdate = async (setClause: string, updateParams: any[]) => {
         // Get the ID from the currently loaded entity data using the schema property name
-        const currentId = entityData.value?.[idColumnName];
+        const currentId = entityData.value?.general__entity_id;
 
         if (!currentId) {
             console.warn(
@@ -281,7 +285,7 @@ export function useVircadiaEntity(
             /\$(\d+)/g,
             (_, n) => `$${Number.parseInt(n, 10) + 1}`,
         );
-        const query = `UPDATE ${tableName} SET ${adjustedSetClause} WHERE ${idColumnName} = $1`;
+        const query = `UPDATE entity.entities SET ${adjustedSetClause} WHERE ${ID_COLUMN} = $1`;
 
         console.log(
             `Executing update for entity ${currentId}: SET ${adjustedSetClause}`,
@@ -335,10 +339,10 @@ export function useVircadiaEntity(
         creating.value = false;
 
         const activeIdentifier = getIdentifierDetails(
-            entityId,
-            entityName,
-            idColumnName, // Use schema ID column
-            nameColumnName, // Use schema name column
+            entityId, // Now from options
+            entityName, // Now from options
+            ID_COLUMN, // Hardcoded ID column
+            NAME_COLUMN, // Hardcoded Name column
         );
 
         if (activeIdentifier) {
@@ -348,10 +352,10 @@ export function useVircadiaEntity(
                 pollIntervalId = setInterval(() => {
                     // Re-check identifier details in case they changed between intervals
                     const currentActiveIdentifier = getIdentifierDetails(
-                        entityId,
-                        entityName,
-                        idColumnName, // Use schema ID column
-                        nameColumnName, // Use schema name column
+                        entityId, // Now from options
+                        entityName, // Now from options
+                        ID_COLUMN, // Hardcoded ID column
+                        NAME_COLUMN, // Hardcoded Name column
                     );
                     if (
                         currentActiveIdentifier &&
@@ -385,10 +389,10 @@ export function useVircadiaEntity(
     // Exposed refresh function (modified)
     const refresh = () => {
         const activeIdentifier = getIdentifierDetails(
-            entityId,
-            entityName,
-            idColumnName, // Use schema ID column
-            nameColumnName, // Use schema name column
+            entityId, // Now from options
+            entityName, // Now from options
+            ID_COLUMN, // Hardcoded ID column
+            NAME_COLUMN, // Hardcoded Name column
         );
         // Only refresh if an identifier exists and not busy
         if (
