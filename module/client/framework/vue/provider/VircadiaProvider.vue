@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { provide, onUnmounted, ref, readonly } from "vue";
+import { provide, onUnmounted, ref, readonly, defineExpose } from "vue"; // Import defineExpose
 import {
     VircadiaClientCore,
     type VircadiaClientCoreConfig,
@@ -22,18 +22,9 @@ const props = defineProps<{
 
 // Initialize client with provided config
 const client = new VircadiaClientCore(props.config);
-const connectionInfo = ref<ConnectionInfo>({
-    status: "disconnected",
-    isConnected: false,
-    isConnecting: false,
-    isReconnecting: false,
-    connectionDuration: 0,
-    reconnectAttempts: 0,
-    pendingRequests: Array<{
-        requestId: string;
-        elapsedMs: number;
-    }>(),
-});
+const connectionInfo = ref<ConnectionInfo>(
+    client.Utilities.Connection.getConnectionInfo(), // Initialize with current status
+);
 
 // Update connection status when it changes
 const updateConnectionStatus = () => {
@@ -48,7 +39,7 @@ client.Utilities.Connection.addEventListener(
 
 // Provide the client and connection status to child components using imported keys
 provide(VIRCADIA_CLIENT_KEY, client);
-provide(VIRCADIA_CONNECTION_INFO_KEY, readonly(connectionInfo)); // Keep readonly for safety if desired
+provide(VIRCADIA_CONNECTION_INFO_KEY, readonly(connectionInfo));
 
 // Clean up resources when component is unmounted
 onUnmounted(() => {
@@ -61,5 +52,11 @@ onUnmounted(() => {
         client.Utilities.Connection.disconnect();
     }
     client.dispose();
+});
+
+// Expose the client instance and connectionInfo ref to the parent
+defineExpose({
+    client,
+    connectionInfo: readonly(connectionInfo), // Expose the readonly ref
 });
 </script>
