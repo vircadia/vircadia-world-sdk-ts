@@ -14,8 +14,6 @@ import {
     type VircadiaAssetData,
 } from "../composable/useVircadiaAsset";
 
-// Keep the VircadiaAssetData interface export if needed elsewhere,
-// otherwise it can be removed if only used internally by the composable.
 export type { VircadiaAssetData };
 
 const props = defineProps<{

@@ -4,8 +4,8 @@ import { useVircadia } from "../provider/useVircadia";
 export interface VircadiaAssetData {
     arrayBuffer: ArrayBuffer;
     blob: Blob;
-    type: string;
-    url: string;
+    mimeType: string;
+    blobUrl: string;
 }
 
 /**
@@ -32,8 +32,8 @@ export function useVircadiaAsset(fileName: Ref<string>) {
         loading.value = true;
         error.value = null;
         // Clean up previous URL if it exists before loading new one
-        if (assetData.value?.url) {
-            URL.revokeObjectURL(assetData.value.url);
+        if (assetData.value?.blobUrl) {
+            URL.revokeObjectURL(assetData.value.blobUrl);
             assetData.value = null; // Clear old data
         }
 
@@ -102,8 +102,8 @@ export function useVircadiaAsset(fileName: Ref<string>) {
             assetData.value = {
                 arrayBuffer,
                 blob,
-                type: mimeType,
-                url,
+                mimeType: mimeType,
+                blobUrl: url,
             };
 
             console.log(
@@ -114,8 +114,8 @@ export function useVircadiaAsset(fileName: Ref<string>) {
             error.value =
                 err instanceof Error ? err : new Error("Failed to load asset");
             // Ensure data is null on error
-            if (assetData.value?.url) {
-                URL.revokeObjectURL(assetData.value.url);
+            if (assetData.value?.blobUrl) {
+                URL.revokeObjectURL(assetData.value.blobUrl);
             }
             assetData.value = null;
         } finally {
@@ -135,9 +135,9 @@ export function useVircadiaAsset(fileName: Ref<string>) {
 
     // Clean up URL object when the component using the composable unmounts
     onUnmounted(() => {
-        if (assetData.value?.url) {
+        if (assetData.value?.blobUrl) {
             console.log(`Revoking Object URL for: ${fileName.value}`);
-            URL.revokeObjectURL(assetData.value.url);
+            URL.revokeObjectURL(assetData.value.blobUrl);
         }
     });
 
