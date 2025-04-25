@@ -1,4 +1,4 @@
-import { ref, watch, onUnmounted, readonly, type Ref, inject } from "vue";
+import { ref, watch, readonly, type Ref } from "vue";
 import type { VircadiaInstance } from "../provider/useVircadia";
 
 export interface VircadiaAssetData {
@@ -20,7 +20,7 @@ export interface UseVircadiaAssetOptions {
  *
  * @param options - An object containing the configuration options.
  * @param options.fileName - A Ref containing the name of the asset file to load.
- * @returns Reactive refs for asset data, loading state, and error state.
+ * @returns Reactive refs for asset data, loading state, error state, and cleanup function.
  */
 export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
     // Destructure fileName from options
@@ -37,6 +37,15 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
             `Vircadia instance (${options.instance}) not found. Ensure you are using this composable within a Vircadia context.`,
         );
     }
+
+    // Function to clean up resources
+    const cleanup = () => {
+        if (assetData.value?.blobUrl) {
+            console.log(`Manually revoking Object URL for: ${fileName.value}`);
+            URL.revokeObjectURL(assetData.value.blobUrl);
+            assetData.value = null;
+        }
+    };
 
     const loadAsset = async (options: { assetFileName: string }) => {
         const { assetFileName } = options;
@@ -152,18 +161,12 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
         { immediate: true }, // Load immediately when the composable is used
     );
 
-    // Clean up URL object when the component using the composable unmounts
-    onUnmounted(() => {
-        if (assetData.value?.blobUrl) {
-            console.log(`Revoking Object URL for: ${fileName.value}`);
-            URL.revokeObjectURL(assetData.value.blobUrl);
-        }
-    });
-
     // Return readonly refs to prevent modification outside the composable
+    // Plus the new cleanup function
     return {
         assetData: readonly(assetData),
         loading: readonly(loading),
         error: readonly(error),
+        cleanup, // Expose cleanup function for manual resource management
     };
 }

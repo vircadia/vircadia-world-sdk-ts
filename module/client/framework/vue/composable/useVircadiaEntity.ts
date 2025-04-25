@@ -1,12 +1,4 @@
-import {
-    ref,
-    watch,
-    onUnmounted,
-    readonly,
-    shallowRef,
-    type Ref,
-    inject,
-} from "vue";
+import { ref, watch, readonly, shallowRef, type Ref } from "vue";
 import type { VircadiaInstance } from "../provider/useVircadia";
 import type { Entity } from "../../../../../schema/schema.general"; // Import the Entity namespace
 
@@ -388,15 +380,10 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
         }
     };
 
+    const cleanup = () => {};
+
     // Watch for changes in entityId or entityName to trigger a fetch
     watch([entityId, entityName], triggerFetch, { immediate: true });
-
-    // Cleanup on unmount
-    onUnmounted(() => {
-        isUnmounted = true;
-        console.log("Unmounting entity composable.");
-        // Cancel any ongoing operations if possible (not directly supported by Connection.query)
-    });
 
     // Public function to manually refresh data
     const executeRetrieve = () => {
@@ -434,5 +421,6 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
         error: readonly(error),
         executeUpdate,
         executeRetrieve,
+        cleanup,
     };
 }
