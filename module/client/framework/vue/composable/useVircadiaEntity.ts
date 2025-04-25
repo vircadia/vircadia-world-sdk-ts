@@ -1,5 +1,13 @@
-import { ref, watch, onUnmounted, readonly, shallowRef, type Ref } from "vue";
-import { useVircadia } from "../provider/useVircadia";
+import {
+    ref,
+    watch,
+    onUnmounted,
+    readonly,
+    shallowRef,
+    type Ref,
+    inject,
+} from "vue";
+import type { VircadiaInstance } from "../provider/useVircadia";
 import type { Entity } from "../../../../../schema/schema.general"; // Import the Entity namespace
 
 export interface UseVircadiaEntityOptions {
@@ -15,16 +23,29 @@ export interface UseVircadiaEntityOptions {
      */
     entityName?: Ref<string | null | undefined>;
     /**
-     * The SQL SELECT clause string (e.g., "*", "name, description", "general__position").
+     * The SQL SELECT clause string (e.g., "*", "general__position, general__rotation").
      * Determines which properties are fetched. Defaults to "*".
      */
     selectClause?: string;
-    /** Interval in milliseconds to automatically refresh data. Set to null or 0 to disable polling. */
-    pollIntervalMs?: number | null;
+    /**
+     * Parameters to use with the selectClause. Empty by default.
+     */
+    selectParams?: any[];
     /** If true, automatically create the entity if it doesn't exist when fetching by ID or name. Defaults to false. */
-    createIfNotExist?: boolean;
-    /** Default properties to set when creating a new entity. The identifying property (ID or name) will be added automatically. */
-    defaultCreateProperties?: Partial<Entity.I_Entity>; // Use partial entity type
+    insertIfNotExist?: boolean;
+    /**
+     * The SQL INSERT clause to execute for entity creation, following "INSERT INTO entity.entities".
+     * Example: "(general__entity_name, general__position) VALUES ($1, $2) RETURNING general__entity_id"
+     * Note: The composable handles the "if not exist" logic by attempting creation only after a fetch fails.
+     * Include "RETURNING general__entity_id" if you want the composable to automatically fetch the created entity.
+     */
+    insertClause?: string;
+    /**
+     * Parameters to use with the createInsertClause when creating a new entity.
+     */
+    insertParams?: any[];
+    /** Vircadia instance */
+    instance: VircadiaInstance;
 }
 
 // Helper function to determine the active identifier and query details
@@ -56,33 +77,41 @@ function getIdentifierDetails(
  * from the 'entity.entities' table using 'general__entity_id' or 'general__entity_name' as the key.
  * Allows specifying which columns to fetch via a SELECT clause string,
  * executing updates via a custom SET clause string, and optionally creating
- * the entity if it does not exist.
+ * the entity if it does not exist using a specific INSERT clause.
  *
- * @param options - Configuration options including entityId, entityName, SELECT clause, creation behavior, and polling.
+ * @param options - Configuration options including entityId, entityName, SELECT clause, and creation behavior.
  * @returns Reactive refs for entity data, retrieving/updating/creating state, errors, and update/refresh functions.
  */
-export function useVircadiaEntity(options: UseVircadiaEntityOptions = {}) {
+export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
     const {
-        entityId = ref(null), // Now part of options
+        entityId = ref(null),
         entityName = ref(null),
         selectClause = "*",
-        pollIntervalMs = null,
-        createIfNotExist = false,
-        defaultCreateProperties = {},
+        selectParams = [],
+        insertIfNotExist: createIfNotExist = false,
+        insertClause: createInsertClause = "", // Changed from createInsertQuery
+        insertParams: createInsertParams = [],
+        instance,
     } = options;
 
-    // Hardcoded table and ID/Name column names based on schema are now directly in queries/helpers
+    // Hardcoded table and ID/Name column names based on schema
+    const TABLE_NAME = "entity.entities"; // Added table name constant
     const ID_COLUMN = "general__entity_id";
     const NAME_COLUMN = "general__entity_name";
 
-    const entityData = shallowRef<Entity.I_Entity | null>(null); // Use I_Entity
+    const entityData = shallowRef<Entity.I_Entity | null>(null);
     const retrieving = ref(false);
     const updating = ref(false);
-    const creating = ref(false); // Represents the state of an ongoing create query
+    const creating = ref(false);
     const error = ref<Error | null>(null);
-    const vircadia = useVircadia();
+    const vircadia = instance;
 
-    let pollIntervalId: ReturnType<typeof setInterval> | null = null;
+    if (!vircadia) {
+        throw new Error(
+            `Vircadia instance (${options.instance}) not found. Ensure you are using this composable within a Vircadia context.`,
+        );
+    }
+
     let isUnmounted = false;
 
     // --- Entity Creation ---
@@ -92,44 +121,34 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions = {}) {
     }): Promise<string | null> => {
         creating.value = true;
         error.value = null;
-        console.log(
-            `Attempting to create entity with ${identifierDetails.column}: ${identifierDetails.value}`,
-        );
 
-        const propertiesToInsert: Partial<Entity.I_Entity> = {
-            // Use partial entity type
-            ...defaultCreateProperties,
-            [identifierDetails.column as keyof Entity.I_Entity]:
-                identifierDetails.value, // Type assertion needed here
-        };
-
-        // Ensure ID is included if it's the identifier and not already in defaults
-        if (
-            identifierDetails.column === ID_COLUMN &&
-            !(ID_COLUMN in propertiesToInsert)
-        ) {
-            propertiesToInsert.general__entity_id = identifierDetails.value;
+        // Check for the insert clause instead of the full query
+        if (!createInsertClause.trim()) {
+            console.error(
+                "Cannot create entity: `createInsertClause` option is missing or empty.",
+            );
+            error.value = new Error(
+                "Entity creation failed: Missing INSERT clause.",
+            );
+            creating.value = false;
+            return null;
         }
 
-        // Filter out undefined values before creating columns/placeholders
-        const validProperties = Object.entries(propertiesToInsert).filter(
-            ([, value]) => value !== undefined,
-        );
-        const columns = validProperties.map(([key]) => key);
-        const placeholders = columns.map((_, i) => `$${i + 1}`).join(", ");
-        const values = validProperties.map(([, value]) => value);
+        // Construct the full query
+        const query = `INSERT INTO ${TABLE_NAME} ${createInsertClause}`;
 
-        // Assumes INSERT...RETURNING general__entity_id is supported.
-        const query = `INSERT INTO entity.entities (${columns.join(", ")}) VALUES (${placeholders}) RETURNING ${ID_COLUMN}`;
+        console.log(
+            `Attempting to create entity (triggered by missing ${identifierDetails.column}: ${identifierDetails.value}) using query: ${query}`,
+            createInsertParams,
+        );
 
         try {
-            // Specify return type expecting an object with the correct ID property
             const createResult =
                 await vircadia.client.Utilities.Connection.query<
-                    Pick<Entity.I_Entity, "general__entity_id">[] // Expecting the ID field
+                    Pick<Entity.I_Entity, "general__entity_id">[]
                 >({
-                    query,
-                    parameters: values,
+                    query, // Use the constructed query
+                    parameters: createInsertParams,
                     timeoutMs: 10000,
                 });
 
@@ -143,33 +162,38 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions = {}) {
                 console.log(
                     `Successfully created entity with ID: ${createdId}`,
                 );
+                // Return the ID obtained from RETURNING clause
                 return createdId;
             }
 
             console.warn(
-                "Entity possibly created, but failed to retrieve ID immediately via RETURNING.",
+                "Entity possibly created, but failed to retrieve ID immediately (was RETURNING general__entity_id included in the insert clause?).",
             );
-            // If we created by ID, that ID is the one we used.
+            // If ID wasn't returned, but we were initially looking by ID, return that ID.
+            // Otherwise, we can't be sure what the ID is.
             return identifierDetails.column === ID_COLUMN
                 ? identifierDetails.value
                 : null;
         } catch (err) {
             if (isUnmounted) return null;
             console.error(
-                `Error creating entity with ${identifierDetails.column} ${identifierDetails.value}:`,
+                `Error creating entity using query "${query}":`, // Log the constructed query
                 err,
             );
             error.value =
                 err instanceof Error
                     ? err
                     : new Error("Failed to create entity");
-            return null;
+            return null; // Return null on creation error
         } finally {
-            // creating state is reset in fetchData after potential re-fetch
+            // Ensure creating is set to false only if not unmounted
+            if (!isUnmounted) {
+                creating.value = false;
+            }
         }
     };
 
-    // --- Data Fetching (modified) ---
+    // --- Data Fetching ---
     const fetchData = async (activeIdentifier: {
         identifier: string;
         column: string;
@@ -181,58 +205,64 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions = {}) {
         const { column, value } = activeIdentifier;
 
         try {
-            // Ensure the ID column is always selected for consistency
+            // Ensure the ID column is always selected if not selecting "*"
             const effectiveSelectClause =
                 selectClause.includes(ID_COLUMN) || selectClause.trim() === "*"
                     ? selectClause
                     : `${selectClause}, ${ID_COLUMN}`;
 
-            const query = `SELECT ${effectiveSelectClause} FROM entity.entities WHERE ${column} = $1`;
+            // Adjust parameter indices for the select clause if needed
+            const allParameters = [value, ...selectParams];
+            const adjustedSelectClause = effectiveSelectClause.replace(
+                /\$(\d+)/g,
+                (_, n) => `$${Number.parseInt(n, 10) + 1}`,
+            );
+
+            const query = `SELECT ${adjustedSelectClause} FROM ${TABLE_NAME} WHERE ${column} = $1`;
             console.log(
-                `Fetching entity by ${column} = ${value} with clause: ${effectiveSelectClause}`,
+                `Fetching entity by ${column} = ${value} with clause: ${adjustedSelectClause}`,
             );
 
             const queryResult =
                 await vircadia.client.Utilities.Connection.query<
                     Entity.I_Entity[]
                 >({
-                    // Use I_Entity[]
                     query,
-                    parameters: [value],
+                    parameters: allParameters,
                     timeoutMs: 10000,
                 });
 
             if (isUnmounted) return;
 
             if (queryResult.result.length > 0) {
-                // Entity found
-                entityData.value = { ...queryResult.result[0] }; // Assign directly
+                entityData.value = { ...queryResult.result[0] };
                 console.log("Entity found/updated:", entityData.value);
             } else {
-                // Not found
                 console.warn(`Entity with ${column} = ${value} not found.`);
+                // Attempt creation only if not found and flag is set
                 if (createIfNotExist) {
                     const createdId = await performCreate(activeIdentifier);
+                    // If creation succeeded and returned an ID, re-fetch using that ID
                     if (createdId && !isUnmounted) {
-                        // Successfully created, now fetch the data using the ID
                         console.log(
-                            `Re-fetching entity data after creation (ID: ${createdId})...`,
+                            `Re-fetching entity data after creation attempt (using ID: ${createdId})...`,
                         );
-                        // Fetch using the known created ID.
-                        // This ensures we get all columns specified by selectClause.
+                        // Fetch using the known ID column and the returned/assumed ID
                         await fetchData({
                             identifier: "id",
-                            column: ID_COLUMN, // Use hardcoded ID column
+                            column: ID_COLUMN,
                             value: createdId,
                         });
-                        // Note: The original entityId ref passed by the consumer is NOT updated here.
-                    } else if (!isUnmounted) {
-                        // Creation failed or component unmounted during creation
+                        // Important: Return here to prevent setting entityData to null below
+                        return;
+                    }
+
+                    if (!isUnmounted) {
+                        // Creation failed or didn't return an ID
                         entityData.value = null;
-                        // Error state should be set by performCreate
                     }
                 } else {
-                    // Not found and not creating
+                    // Not creating, so set data to null
                     entityData.value = null;
                 }
             }
@@ -248,18 +278,16 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions = {}) {
                     : new Error("Failed to fetch entity data");
             entityData.value = null;
         } finally {
-            // Ensure creating is false if fetch fails after a create attempt
-            creating.value = false;
-            if (!isUnmounted) {
+            // Ensure retrieving is set to false only if not unmounted and not currently creating
+            if (!isUnmounted && !creating.value) {
                 retrieving.value = false;
             }
         }
     };
 
-    // --- Data Updating (modified) ---
-    // biome-ignore lint/suspicious/noExplicitAny: Parameters can be of any type
+    // --- Data Updating ---
     const performUpdate = async (setClause: string, updateParams: any[]) => {
-        // Get the ID from the currently loaded entity data using the schema property name
+        // Use the ID from the potentially just updated entityData
         const currentId = entityData.value?.general__entity_id;
 
         if (!currentId) {
@@ -278,18 +306,18 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions = {}) {
         updating.value = true;
         error.value = null;
 
-        // Parameters: ID is first, then the rest for the SET clause
+        // Adjust parameter indices for the set clause
         const parameters = [currentId, ...updateParams];
-        // Adjust parameter placeholders in SET clause assuming ID is $1
         const adjustedSetClause = setClause.replace(
             /\$(\d+)/g,
             (_, n) => `$${Number.parseInt(n, 10) + 1}`,
         );
-        const query = `UPDATE entity.entities SET ${adjustedSetClause} WHERE ${ID_COLUMN} = $1`;
+
+        const query = `UPDATE ${TABLE_NAME} SET ${adjustedSetClause} WHERE ${ID_COLUMN} = $1`;
 
         console.log(
             `Executing update for entity ${currentId}: SET ${adjustedSetClause}`,
-            updateParams, // Log original params for clarity
+            updateParams,
         );
 
         try {
@@ -301,7 +329,10 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions = {}) {
 
             if (isUnmounted) return;
             console.log(`Successfully executed update for entity ${currentId}`);
-            // Consider adding an option to automatically refresh after update
+            // Optional: Re-fetch data after update to ensure consistency,
+            // especially if the update modified fields included in the selectClause.
+            // Consider adding a flag or option for this behavior.
+            // refresh(); // Example: uncomment to refresh after successful update
         } catch (err) {
             if (isUnmounted) return;
             console.error(
@@ -319,19 +350,21 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions = {}) {
         }
     };
 
-    // Exposed update function
-    // biome-ignore lint/suspicious/noExplicitAny: Parameters can be of any type
+    // Public function to trigger an update
     const executeUpdate = (setClause: string, parameters: any[]) => {
+        // Prevent update if another operation is in progress
+        if (retrieving.value || creating.value || updating.value) {
+            console.warn(
+                "executeUpdate skipped: Another operation (fetch, create, update) is already in progress.",
+            );
+            return;
+        }
         performUpdate(setClause, parameters);
     };
 
-    // --- Watchers and Lifecycle (modified) ---
+    // Function to trigger the initial fetch or re-fetch based on current ID/Name refs
     const triggerFetch = () => {
-        if (pollIntervalId) {
-            clearInterval(pollIntervalId);
-            pollIntervalId = null;
-        }
-        // Reset state immediately on identifier change
+        // Reset state before fetching
         entityData.value = null;
         error.value = null;
         retrieving.value = false;
@@ -339,69 +372,49 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions = {}) {
         creating.value = false;
 
         const activeIdentifier = getIdentifierDetails(
-            entityId, // Now from options
-            entityName, // Now from options
-            ID_COLUMN, // Hardcoded ID column
-            NAME_COLUMN, // Hardcoded Name column
+            entityId,
+            entityName,
+            ID_COLUMN,
+            NAME_COLUMN, // Pass hardcoded name column
         );
 
         if (activeIdentifier) {
-            fetchData(activeIdentifier); // Start fetch/create process
-
-            if (pollIntervalMs && pollIntervalMs > 0) {
-                pollIntervalId = setInterval(() => {
-                    // Re-check identifier details in case they changed between intervals
-                    const currentActiveIdentifier = getIdentifierDetails(
-                        entityId, // Now from options
-                        entityName, // Now from options
-                        ID_COLUMN, // Hardcoded ID column
-                        NAME_COLUMN, // Hardcoded Name column
-                    );
-                    if (
-                        currentActiveIdentifier &&
-                        !retrieving.value &&
-                        !updating.value &&
-                        !creating.value && // Don't poll while creating/updating
-                        !isUnmounted
-                    ) {
-                        fetchData(currentActiveIdentifier); // Poll using the latest active identifier
-                    }
-                }, pollIntervalMs);
-            }
+            fetchData(activeIdentifier);
         } else {
             console.warn(
                 "useVircadiaEntity: Neither entityId nor entityName is provided. No entity will be loaded.",
             );
+            entityData.value = null; // Ensure data is null if no identifier
         }
     };
 
-    // Watch both potential identifiers
+    // Watch for changes in entityId or entityName to trigger a fetch
     watch([entityId, entityName], triggerFetch, { immediate: true });
 
+    // Cleanup on unmount
     onUnmounted(() => {
         isUnmounted = true;
-        if (pollIntervalId) {
-            clearInterval(pollIntervalId);
-        }
         console.log("Unmounting entity composable.");
+        // Cancel any ongoing operations if possible (not directly supported by Connection.query)
     });
 
-    // Exposed refresh function (modified)
-    const refresh = () => {
+    // Public function to manually refresh data
+    const executeRetrieve = () => {
         const activeIdentifier = getIdentifierDetails(
-            entityId, // Now from options
-            entityName, // Now from options
-            ID_COLUMN, // Hardcoded ID column
-            NAME_COLUMN, // Hardcoded Name column
+            entityId,
+            entityName,
+            ID_COLUMN,
+            NAME_COLUMN, // Pass hardcoded name column
         );
-        // Only refresh if an identifier exists and not busy
+
         if (
             activeIdentifier &&
             !retrieving.value &&
             !creating.value &&
             !updating.value
         ) {
-            fetchData(activeIdentifier);
+            console.log("Manual refresh triggered.");
+            fetchData(activeIdentifier); // Re-fetch with the current identifier
         } else if (!activeIdentifier) {
             console.warn(
                 "Refresh skipped: No active entity identifier (ID or Name).",
@@ -417,9 +430,9 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions = {}) {
         entityData: readonly(entityData),
         retrieving: readonly(retrieving),
         updating: readonly(updating),
-        creating: readonly(creating), // Expose creating state
+        creating: readonly(creating),
         error: readonly(error),
         executeUpdate,
-        refresh,
+        executeRetrieve,
     };
 }

@@ -1,5 +1,5 @@
-import { ref, watch, onUnmounted, readonly, type Ref } from "vue";
-import { useVircadia } from "../provider/useVircadia";
+import { ref, watch, onUnmounted, readonly, type Ref, inject } from "vue";
+import type { VircadiaInstance } from "../provider/useVircadia";
 
 export interface VircadiaAssetData {
     arrayBuffer: ArrayBuffer;
@@ -8,20 +8,39 @@ export interface VircadiaAssetData {
     blobUrl: string;
 }
 
+// Define options interface
+export interface UseVircadiaAssetOptions {
+    /** A Ref containing the name of the asset file to load. */
+    fileName: Ref<string>;
+    instance: VircadiaInstance;
+}
+
 /**
  * Composable for reactively loading Vircadia assets from the database.
  *
- * @param fileName - A Ref containing the name of the asset file to load.
+ * @param options - An object containing the configuration options.
+ * @param options.fileName - A Ref containing the name of the asset file to load.
  * @returns Reactive refs for asset data, loading state, and error state.
  */
-export function useVircadiaAsset(fileName: Ref<string>) {
+export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
+    // Destructure fileName from options
+    const { fileName, instance } = options;
+
     const assetData = ref<VircadiaAssetData | null>(null);
     const loading = ref(false);
     const error = ref<Error | null>(null);
 
-    const vircadia = useVircadia();
+    const vircadia = instance;
 
-    const loadAsset = async (assetFileName: string) => {
+    if (!vircadia) {
+        throw new Error(
+            `Vircadia instance (${options.instance}) not found. Ensure you are using this composable within a Vircadia context.`,
+        );
+    }
+
+    const loadAsset = async (options: { assetFileName: string }) => {
+        const { assetFileName } = options;
+
         if (!assetFileName) {
             assetData.value = null;
             loading.value = false;
@@ -76,10 +95,10 @@ export function useVircadiaAsset(fileName: Ref<string>) {
                 rawData &&
                 typeof rawData === "object" &&
                 "data" in rawData &&
-                // biome-ignore lint/suspicious/noExplicitAny: Data can be of any type potentially.
+                // biome-ignore lint/suspicious/noExplicitAny: ...
                 Array.isArray((rawData as unknown as any).data)
             ) {
-                // biome-ignore lint/suspicious/noExplicitAny: Data can be of any type potentially.
+                // biome-ignore lint/suspicious/noExplicitAny: ...
                 byteArray = (rawData as unknown as any).data;
             } else if (rawData instanceof ArrayBuffer) {
                 // Handle direct ArrayBuffer case if the driver returns it
@@ -124,11 +143,11 @@ export function useVircadiaAsset(fileName: Ref<string>) {
         }
     };
 
-    // Watch the fileName ref and trigger loading
+    // Watch the fileName ref (already destructured) and trigger loading
     watch(
         fileName,
         (newFileName) => {
-            loadAsset(newFileName);
+            loadAsset({ assetFileName: newFileName });
         },
         { immediate: true }, // Load immediately when the composable is used
     );

@@ -1,32 +1,94 @@
-import { inject, ref, readonly, computed } from "vue";
-
-// Import the shared keys
 import {
-    VIRCADIA_CLIENT_KEY,
-    VIRCADIA_CONNECTION_INFO_KEY,
-} from "./injectionKeys";
+    ref,
+    getCurrentInstance,
+    onUnmounted,
+    type Ref,
+    type InjectionKey,
+} from "vue";
+
+import {
+    VircadiaClientCore,
+    type VircadiaClientCoreConfig,
+    type ConnectionInfo,
+} from "../../../core/vircadia.client.core";
 
 /**
- * Vircadia client composable for Vue applications.
- * Must be used within a component that is a descendant of VircadiaProvider.
- * Provides reactive state and methods to interact with the Vircadia connection.
+ * Options for creating a Vircadia instance
  */
-export function useVircadia() {
-    // Inject using the imported keys
-    const client = inject(VIRCADIA_CLIENT_KEY);
-    const connectionInfo = inject(VIRCADIA_CONNECTION_INFO_KEY);
+export interface VircadiaOptions {
+    /**
+     * Configuration for the Vircadia client
+     */
+    config: VircadiaClientCoreConfig;
+}
 
-    // Ensure the composable is used within the provider context
-    if (!client || !connectionInfo) {
-        throw new Error(
-            "useVircadia() must be used within a <VircadiaProvider> component.",
+/**
+ * Return type for the useVircadia function
+ */
+export interface VircadiaInstance {
+    client: VircadiaClientCore;
+    connectionInfo: Ref<ConnectionInfo>;
+    dispose: () => void;
+}
+
+/**
+ * Creates a Vircadia client instance with Vue reactivity.
+ * This function creates a completely independent instance without any global state.
+ *
+ * @param options Configuration options for the Vircadia client
+ * @returns Vircadia client instance and connection info
+ */
+export function useVircadia(options: VircadiaOptions): VircadiaInstance {
+    const { config } = options;
+
+    // Initialize client with provided config
+    const client = new VircadiaClientCore(config);
+
+    // Create reactive connection info
+    const connectionInfo = ref<ConnectionInfo>(
+        client.Utilities.Connection.getConnectionInfo(),
+    );
+
+    // Update connection status when it changes
+    const updateConnectionStatus = () => {
+        connectionInfo.value = client.Utilities.Connection.getConnectionInfo();
+    };
+
+    // Listen for status changes
+    client.Utilities.Connection.addEventListener(
+        "statusChange",
+        updateConnectionStatus,
+    );
+
+    // Create a dispose function
+    const dispose = () => {
+        client.Utilities.Connection.removeEventListener(
+            "statusChange",
+            updateConnectionStatus,
         );
+
+        // Ensure disconnection happens before disposal if connected
+        if (connectionInfo.value.isConnected) {
+            client.Utilities.Connection.disconnect();
+        }
+
+        client.dispose();
+    };
+
+    // Only register cleanup on component unmount if in a component context
+    const instance = getCurrentInstance();
+    if (instance) {
+        onUnmounted(dispose);
     }
 
-    // Create simplified reactive API
+    // Return the client and connection info
     return {
-        connectionInfo, // Return the reactive ref directly, it's already readonly from the provider
-        // Raw client access if needed
         client,
+        connectionInfo,
+        dispose,
     };
+}
+
+export function getInstanceKey(name: string): InjectionKey<VircadiaInstance> {
+    return name as string & InjectionKey<VircadiaInstance>;
 }
