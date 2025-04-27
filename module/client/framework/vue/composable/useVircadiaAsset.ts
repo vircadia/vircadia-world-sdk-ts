@@ -1,4 +1,4 @@
-import { ref, watch, readonly, type Ref } from "vue";
+import { ref, readonly, type Ref } from "vue"; // Removed watch
 import type { VircadiaInstance } from "../provider/useVircadia";
 
 export interface VircadiaAssetData {
@@ -11,16 +11,17 @@ export interface VircadiaAssetData {
 // Define options interface
 export interface UseVircadiaAssetOptions {
     /** A Ref containing the name of the asset file to load. */
-    fileName: Ref<string>;
+    fileName: Ref<string | null | undefined>; // Allow null/undefined
     instance: VircadiaInstance;
 }
 
 /**
- * Composable for reactively loading Vircadia assets from the database.
+ * Composable for manually loading Vircadia assets from the database.
+ * Loading must be triggered explicitly by calling the returned `executeLoad` function.
  *
  * @param options - An object containing the configuration options.
  * @param options.fileName - A Ref containing the name of the asset file to load.
- * @returns Reactive refs for asset data, loading state, error state, and cleanup function.
+ * @returns Reactive refs for asset data, loading state, error state, the manual load function, and cleanup function.
  */
 export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
     // Destructure fileName from options
@@ -45,15 +46,27 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
             URL.revokeObjectURL(assetData.value.blobUrl);
             assetData.value = null;
         }
+        // Reset states on cleanup
+        loading.value = false;
+        error.value = null;
     };
 
-    const loadAsset = async (options: { assetFileName: string }) => {
-        const { assetFileName } = options;
+    // Renamed from loadAsset, now public and uses the fileName ref directly
+    const executeLoad = async () => {
+        const assetFileName = fileName.value; // Get current value from ref
 
         if (!assetFileName) {
-            assetData.value = null;
-            loading.value = false;
-            error.value = null;
+            console.warn("executeLoad skipped: fileName is not provided.");
+            // Clean up existing data if filename becomes null/undefined
+            cleanup();
+            return;
+        }
+
+        // Prevent load if already loading
+        if (loading.value) {
+            console.warn(
+                `executeLoad skipped for ${assetFileName}: Load already in progress.`,
+            );
             return;
         }
 
@@ -90,7 +103,7 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
                     timeoutMs: 100000, // Consider making this configurable
                 });
 
-            if (!queryResult.result[0]) {
+            if (!queryResult.result || queryResult.result.length === 0) {
                 throw new Error(`Asset ${assetFileName} not found`);
             }
 
@@ -99,36 +112,36 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
             const mimeType = queryResult.result[0].asset__mime_type;
 
             // Handle bytea data in different formats
-            let byteArray: number[] = [];
+            let byteArray: Uint8Array; // Use Uint8Array directly
             if (
                 rawData &&
                 typeof rawData === "object" &&
                 "data" in rawData &&
-                // biome-ignore lint/suspicious/noExplicitAny: ...
-                Array.isArray((rawData as unknown as any).data)
+                // biome-ignore lint/suspicious/noExplicitAny: Trusting driver structure
+                Array.isArray((rawData as any).data)
             ) {
-                // biome-ignore lint/suspicious/noExplicitAny: ...
-                byteArray = (rawData as unknown as any).data;
+                // biome-ignore lint/suspicious/noExplicitAny: Trusting driver structure
+                byteArray = new Uint8Array((rawData as any).data);
             } else if (rawData instanceof ArrayBuffer) {
                 // Handle direct ArrayBuffer case if the driver returns it
-                byteArray = Array.from(new Uint8Array(rawData));
+                byteArray = new Uint8Array(rawData);
             } else if (Array.isArray(rawData)) {
-                // Handle simple array case
-                byteArray = rawData;
+                // Handle simple array case (less likely but possible)
+                byteArray = new Uint8Array(rawData);
             } else {
                 throw new Error(
                     `Unexpected data format for asset ${assetFileName}`,
                 );
             }
 
-            // Convert to array buffer and blob
-            const uint8Array = new Uint8Array(byteArray);
-            const arrayBuffer = uint8Array.buffer;
-            const blob = new Blob([uint8Array], { type: mimeType });
+            // Using .slice() creates a copy of the data in a new Uint8Array,
+            // and its buffer is guaranteed to be an ArrayBuffer.
+            const arrayBuffer = byteArray.slice().buffer as ArrayBuffer;
+            const blob = new Blob([byteArray], { type: mimeType });
             const url = URL.createObjectURL(blob);
 
             assetData.value = {
-                arrayBuffer,
+                arrayBuffer, // This is now guaranteed to be ArrayBuffer
                 blob,
                 mimeType: mimeType,
                 blobUrl: url,
@@ -141,32 +154,28 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
             console.error(`Error loading asset ${assetFileName}:`, err);
             error.value =
                 err instanceof Error ? err : new Error("Failed to load asset");
-            // Ensure data is null on error
-            if (assetData.value?.blobUrl) {
-                URL.revokeObjectURL(assetData.value.blobUrl);
-            }
-            assetData.value = null;
+            // Ensure data is null on error and cleanup URL
+            cleanup(); // Use cleanup to handle URL revocation and state reset
         } finally {
-            loading.value = false;
+            // Only set loading to false if not cleaned up (which already sets it)
+            if (loading.value) {
+                loading.value = false;
+            }
             console.log(`Finished loading attempt for asset: ${assetFileName}`);
         }
     };
 
-    // Watch the fileName ref (already destructured) and trigger loading
-    watch(
-        fileName,
-        (newFileName) => {
-            loadAsset({ assetFileName: newFileName });
-        },
-        { immediate: true }, // Load immediately when the composable is used
-    );
+    // Remove the watch that triggered automatic loading
+
+    // No initial load is triggered automatically. User must call executeLoad().
 
     // Return readonly refs to prevent modification outside the composable
-    // Plus the new cleanup function
+    // Plus the new executeLoad and cleanup functions
     return {
         assetData: readonly(assetData),
         loading: readonly(loading),
         error: readonly(error),
+        executeLoad, // Expose manual load function
         cleanup, // Expose cleanup function for manual resource management
     };
 }

@@ -10,6 +10,7 @@
         "console-log-colors": "latest",
         "eight-colors": "latest",
         "jsonwebtoken": "^9.0.2",
+        "lodash-es": "^4.17.21",
         "mobx": "latest",
         "postgres": "latest",
         "three": "^0.175.0",
@@ -23,6 +24,7 @@
         "@types/node": "^22.13.10",
         "@types/three": "^0.175.0",
         "@types/tmp": "^0.2.6",
+        "@types/lodash-es": "^4.17.12",
         "bun-types": "latest"
     },
     "scripts": {
