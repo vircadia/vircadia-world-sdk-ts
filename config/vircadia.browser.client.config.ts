@@ -78,7 +78,13 @@ const browserClientEnvSchema = z.object({
     VRCA_CLIENT_WEB_BABYLON_JS_DEV_PORT: z.coerce.number().default(3066),
 });
 
+// Define env record type based on our schema
+type EnvRecord = z.infer<typeof browserClientEnvSchema>;
+
 // Parse client environment variables
 export const VircadiaConfig_BROWSER_CLIENT = browserClientEnvSchema.parse(
-    import.meta.env ?? process.env,
+    // Fix TypeScript error with appropriate typing
+    (typeof import.meta !== "undefined"
+        ? (import.meta as { env?: Record<string, unknown> }).env
+        : undefined) ?? process.env,
 );
