@@ -101,6 +101,26 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
             return null;
         }
 
+        // Get the entity name from the parameters
+        let entityNameToUse = null;
+        if (
+            createInsertParams.length > 0 &&
+            typeof createInsertParams[0] === "string"
+        ) {
+            entityNameToUse = createInsertParams[0];
+        }
+
+        if (!entityNameToUse) {
+            console.error(
+                "Cannot create entity: No entity name provided in parameters.",
+            );
+            error.value = new Error(
+                "Entity creation failed: Missing entity name.",
+            );
+            creating.value = false;
+            return null;
+        }
+
         const query = `INSERT INTO ${TABLE_NAME} ${createInsertClause}`;
         console.log(
             `Attempting to create entity using query: ${query}`,
@@ -133,10 +153,11 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
             }
 
             console.warn(
-                "Entity possibly created, but failed to retrieve name (was RETURNING general__entity_name included in the insert clause?).",
+                "Entity possibly created, but failed to retrieve name. Returning the name provided in parameters:",
+                entityNameToUse,
             );
-            // Return null if name wasn't returned
-            return null;
+            // Return the name we tried to create with
+            return entityNameToUse;
         } catch (err) {
             if (isUnmounted) return null;
             console.error(`Error creating entity using query "${query}":`, err);
@@ -194,16 +215,9 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
                     ? selectClause
                     : `${selectClause}, ${NAME_COLUMN}`;
 
-            // Adjust parameter indices for the select clause if needed
-            const allParameters = [currentEntityName, ...selectParams];
-            const adjustedSelectClause = effectiveSelectClause.replace(
-                /\$(\d+)/g,
-                (_, n) => `$${Number.parseInt(n, 10) + 1}`,
-            );
-
-            const query = `SELECT ${adjustedSelectClause} FROM ${TABLE_NAME} WHERE ${NAME_COLUMN} = $1`;
+            const query = `SELECT ${effectiveSelectClause} FROM ${TABLE_NAME} WHERE ${NAME_COLUMN} = '${currentEntityName}'`;
             console.log(
-                `Fetching entity by ${NAME_COLUMN} = ${currentEntityName} with clause: ${adjustedSelectClause}`,
+                `Fetching entity by ${NAME_COLUMN} = ${currentEntityName} with clause: ${effectiveSelectClause}`,
             );
 
             const queryResult =
@@ -211,7 +225,7 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
                     Entity.I_Entity[]
                 >({
                     query,
-                    parameters: allParameters,
+                    parameters: selectParams,
                     timeoutMs: 10000,
                 });
 
@@ -301,24 +315,14 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
         updating.value = true;
         error.value = null;
 
-        // Adjust parameter indices for the set clause
-        const parameters = [currentName, ...updateParams];
-        const adjustedSetClause = setClause.replace(
-            /\$(\d+)/g,
-            (_, n) => `$${Number.parseInt(n, 10) + 1}`,
-        );
+        const query = `UPDATE ${TABLE_NAME} SET ${setClause} WHERE ${NAME_COLUMN} = '${currentName}'`;
 
-        const query = `UPDATE ${TABLE_NAME} SET ${adjustedSetClause} WHERE ${NAME_COLUMN} = $1`;
-
-        console.log(
-            `Executing update for entity ${currentName}: SET ${adjustedSetClause}`,
-            updateParams,
-        );
+        console.log(`Executing update for entity ${currentName}: ${query}`);
 
         try {
             await vircadia.client.Utilities.Connection.query({
                 query,
-                parameters,
+                parameters: updateParams,
                 timeoutMs: 10000,
             });
 
