@@ -451,7 +451,6 @@ export namespace Service {
 export namespace Client {
     export enum E_Client {
         WEB_BABYLON_JS = "web_babylon_js",
-        WEB_THREE_JS = "web_three_js",
     }
 }
 
