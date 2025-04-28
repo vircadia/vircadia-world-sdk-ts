@@ -4,7 +4,6 @@ export namespace Config {
 
 export namespace Entity {
     export interface I_Entity {
-        general__entity_id: string;
         general__entity_name: string;
         general__semantic_version: string;
         general__created_at?: string;

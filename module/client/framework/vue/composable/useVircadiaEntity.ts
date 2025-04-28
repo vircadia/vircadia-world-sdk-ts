@@ -5,16 +5,10 @@ import { isEqual } from "lodash-es"; // Import isEqual for deep comparison
 
 export interface UseVircadiaEntityOptions {
     /**
-     * A Ref containing the ID (general__entity_id) of the entity to manage.
-     * If both entityId and entityName are provided, entityId takes precedence for retrieval.
+     * A Ref containing the name (general__entity_name) of the entity to manage.
+     * Required for entity retrieval.
      */
-    entityId?: Ref<string | null | undefined>;
-    /**
-     * A Ref containing the name of the entity to manage.
-     * Used for retrieval if entityId is not provided.
-     * The name is looked up in the 'general__entity_name' column.
-     */
-    entityName?: Ref<string | null | undefined>;
+    entityName: Ref<string | null | undefined>;
     /**
      * The SQL SELECT clause string (e.g., "*", "general__position, general__rotation").
      * Determines which properties are fetched. Defaults to "*".
@@ -23,60 +17,35 @@ export interface UseVircadiaEntityOptions {
     /**
      * Parameters to use with the selectClause. Empty by default.
      */
-    selectParams?: any[];
+    selectParams?: unknown[];
     /**
      * The SQL INSERT clause to execute for entity creation, following "INSERT INTO entity.entities".
-     * Example: "(general__entity_name, general__position) VALUES ($1, $2) RETURNING general__entity_id"
-     * Include "RETURNING general__entity_id" if you want the composable to return the created entity's ID.
+     * Example: "(general__entity_name, general__position) VALUES ($1, $2) RETURNING general__entity_name"
+     * Include "RETURNING general__entity_name" if you want the composable to return the created entity's name.
      */
     insertClause?: string;
     /**
      * Parameters to use with the createInsertClause when creating a new entity.
      */
-    insertParams?: any[];
+    insertParams?: unknown[];
     /** Vircadia instance */
     instance: VircadiaInstance;
 }
 
-// Helper function to determine the active identifier and query details
-function getIdentifierDetails(
-    idRef: Ref<string | null | undefined>,
-    nameRef: Ref<string | null | undefined>,
-    idColumn: string, // Keep parameters for clarity within the helper
-    nameColumn: string, // Keep parameter name for clarity, but value is hardcoded
-): { identifier: string; column: string; value: string } | null {
-    const id = idRef.value;
-    const name = nameRef.value;
-
-    if (id) {
-        return { identifier: "id", column: idColumn, value: id };
-    }
-    if (name) {
-        // Use hardcoded name column here
-        return {
-            identifier: "name",
-            column: "general__entity_name",
-            value: name,
-        };
-    }
-    return null;
-}
-
 /**
  * Composable for manually managing a specific Vircadia entity's properties
- * from the 'entity.entities' table using 'general__entity_id' or 'general__entity_name' as the key.
+ * from the 'entity.entities' table using 'general__entity_name' as the key.
  * Allows specifying which columns to fetch via a SELECT clause string,
  * executing updates via a custom SET clause string, and creating
  * the entity using a specific INSERT clause. All operations (retrieve, update, create)
  * must be triggered manually via the returned functions.
  *
- * @param options - Configuration options including entityId, entityName, SELECT clause, and creation behavior.
+ * @param options - Configuration options including entityName, SELECT clause, and creation behavior.
  * @returns Reactive refs for entity data, retrieving/updating/creating state, errors, and manual action functions.
  */
 export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
     const {
-        entityId = ref(null),
-        entityName = ref(null),
+        entityName,
         selectClause = "*",
         selectParams = [],
         // insertIfNotExist is removed as creation is now manual
@@ -85,9 +54,8 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
         instance,
     } = options;
 
-    // Hardcoded table and ID/Name column names based on schema
+    // Hardcoded table and ID column name based on schema
     const TABLE_NAME = "entity.entities"; // Added table name constant
-    const ID_COLUMN = "general__entity_id";
     const NAME_COLUMN = "general__entity_name";
 
     const entityData = shallowRef<Entity.I_Entity | null>(null);
@@ -107,7 +75,7 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
 
     // --- Entity Creation ---
     // Internal function to perform the creation database query
-    const performCreate = async (): Promise<string | null> => {
+    const executeCreate = async (): Promise<string | null> => {
         // Prevent create if another operation is in progress
         if (retrieving.value || creating.value || updating.value) {
             console.warn(
@@ -142,7 +110,7 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
         try {
             const createResult =
                 await vircadia.client.Utilities.Connection.query<
-                    Pick<Entity.I_Entity, "general__entity_id">[]
+                    Pick<Entity.I_Entity, "general__entity_name">[]
                 >({
                     query,
                     parameters: createInsertParams,
@@ -153,21 +121,21 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
 
             if (
                 createResult.result.length > 0 &&
-                createResult.result[0].general__entity_id
+                createResult.result[0].general__entity_name
             ) {
-                const createdId = createResult.result[0].general__entity_id;
+                const createdName = createResult.result[0].general__entity_name;
                 console.log(
-                    `Successfully created entity with ID: ${createdId}`,
+                    `Successfully created entity with name: ${createdName}`,
                 );
-                // Return the ID obtained from RETURNING clause
+                // Return the name obtained from RETURNING clause
                 // Do not automatically fetch or update local state here
-                return createdId;
+                return createdName;
             }
 
             console.warn(
-                "Entity possibly created, but failed to retrieve ID (was RETURNING general__entity_id included in the insert clause?).",
+                "Entity possibly created, but failed to retrieve name (was RETURNING general__entity_name included in the insert clause?).",
             );
-            // Return null if ID wasn't returned
+            // Return null if name wasn't returned
             return null;
         } catch (err) {
             if (isUnmounted) return null;
@@ -184,14 +152,9 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
         }
     };
 
-    // Public function to trigger entity creation
-    const executeCreate = async (): Promise<string | null> => {
-        return performCreate();
-    };
-
     // --- Data Fetching ---
     // Internal function to perform the fetch database query
-    const performRetrieve = async () => {
+    const executeRetrieve = async () => {
         // Prevent fetch if another operation is in progress
         if (retrieving.value || creating.value || updating.value) {
             console.warn(
@@ -203,54 +166,44 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
             return;
         }
 
-        // Get current values from refs
-        const currentEntityId = entityId.value;
+        // Get current value from name ref
         const currentEntityName = entityName.value;
 
         // Log what we're working with for debugging
-        console.log(
-            `Entity retrieve called with ID: ${currentEntityId}, Name: ${currentEntityName}`,
-        );
+        console.log(`Entity retrieve called with name: ${currentEntityName}`);
 
-        const activeIdentifier = getIdentifierDetails(
-            entityId,
-            entityName,
-            ID_COLUMN,
-            NAME_COLUMN,
-        );
-
-        if (!activeIdentifier) {
+        if (!currentEntityName) {
             console.warn(
-                "performRetrieve skipped: Neither entityId nor entityName is provided.",
+                "performRetrieve skipped: entityName is not provided.",
             );
             entityData.value = null; // Ensure data is null if no identifier
             error.value = new Error(
-                "Retrieve operation skipped: No identifier provided.",
+                "Retrieve operation skipped: No entity name provided.",
             );
             return;
         }
 
         retrieving.value = true;
         error.value = null; // Clear previous errors before fetching
-        const { column, value } = activeIdentifier;
 
         try {
-            // Ensure the ID column is always selected if not selecting "*"
+            // Ensure the name column is always selected if not selecting "*"
             const effectiveSelectClause =
-                selectClause.includes(ID_COLUMN) || selectClause.trim() === "*"
+                selectClause.includes(NAME_COLUMN) ||
+                selectClause.trim() === "*"
                     ? selectClause
-                    : `${selectClause}, ${ID_COLUMN}`;
+                    : `${selectClause}, ${NAME_COLUMN}`;
 
             // Adjust parameter indices for the select clause if needed
-            const allParameters = [value, ...selectParams];
+            const allParameters = [currentEntityName, ...selectParams];
             const adjustedSelectClause = effectiveSelectClause.replace(
                 /\$(\d+)/g,
                 (_, n) => `$${Number.parseInt(n, 10) + 1}`,
             );
 
-            const query = `SELECT ${adjustedSelectClause} FROM ${TABLE_NAME} WHERE ${column} = $1`;
+            const query = `SELECT ${adjustedSelectClause} FROM ${TABLE_NAME} WHERE ${NAME_COLUMN} = $1`;
             console.log(
-                `Fetching entity by ${column} = ${value} with clause: ${adjustedSelectClause}`,
+                `Fetching entity by ${NAME_COLUMN} = ${currentEntityName} with clause: ${adjustedSelectClause}`,
             );
 
             const queryResult =
@@ -279,13 +232,15 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
                 error.value = null; // Clear error on successful fetch/update
             } else {
                 // Entity not found
-                console.warn(`Entity with ${column} = ${value} not found.`);
+                console.warn(
+                    `Entity with ${NAME_COLUMN} = ${currentEntityName} not found.`,
+                );
                 entityData.value = null; // Set data to null if not found
             }
         } catch (err) {
             if (isUnmounted) return;
             console.error(
-                `Error fetching entity by ${column} = ${value}:`,
+                `Error fetching entity by ${NAME_COLUMN} = ${currentEntityName}:`,
                 err,
             );
             const fetchError =
@@ -293,7 +248,10 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
                     ? err
                     : new Error("Failed to fetch entity data");
             // Only update error ref if it's a new error or null
-            if (!error.value || error.value?.message !== fetchError.message) {
+            if (
+                !error.value ||
+                fetchError.message !== (error.value as Error).message
+            ) {
                 error.value = fetchError;
             }
             entityData.value = null; // Ensure data is null on fetch error
@@ -304,14 +262,12 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
         }
     };
 
-    // Public function to trigger a fetch
-    const executeRetrieve = () => {
-        performRetrieve();
-    };
-
     // --- Data Updating ---
     // Internal function to perform the update database query
-    const performUpdate = async (setClause: string, updateParams: any[]) => {
+    const executeUpdate = async (
+        setClause: string,
+        updateParams: unknown[],
+    ) => {
         // Prevent update if another operation is in progress
         if (retrieving.value || creating.value || updating.value) {
             console.warn(
@@ -323,14 +279,16 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
             return;
         }
 
-        // Use the ID from the potentially just updated entityData
-        const currentId = entityData.value?.general__entity_id;
+        // Use the name from the potentially just updated entityData
+        const currentName = entityData.value?.general__entity_name;
 
-        if (!currentId) {
+        if (!currentName) {
             console.warn(
-                "performUpdate skipped: Entity ID not available in local data. Ensure entity is loaded via executeRetrieve first.",
+                "performUpdate skipped: Entity name not available in local data. Ensure entity is loaded via executeRetrieve first.",
             );
-            error.value = new Error("Cannot update: Entity ID not available.");
+            error.value = new Error(
+                "Cannot update: Entity name not available.",
+            );
             return;
         }
 
@@ -344,16 +302,16 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
         error.value = null;
 
         // Adjust parameter indices for the set clause
-        const parameters = [currentId, ...updateParams];
+        const parameters = [currentName, ...updateParams];
         const adjustedSetClause = setClause.replace(
             /\$(\d+)/g,
             (_, n) => `$${Number.parseInt(n, 10) + 1}`,
         );
 
-        const query = `UPDATE ${TABLE_NAME} SET ${adjustedSetClause} WHERE ${ID_COLUMN} = $1`;
+        const query = `UPDATE ${TABLE_NAME} SET ${adjustedSetClause} WHERE ${NAME_COLUMN} = $1`;
 
         console.log(
-            `Executing update for entity ${currentId}: SET ${adjustedSetClause}`,
+            `Executing update for entity ${currentName}: SET ${adjustedSetClause}`,
             updateParams,
         );
 
@@ -365,12 +323,14 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
             });
 
             if (isUnmounted) return;
-            console.log(`Successfully executed update for entity ${currentId}`);
+            console.log(
+                `Successfully executed update for entity ${currentName}`,
+            );
             error.value = null; // Clear error on success
         } catch (err) {
             if (isUnmounted) return;
             console.error(
-                `Error executing update for entity ${currentId}:`,
+                `Error executing update for entity ${currentName}:`,
                 err,
             );
             error.value =
@@ -384,16 +344,9 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
         }
     };
 
-    // Public function to trigger an update
-    const executeUpdate = (setClause: string, parameters: any[]) => {
-        performUpdate(setClause, parameters);
-    };
-
     // --- Cleanup ---
     const cleanup = () => {
-        console.log(
-            `useVircadiaEntity cleanup called for ${entityId.value || entityName.value}`,
-        );
+        console.log(`useVircadiaEntity cleanup called for ${entityName.value}`);
         isUnmounted = true; // Flag to prevent async operations from updating state after cleanup
     };
 
