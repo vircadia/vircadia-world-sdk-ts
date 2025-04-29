@@ -1,20 +1,13 @@
 {
-    "compilerOptions": {
-        "allowJs": true,
-        "strict": true,
-        "target": "ESNext",
-        "module": "ESNext",
-        "moduleResolution": "bundler",
-        "lib": ["DOM", "ESNext"],
-        "jsx": "react",
-        "outDir": "dist",
-        "types": ["bun-types", "@types/node", "@types/jsonwebtoken"]
-    },
-    "include": [
-        "./**/*.ts",
-        "./**/*.tsx",
-        "./**/*.js",
-        "./**/*.jsx",
-        "../../server/service/world-tick-manager.ts"
-    ]
+	"compilerOptions": {
+		"allowJs": true,
+		"strict": true,
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"lib": ["DOM", "ESNext"],
+		"jsx": "react",
+		"outDir": "dist"
+	},
+	"include": ["./**/*.ts", "./**/*.tsx", "./**/*.js", "./**/*.jsx"]
 }
