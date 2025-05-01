@@ -264,6 +264,25 @@ export namespace Communication {
             AUTH_SESSION_VALIDATE = "AUTH_SESSION_VALIDATE",
         }
 
+        // Interface for parameter documentation
+        export interface I_Parameter {
+            name: string;
+            type: string;
+            required: boolean;
+            description: string;
+        }
+        
+        // Interface for return value documentation
+        export interface I_Return {
+            type: string;
+            description: string;
+            fields?: {
+                name: string;
+                type: string;
+                description: string;
+            }[];
+        }
+        
         export const Endpoint: {
             [key in E_Endpoint]: {
                 path: string;
@@ -274,6 +293,9 @@ export namespace Communication {
                 createSuccess: (...args: any[]) => any;
                 // biome-ignore lint/suspicious/noExplicitAny: This interface needs to be flexible for different endpoint implementations
                 createError: (...args: any[]) => any;
+                description: string;
+                parameters: I_Parameter[];
+                returns: I_Return; // Added returns field
             };
         } = {
             AUTH_SESSION_VALIDATE: {
@@ -308,6 +330,42 @@ export namespace Communication {
                     timestamp: Date.now(),
                     error,
                 }),
+                description: "Validates a user session token from an authentication provider",
+                parameters: [
+                    {
+                        name: "token",
+                        type: "string",
+                        required: true,
+                        description: "Authentication token to validate"
+                    },
+                    {
+                        name: "provider",
+                        type: "string",
+                        required: true,
+                        description: "Name of the authentication provider (e.g., 'oauth', 'local')"
+                    }
+                ],
+                returns: {
+                    type: "object",
+                    description: "Response indicating whether the session is valid",
+                    fields: [
+                        {
+                            name: "success",
+                            type: "boolean",
+                            description: "Indicates if the validation was successful"
+                        },
+                        {
+                            name: "timestamp",
+                            type: "number",
+                            description: "Unix timestamp when the response was generated"
+                        },
+                        {
+                            name: "error",
+                            type: "string",
+                            description: "Error message (only present when success is false)"
+                        }
+                    ]
+                }
             },
         } as const;
     }
