@@ -4,8 +4,8 @@ import { VircadiaConfig_CLI } from "../../config/vircadia.cli.config";
 import { VircadiaConfig_SERVER } from "../../config/vircadia.server.config";
 // TODO: Use Bun native .sql client and use pooling to reduce latency issues.
 
-const IDLE_TIMEOUT_MS = 86400000; // 24 hours
-const CONNECT_TIMEOUT_MS = 10000; // 10 seconds
+const IDLE_TIMEOUT_S = 86400; // 24 hours
+const CONNECT_TIMEOUT_S = 10; // 10 seconds
 
 export class PostgresClient {
     private static instance: PostgresClient | null = null;
@@ -75,8 +75,8 @@ export class PostgresClient {
                     database: data.postgres.database,
                     username: data.postgres.username,
                     password: data.postgres.password,
-                    idle_timeout: IDLE_TIMEOUT_MS,
-                    connect_timeout: CONNECT_TIMEOUT_MS,
+                    idle_timeout: IDLE_TIMEOUT_S,
+                    connect_timeout: CONNECT_TIMEOUT_S,
                     onnotice:
                         this.debug && !this.suppress ? () => {} : undefined,
                     onclose:
@@ -127,8 +127,8 @@ export class PostgresClient {
                     database: data.postgres.database,
                     username: data.postgres.username,
                     password: data.postgres.password,
-                    idle_timeout: IDLE_TIMEOUT_MS,
-                    connect_timeout: CONNECT_TIMEOUT_MS,
+                    idle_timeout: IDLE_TIMEOUT_S,
+                    connect_timeout: CONNECT_TIMEOUT_S,
                     onnotice:
                         this.debug && !this.suppress ? () => {} : undefined,
                     onclose:
