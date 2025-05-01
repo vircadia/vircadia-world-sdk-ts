@@ -10,7 +10,7 @@ import {
     VircadiaClientCore,
     type VircadiaClientCoreConfig,
     type ConnectionInfo,
-} from "../../../core/vircadia.client.core";
+} from "../../../core/browser/vircadia.browser.client.core";
 
 /**
  * Options for creating a Vircadia instance

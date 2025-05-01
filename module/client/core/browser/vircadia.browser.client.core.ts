@@ -1,5 +1,5 @@
-import { Communication } from "../../../schema/schema.general";
-import { log } from "../../general/log";
+import { Communication } from "../../../../schema/schema.general";
+import { log } from "../../../internal/general.log.client";
 
 // Define event types
 export type ConnectionState =
