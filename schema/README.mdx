@@ -2,24 +2,16 @@
 sidebar_label: Schema
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 
 import generalSchema from '!!raw-loader!./schema.general.ts';
 
-# Typescript Schemas
+# TypeScript Schema
 
-These schema files are used throughout the Vircadia World SDK to provide TypeScript type safety and documentation for developers building on the platform. 
+These schema files are used throughout the Vircadia World SDK to provide TypeScript type safety and documentation for developers building on the platform.
 
-<Tabs>
-  <TabItem value="general" label="General Schema">
-    <p>
-        The General Schema defines the core data structures used in the Vircadia World PostgreSQL database:
-    </p>
-    <CodeBlock language="typescript" title="schema.general.ts">
-      {generalSchema}
-    </CodeBlock>
-  </TabItem>
-</Tabs>
+## General Schema
 
+<CodeBlock language="typescript" title="schema.general.ts">
+  {generalSchema}
+</CodeBlock>
