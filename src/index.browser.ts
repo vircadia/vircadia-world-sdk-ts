@@ -3,7 +3,7 @@ import { version } from "../package.json";
 // Version information
 export const VERSION = version;
 
-// Browser-specific exports
+// Client exports
 export * from "./client/config/browser/vircadia.browser.client.config";
 export * from "./client/core/browser/vircadia.browser.client.core";
 export * from "./client/framework/vue/composable/useVircadiaAsset";

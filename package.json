@@ -8,8 +8,7 @@
     "exports": {
         ".": {
             "browser": "./dist/browser/index.js",
-            "bun": "./dist/bun/index.js",
-            "types": "./dist/index.d.ts"
+            "bun": "./dist/bun/index.js"
         }
     },
     "sideEffects": false,
@@ -39,6 +38,9 @@
         "lint": "eslint './**/*.{ts,tsx,js,jsx}'",
         "build:browser": "bun run build.browser.js",
         "build:bun": "bun run build.bun.js",
+        "build:types": "tsc --emitDeclarationOnly",
+        "build": "bun run build.js",
+        "pack": "cd package && npm pack ../",
         "dev": "bun --watch build.js"
     }
 }

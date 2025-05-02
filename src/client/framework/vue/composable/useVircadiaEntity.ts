@@ -1,6 +1,6 @@
 import { ref, readonly, shallowRef, type Ref, toRaw } from "vue"; // Removed watch, Import toRaw
 import type { VircadiaInstance } from "../provider/useVircadia";
-import type { Entity } from "../../../../../schema/schema.general"; // Import the Entity namespace
+import type { Entity } from "../../../../schema/schema.general"; // Import the Entity namespace
 import { isEqual } from "lodash-es"; // Import isEqual for deep comparison
 
 export interface UseVircadiaEntityOptions {

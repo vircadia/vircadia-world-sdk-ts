@@ -1,7 +1,3 @@
-import { log } from "../../../../server/module/server.log.client";
-import { Agent as AgentMeta } from "../../../meta";
-import { Audio } from "./audio";
-
 export namespace WebRTC {
     export const WEBRTC_LOG_PREFIX = "[WEBRTC]";
 
@@ -55,10 +51,9 @@ export namespace WebRTC {
         agentId: string,
         event: MessageEvent,
     ) => {
-        log({
-            message: `${WebRTC.WEBRTC_LOG_PREFIX} Received message from agent ${agentId}: ${event.data}`,
-            type: "info",
-        });
+        console.info(
+            `${WebRTC.WEBRTC_LOG_PREFIX} Received message from agent ${agentId}: ${event.data}`,
+        );
         // Implement your logic for handling different types of messages here
     };
 
@@ -81,34 +76,34 @@ export namespace WebRTC {
     }) => {
         // Remove existing tracks
         const senders = data.rtcConnection.getSenders();
-        senders.forEach((sender) => {
+        for (const sender of senders) {
             data.rtcConnection.removeTrack(sender);
-        });
+        }
 
         // Add new tracks
-        data.outgoingAudioMediaStream.getTracks().forEach((track) => {
+        for (const track of data.outgoingAudioMediaStream.getTracks()) {
             data.rtcConnection.addTrack(track, data.outgoingAudioMediaStream);
-        });
+        }
     };
 
-    export const deinitConnection = (
-        connection: AgentMeta.I_AgentPeerConnection,
-    ) => {
-        if (connection.incomingAudioMediaPanner) {
-            Audio.removeIncomingAudioStream(
-                connection.incomingAudioMediaPanner,
-            );
-        }
-        if (connection.rtcDataChannel) {
-            connection.rtcDataChannel.close();
-        }
-        if (connection.incomingAudioMediaStream) {
-            connection.incomingAudioMediaStream
-                .getTracks()
-                .forEach((track) => track.stop());
-        }
-        if (connection.rtcConnection) {
-            connection.rtcConnection.close();
-        }
-    };
+    // export const deinitConnection = (
+    //     connection: AgentMeta.I_AgentPeerConnection,
+    // ) => {
+    //     if (connection.incomingAudioMediaPanner) {
+    //         // Audio.removeIncomingAudioStream(
+    //         //     connection.incomingAudioMediaPanner,
+    //         // );
+    //     }
+    //     if (connection.rtcDataChannel) {
+    //         connection.rtcDataChannel.close();
+    //     }
+    //     if (connection.incomingAudioMediaStream) {
+    //         for (const track of connection.incomingAudioMediaStream.getTracks()) {
+    //             track.stop();
+    //         }
+    //     }
+    //     if (connection.rtcConnection) {
+    //         connection.rtcConnection.close();
+    //     }
+    // };
 }
