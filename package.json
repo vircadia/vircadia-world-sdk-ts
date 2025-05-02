@@ -2,21 +2,14 @@
     "name": "@vircadia/world-sdk-ts",
     "type": "module",
     "version": "0.0.1",
-    "types": "./dist/types/browser/index.browser.d.ts",
     "exports": {
-        ".": {
-            "browser": {
-                "import": "./dist/browser/index.browser.js",
-                "types": "./dist/types/browser/index.browser.d.ts"
-            },
-            "bun": {
-                "import": "./dist/bun/index.bun.js",
-                "types": "./dist/types/bun/index.bun.d.ts"
-            },
-            "default": {
-                "import": "./dist/browser/index.browser.js",
-                "types": "./dist/types/browser/index.browser.d.ts"
-            }
+        "./browser": {
+            "import": "./dist/browser/index.browser.js",
+            "types": "./dist/types/browser/index.browser.d.ts"
+        },
+        "./bun": {
+            "import": "./dist/bun/index.bun.js",
+            "types": "./dist/types/bun/index.bun.d.ts"
         }
     },
     "sideEffects": false,

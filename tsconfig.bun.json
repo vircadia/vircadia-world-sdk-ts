@@ -1,12 +1,8 @@
 {
     "extends": "./tsconfig.json",
     "compilerOptions": {
-        "rootDir": "./src",
         "outDir": "./dist/bun",
         "declarationDir": "./dist/types/bun",
-        "declaration": true,
-        "emitDeclarationOnly": true,
-        "composite": true,
         "types": ["bun-types"]
     },
     "include": ["src/**/*"],

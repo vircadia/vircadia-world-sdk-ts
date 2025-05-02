@@ -1,5 +1,6 @@
 {
     "compilerOptions": {
+        "rootDir": "./src",
         "target": "ES2022",
         "module": "ESNext",
         "moduleResolution": "bundler",
@@ -8,6 +9,10 @@
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
         "isolatedModules": true,
+        "declaration": true,
+        "emitDeclarationOnly": true,
+        "composite": true,
+        "outDir": "./dist",
         "paths": {
             "@/*": ["./src/*"]
         },
