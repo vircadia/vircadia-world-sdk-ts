@@ -2,6 +2,20 @@
     "name": "@vircadia/world-sdk-ts",
     "type": "module",
     "version": "0.0.1-dev",
+    "description": "Vircadia World SDK for TypeScript",
+    "license": "Apache-2.0",
+    "author": "Vircadia",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/vircadia/vircadia-world.git"
+    },
+    "files": [
+        "dist",
+        "README.md"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
     "exports": {
         "./browser": {
             "import": "./dist/browser/index.browser.js",
@@ -35,11 +49,12 @@
     },
     "scripts": {
         "build": "bun run clean && bun run build:types && bun run build:browser && bun run build:bun",
-        "dev": "bun --watch run build.js",
         "pack": "cd package && npm pack ../",
         "clean": "rm -rf dist",
         "build:types": "tsc --build tsconfig.json",
         "build:browser": "bun run build.browser.js",
-        "build:bun": "bun run build.bun.js"
+        "build:bun": "bun run build.bun.js",
+        "prepublishOnly": "bun run build",
+        "publish": "npm publish"
     }
 }
