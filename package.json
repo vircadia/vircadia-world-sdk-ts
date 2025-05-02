@@ -1,7 +1,7 @@
 {
     "name": "@vircadia/world-sdk-ts",
     "type": "module",
-    "version": "0.0.1",
+    "version": "0.0.1-dev",
     "exports": {
         "./browser": {
             "import": "./dist/browser/index.browser.js",
@@ -34,8 +34,12 @@
         "bun-types": "latest"
     },
     "scripts": {
-        "build": "bun run build.js",
+        "build": "bun run clean && bun run build:types && bun run build:browser && bun run build:bun",
         "dev": "bun --watch run build.js",
-        "pack": "cd package && npm pack ../"
+        "pack": "cd package && npm pack ../",
+        "clean": "rm -rf dist",
+        "build:types": "tsc --build tsconfig.json",
+        "build:browser": "bun run build.browser.js",
+        "build:bun": "bun run build.bun.js"
     }
 }

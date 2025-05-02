@@ -12,15 +12,19 @@
         "declaration": true,
         "emitDeclarationOnly": true,
         "composite": true,
-        "outDir": "./dist",
+        "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
         "paths": {
             "@/*": ["./src/*"]
         },
-        "lib": ["DOM", "ESNext"],
-        "types": ["node", "bun-types"]
+        "lib": ["DOM", "ESNext"]
     },
     "include": ["src/**/*"],
-    "exclude": ["node_modules", "dist"],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "src/**/*.browser.ts",
+        "src/**/*.bun.ts"
+    ],
     "references": [
         { "path": "./tsconfig.browser.json" },
         { "path": "./tsconfig.bun.json" }

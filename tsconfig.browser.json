@@ -3,10 +3,9 @@
     "compilerOptions": {
         "outDir": "./dist/browser",
         "declarationDir": "./dist/types/browser",
+        "tsBuildInfoFile": "./dist/browser/tsconfig.browser.tsbuildinfo",
         "lib": ["DOM", "ESNext"],
         "types": ["@types/node"]
     },
-    "include": ["src/**/*"],
-    "exclude": ["node_modules", "dist", "src/**/*.bun.ts"],
     "files": ["./src/index.browser.ts"]
 }

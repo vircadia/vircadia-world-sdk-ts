@@ -3,9 +3,8 @@
     "compilerOptions": {
         "outDir": "./dist/bun",
         "declarationDir": "./dist/types/bun",
+        "tsBuildInfoFile": "./dist/bun/tsconfig.bun.tsbuildinfo",
         "types": ["bun-types"]
     },
-    "include": ["src/**/*"],
-    "exclude": ["node_modules", "dist", "src/**/*.browser.ts"],
     "files": ["./src/index.bun.ts"]
 }
