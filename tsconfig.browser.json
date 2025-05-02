@@ -1,0 +1,16 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "rootDir": "./src",
+        "outDir": "./dist/browser",
+        "declarationDir": "./dist/types/browser",
+        "declaration": true,
+        "emitDeclarationOnly": true,
+        "composite": true,
+        "lib": ["DOM", "ESNext"],
+        "types": ["@types/node"]
+    },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist", "src/**/*.bun.ts"],
+    "files": ["./src/index.browser.ts"]
+}

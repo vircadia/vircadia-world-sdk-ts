@@ -19,10 +19,10 @@ try {
             "eight-colors",
             "jsonwebtoken",
             "lodash-es",
-            "mobx",
             "postgres",
             "tmp",
-            "zod"
+            "zod",
+            "idb"
         ]
     });
 

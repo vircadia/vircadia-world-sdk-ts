@@ -4,13 +4,20 @@
         "module": "ESNext",
         "moduleResolution": "bundler",
         "esModuleInterop": true,
-        "declaration": true,
-        "declarationDir": "./dist",
-        "outDir": "./dist",
         "strict": true,
         "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true
+        "forceConsistentCasingInFileNames": true,
+        "isolatedModules": true,
+        "paths": {
+            "@/*": ["./src/*"]
+        },
+        "lib": ["DOM", "ESNext"],
+        "types": ["node", "bun-types"]
     },
     "include": ["src/**/*"],
-    "exclude": ["node_modules", "dist"]
+    "exclude": ["node_modules", "dist"],
+    "references": [
+        { "path": "./tsconfig.browser.json" },
+        { "path": "./tsconfig.bun.json" }
+    ]
 }

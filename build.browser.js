@@ -20,7 +20,6 @@ try {
             "zod",
             "idb",
             "lodash-es",
-            "mobx"
         ]
     });
 

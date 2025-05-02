@@ -1,31 +1,28 @@
-import { spawn } from "bun";
+#!/usr/bin/env bun
 
-async function runCommand(command, args) {
-    console.log(`Running: ${command} ${args.join(" ")}`);
-    const proc = spawn([command, ...args], {
-        stdio: ["inherit", "inherit", "inherit"],
-        cwd: process.cwd(),
-    });
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 
-    const status = await proc.exited;
-    if (status !== 0) {
-        throw new Error(`Command failed with exit code ${status}`);
-    }
+// Ensure dist directory exists
+if (!fs.existsSync('./dist')) {
+    fs.mkdirSync('./dist', { recursive: true });
 }
 
-try {
-    // Generate TypeScript declaration files
-    console.log("Generating TypeScript declaration files...");
-    await runCommand("npx", ["tsc", "--emitDeclarationOnly"]);
-
-    console.log("Starting browser build...");
-    await runCommand("bun", ["run", "build.browser.js"]);
-
-    console.log("Starting bun build...");
-    await runCommand("bun", ["run", "build.bun.js"]);
-
-    console.log("All builds completed successfully!");
-} catch (error) {
-    console.error("Build process failed:", error);
-    process.exit(1);
+// Clean previous build
+if (fs.existsSync('./dist')) {
+    fs.rmSync('./dist', { recursive: true, force: true });
 }
+
+// Build types
+console.log('Building types...');
+spawnSync('tsc', ['--build', 'tsconfig.json'], { stdio: 'inherit' });
+
+// Run browser build
+console.log('Building browser version...');
+await import('./build.browser.js');
+
+// Run bun build
+console.log('Building bun version...');
+await import('./build.bun.js');
+
+console.log('Build completed successfully!');

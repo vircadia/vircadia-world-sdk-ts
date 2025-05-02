@@ -1,0 +1,15 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "rootDir": "./src",
+        "outDir": "./dist/bun",
+        "declarationDir": "./dist/types/bun",
+        "declaration": true,
+        "emitDeclarationOnly": true,
+        "composite": true,
+        "types": ["bun-types"]
+    },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist", "src/**/*.browser.ts"],
+    "files": ["./src/index.bun.ts"]
+}
