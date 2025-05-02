@@ -7,7 +7,8 @@
     "types": "./dist/index.d.ts",
     "exports": {
         ".": {
-            "import": "./dist/index.js",
+            "browser": "./dist/browser/index.js",
+            "bun": "./dist/bun/index.js",
             "types": "./dist/index.d.ts"
         }
     },
@@ -36,7 +37,8 @@
     "scripts": {
         "format": "prettier --write './**/*.{ts,tsx,js,jsx,json}'",
         "lint": "eslint './**/*.{ts,tsx,js,jsx}'",
-        "build": "bun run build.js",
+        "build:browser": "bun run build.browser.js",
+        "build:bun": "bun run build.bun.js",
         "dev": "bun --watch build.js"
     }
 }
