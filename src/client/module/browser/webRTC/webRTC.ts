@@ -1,9 +1,9 @@
-import { log } from '../../../internal/general.log.client';
-import { Agent as AgentMeta } from '../../../meta';
-import { Audio } from './audio';
+import { log } from "../../../../server/module/server.log.client";
+import { Agent as AgentMeta } from "../../../meta";
+import { Audio } from "./audio";
 
 export namespace WebRTC {
-    export const WEBRTC_LOG_PREFIX = '[WEBRTC]';
+    export const WEBRTC_LOG_PREFIX = "[WEBRTC]";
 
     // Helper functions
     export const createPeerConnection = (
@@ -48,9 +48,7 @@ export namespace WebRTC {
         peerConnection: RTCPeerConnection,
         candidate: RTCIceCandidateInit,
     ): Promise<void> => {
-        await peerConnection.addIceCandidate(
-            new RTCIceCandidate(candidate),
-        );
+        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
     };
 
     export const handleDataChannelMessage = (
@@ -58,9 +56,8 @@ export namespace WebRTC {
         event: MessageEvent,
     ) => {
         log({
-            message:
-                `${WebRTC.WEBRTC_LOG_PREFIX} Received message from agent ${agentId}: ${event.data}`,
-            type: 'info',
+            message: `${WebRTC.WEBRTC_LOG_PREFIX} Received message from agent ${agentId}: ${event.data}`,
+            type: "info",
         });
         // Implement your logic for handling different types of messages here
     };
@@ -106,9 +103,9 @@ export namespace WebRTC {
             connection.rtcDataChannel.close();
         }
         if (connection.incomingAudioMediaStream) {
-            connection.incomingAudioMediaStream.getTracks().forEach((
-                track,
-            ) => track.stop());
+            connection.incomingAudioMediaStream
+                .getTracks()
+                .forEach((track) => track.stop());
         }
         if (connection.rtcConnection) {
             connection.rtcConnection.close();

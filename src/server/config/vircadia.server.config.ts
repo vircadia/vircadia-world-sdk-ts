@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { VircadiaConfig_GLOBAL_CONSTS } from "./vircadia.consts.config";
+import { VircadiaConfig_SERVER_CONSTS } from "./vircadia.server.consts";
 
 // Server environment schema
 const serverEnvSchema = z.object({
@@ -78,7 +78,7 @@ const serverEnvSchema = z.object({
         .default("vircadia_world_db"),
     VRCA_SERVER_SERVICE_POSTGRES_SUPER_USER_USERNAME: z
         .string()
-        .default(VircadiaConfig_GLOBAL_CONSTS.DB_SUPER_USER_USERNAME),
+        .default(VircadiaConfig_SERVER_CONSTS.DB_SUPER_USER_USERNAME),
     VRCA_SERVER_SERVICE_POSTGRES_SUPER_USER_PASSWORD: z
         .string()
         .default("CHANGE_ME!"),
@@ -87,7 +87,7 @@ const serverEnvSchema = z.object({
         .default("VRCA_SERVER"),
     VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_USER_USERNAME: z
         .string()
-        .default(VircadiaConfig_GLOBAL_CONSTS.DB_AGENT_PROXY_USER_USERNAME),
+        .default(VircadiaConfig_SERVER_CONSTS.DB_AGENT_PROXY_USER_USERNAME),
     VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_USER_PASSWORD: z
         .string()
         .default("CHANGE_ME!"),

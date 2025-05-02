@@ -1,13 +1,19 @@
 {
-	"compilerOptions": {
-		"allowJs": true,
-		"strict": true,
-		"target": "ESNext",
-		"module": "ESNext",
-		"moduleResolution": "bundler",
-		"lib": ["DOM", "ESNext"],
-		"jsx": "react",
-		"outDir": "dist"
-	},
-	"include": ["./**/*.ts", "./**/*.tsx", "./**/*.js", "./**/*.jsx"]
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "esModuleInterop": true,
+        "strict": true,
+        "declaration": true,
+        "declarationDir": "dist",
+        "outDir": "dist",
+        "skipLibCheck": true,
+        "sourceMap": true,
+        "removeComments": false,
+        "isolatedModules": true,
+        "resolveJsonModule": true
+    },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist"]
 }

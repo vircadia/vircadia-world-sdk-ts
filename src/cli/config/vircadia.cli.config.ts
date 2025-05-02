@@ -1,8 +1,8 @@
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
-import { VircadiaConfig_GLOBAL_CONSTS } from "./vircadia.consts.config";
-import { VircadiaConfig_SERVER } from "./vircadia.server.config";
+import { VircadiaConfig_SERVER_CONSTS } from "../../server/config/vircadia.server.consts";
+import { VircadiaConfig_SERVER } from "../../server/config/vircadia.server.config";
 
 // CLI environment schema
 const cliEnvSchema = z.object({
@@ -41,7 +41,7 @@ const cliEnvSchema = z.object({
         .default(VircadiaConfig_SERVER.VRCA_SERVER_SERVICE_POSTGRES_DATABASE),
     VRCA_CLI_SERVICE_POSTGRES_SUPER_USER_USERNAME: z
         .string()
-        .default(VircadiaConfig_GLOBAL_CONSTS.DB_SUPER_USER_USERNAME),
+        .default(VircadiaConfig_SERVER_CONSTS.DB_SUPER_USER_USERNAME),
     VRCA_CLI_SERVICE_POSTGRES_SUPER_USER_PASSWORD: z
         .string()
         .default(
@@ -50,7 +50,7 @@ const cliEnvSchema = z.object({
 
     VRCA_CLI_SERVICE_POSTGRES_AGENT_PROXY_USER_USERNAME: z
         .string()
-        .default(VircadiaConfig_GLOBAL_CONSTS.DB_AGENT_PROXY_USER_USERNAME),
+        .default(VircadiaConfig_SERVER_CONSTS.DB_AGENT_PROXY_USER_USERNAME),
     VRCA_CLI_SERVICE_POSTGRES_AGENT_PROXY_USER_PASSWORD: z
         .string()
         .default(

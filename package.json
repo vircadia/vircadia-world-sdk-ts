@@ -2,10 +2,17 @@
     "name": "vircadia-world-sdk-ts",
     "type": "module",
     "version": "0.0.1",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "sideEffects": false,
     "dependencies": {
-        "@babylonjs/core": "8.2.0",
-        "@babylonjs/inspector": "8.2.0",
-        "@babylonjs/loaders": "8.2.0",
         "@vueuse/core": "^13.1.0",
         "console-log-colors": "latest",
         "eight-colors": "latest",
@@ -28,6 +35,8 @@
     },
     "scripts": {
         "format": "prettier --write './**/*.{ts,tsx,js,jsx,json}'",
-        "lint": "eslint './**/*.{ts,tsx,js,jsx}'"
+        "lint": "eslint './**/*.{ts,tsx,js,jsx}'",
+        "build": "bun run build.js",
+        "dev": "bun --watch build.js"
     }
 }

@@ -1,7 +1,7 @@
 import postgres from "postgres";
-import { log } from "./general.log.client";
-import { VircadiaConfig_CLI } from "../../config/vircadia.cli.config";
-import { VircadiaConfig_SERVER } from "../../config/vircadia.server.config";
+import { log } from "./server.log.client";
+import { VircadiaConfig_CLI } from "../../cli/config/vircadia.cli.config";
+import { VircadiaConfig_SERVER } from "../../server/config/vircadia.server.config";
 // TODO: Use Bun native .sql client and use pooling to reduce latency issues.
 
 const IDLE_TIMEOUT_S = 86400; // 24 hours

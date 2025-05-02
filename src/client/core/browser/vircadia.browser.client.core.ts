@@ -1,5 +1,5 @@
-import { Communication } from "../../../../schema/schema.general";
-import { log } from "../../../internal/general.log.client";
+import { Communication } from "../../../schema/schema.general";
+import { log } from "../../../server/module/server.log.client";
 
 // Define event types
 export type ConnectionState =
@@ -40,14 +40,14 @@ export interface VircadiaClientCoreConfig {
 // Handles all WebSocket communication with the server
 class ConnectionManager {
     private ws: WebSocket | null = null;
-    private reconnectTimer: Timer | null = null;
+    private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private reconnectCount = 0;
     private pendingRequests = new Map<
         string,
         {
             resolve: (value: unknown) => void;
             reject: (reason: unknown) => void;
-            timeout: Timer;
+            timeout: ReturnType<typeof setTimeout>;
         }
     >();
     private eventListeners = new Map<string, Set<ConnectionEventListener>>();
