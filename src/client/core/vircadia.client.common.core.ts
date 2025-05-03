@@ -1,5 +1,5 @@
-import { Communication } from "../../../schema/schema.general";
-import { log } from "../../../server/module/server.log.client";
+import { Communication } from "../../schema/vircadia.schema.general";
+import { log } from "../module/bun/vircadia.log";
 
 // Define event types
 export type ConnectionState =
@@ -22,7 +22,7 @@ export type ConnectionInfo = {
 };
 type ConnectionEventListener = () => void;
 
-export interface VircadiaClientCoreConfig {
+export interface VircadiaClientBrowserCoreConfig {
     // Connection settings
     serverUrl: string;
     authToken: string;
@@ -55,7 +55,7 @@ class ConnectionManager {
     private connectionStartTime: number | null = null;
     private connectionPromise: Promise<ConnectionInfo> | null = null;
 
-    constructor(private config: VircadiaClientCoreConfig) {}
+    constructor(private config: VircadiaClientBrowserCoreConfig) {}
 
     // Event handling methods
     addEventListener(event: string, listener: ConnectionEventListener): void {
@@ -394,10 +394,10 @@ class ConnectionManager {
 }
 
 // Main class that coordinates all components and exposes utilities
-export class VircadiaClientCore {
+export class VircadiaClientBrowserCore {
     private connectionManager: ConnectionManager;
 
-    constructor(private config: VircadiaClientCoreConfig) {
+    constructor(private config: VircadiaClientBrowserCoreConfig) {
         this.connectionManager = new ConnectionManager(config);
     }
 

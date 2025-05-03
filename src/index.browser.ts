@@ -4,14 +4,13 @@ import { version } from "../package.json";
 export const VERSION = version;
 
 // Client exports
-export * from "./client/config/browser/vircadia.browser.client.config";
-export * from "./client/core/browser/vircadia.browser.client.core";
-export * from "./client/framework/vue/composable/useVircadiaAsset";
-export * from "./client/framework/vue/composable/useVircadiaEntity";
-export * from "./client/framework/vue/provider/useVircadia";
+export * from "./client/core/vircadia.client.browser.config";
+export * from "./client/core/vircadia.client.common.core";
+
+// Framework exports
+export * from "./client/vue/composable/useVircadiaAsset";
+export * from "./client/vue/composable/useVircadiaEntity";
+export * from "./client/vue/provider/useVircadia";
 
 // Schema exports
-export * from "./schema/schema.general";
-
-// Theme exports
-export * from "./theme/config/vircadia.theme.config";
+export * from "./schema/vircadia.schema.general";

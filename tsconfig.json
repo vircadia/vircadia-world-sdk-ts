@@ -18,7 +18,11 @@
         },
         "lib": ["DOM", "ESNext"]
     },
-    "include": ["src/**/*"],
+    "include": [
+        "src/**/*",
+        "../../server/vircadia.server.config.ts",
+        "../../server/vircadia.world.server.consts.ts"
+    ],
     "exclude": [
         "node_modules",
         "dist",

@@ -159,7 +159,7 @@ export namespace Communication {
         required: boolean;
         description: string;
     }
-    
+
     // Interface for return value documentation - moved to be shared across namespaces
     export interface I_Return {
         type: string;
@@ -198,33 +198,39 @@ export namespace Communication {
         // Define documentation for each message type
         export const MessageTypeDocs: Record<MessageType, I_MessageTypeDoc> = {
             [MessageType.GENERAL_ERROR_RESPONSE]: {
-                description: "Response sent when a general error occurs during processing",
+                description:
+                    "Response sent when a general error occurs during processing",
                 messageFormat: {
                     type: "object",
-                    description: "Error response with details about the failure",
+                    description:
+                        "Error response with details about the failure",
                     fields: [
                         {
                             name: "timestamp",
                             type: "number",
-                            description: "Unix timestamp when the error occurred"
+                            description:
+                                "Unix timestamp when the error occurred",
                         },
                         {
                             name: "requestId",
                             type: "string",
-                            description: "ID of the request that generated the error"
+                            description:
+                                "ID of the request that generated the error",
                         },
                         {
                             name: "errorMessage",
                             type: "string",
-                            description: "Detailed error message describing what went wrong"
+                            description:
+                                "Detailed error message describing what went wrong",
                         },
                         {
                             name: "type",
                             type: "string",
-                            description: "Message type identifier (GENERAL_ERROR_RESPONSE)"
-                        }
-                    ]
-                }
+                            description:
+                                "Message type identifier (GENERAL_ERROR_RESPONSE)",
+                        },
+                    ],
+                },
             },
             [MessageType.QUERY_REQUEST]: {
                 description: "Request to execute a query on the server",
@@ -233,20 +239,20 @@ export namespace Communication {
                         name: "query",
                         type: "string",
                         required: true,
-                        description: "The query string to execute"
+                        description: "The query string to execute",
                     },
                     {
                         name: "parameters",
                         type: "array",
                         required: false,
-                        description: "Array of parameters to pass to the query"
+                        description: "Array of parameters to pass to the query",
                     },
                     {
                         name: "requestId",
                         type: "string",
                         required: true,
-                        description: "Unique identifier for this request"
-                    }
+                        description: "Unique identifier for this request",
+                    },
                 ],
                 messageFormat: {
                     type: "object",
@@ -255,98 +261,114 @@ export namespace Communication {
                         {
                             name: "timestamp",
                             type: "number",
-                            description: "Unix timestamp when the request was created"
+                            description:
+                                "Unix timestamp when the request was created",
                         },
                         {
                             name: "requestId",
                             type: "string",
-                            description: "Unique identifier for this request"
+                            description: "Unique identifier for this request",
                         },
                         {
                             name: "errorMessage",
                             type: "string | null",
-                            description: "Error message if there was an issue with the request format"
+                            description:
+                                "Error message if there was an issue with the request format",
                         },
                         {
                             name: "type",
                             type: "string",
-                            description: "Message type identifier (QUERY_REQUEST)"
+                            description:
+                                "Message type identifier (QUERY_REQUEST)",
                         },
                         {
                             name: "query",
                             type: "string",
-                            description: "The query string to execute"
+                            description: "The query string to execute",
                         },
                         {
                             name: "parameters",
                             type: "array",
-                            description: "Array of parameters to pass to the query"
-                        }
-                    ]
-                }
+                            description:
+                                "Array of parameters to pass to the query",
+                        },
+                    ],
+                },
             },
             [MessageType.QUERY_RESPONSE]: {
-                description: "Response to a query request with results or error information",
+                description:
+                    "Response to a query request with results or error information",
                 messageFormat: {
                     type: "object",
-                    description: "Query response containing results or error details",
+                    description:
+                        "Query response containing results or error details",
                     fields: [
                         {
                             name: "timestamp",
                             type: "number",
-                            description: "Unix timestamp when the response was generated"
+                            description:
+                                "Unix timestamp when the response was generated",
                         },
                         {
                             name: "requestId",
                             type: "string",
-                            description: "ID of the request this response is for"
+                            description:
+                                "ID of the request this response is for",
                         },
                         {
                             name: "errorMessage",
                             type: "string | null",
-                            description: "Error message if the query failed, null if successful"
+                            description:
+                                "Error message if the query failed, null if successful",
                         },
                         {
                             name: "type",
                             type: "string",
-                            description: "Message type identifier (QUERY_RESPONSE)"
+                            description:
+                                "Message type identifier (QUERY_RESPONSE)",
                         },
                         {
                             name: "result",
                             type: "T | []",
-                            description: "Query results, empty array if no results or error"
-                        }
-                    ]
-                }
+                            description:
+                                "Query results, empty array if no results or error",
+                        },
+                    ],
+                },
             },
             [MessageType.SYNC_GROUP_UPDATES_RESPONSE]: {
                 description: "Response containing updates for a sync group",
                 messageFormat: {
                     type: "object",
-                    description: "Updates for entities in a specific sync group",
+                    description:
+                        "Updates for entities in a specific sync group",
                     fields: [
                         {
                             name: "timestamp",
                             type: "number",
-                            description: "Unix timestamp when the updates were generated"
+                            description:
+                                "Unix timestamp when the updates were generated",
                         },
                         {
                             name: "requestId",
                             type: "string",
-                            description: "ID of the request that triggered these updates"
+                            description:
+                                "ID of the request that triggered these updates",
                         },
                         {
                             name: "errorMessage",
                             type: "string | null",
-                            description: "Error message if there was a problem, null if successful"
+                            description:
+                                "Error message if there was a problem, null if successful",
                         },
                         {
                             name: "type",
                             type: "string",
-                            description: "Message type identifier (SYNC_GROUP_UPDATES_RESPONSE)"
-                        }
-                    ]
-                }
+                            description:
+                                "Message type identifier (SYNC_GROUP_UPDATES_RESPONSE)",
+                        },
+                    ],
+                },
             },
             [MessageType.TICK_NOTIFICATION]: {
                 description: "Notification sent when a server tick occurs",
@@ -357,31 +379,35 @@ export namespace Communication {
                         {
                             name: "timestamp",
                             type: "number",
-                            description: "Unix timestamp when the tick notification was sent"
+                            description:
+                                "Unix timestamp when the tick notification was sent",
                         },
                         {
                             name: "requestId",
                             type: "string",
-                            description: "ID for this notification"
+                            description: "ID for this notification",
                         },
                         {
                             name: "errorMessage",
                             type: "string | null",
-                            description: "Error message if there was an issue, null if successful"
+                            description:
+                                "Error message if there was an issue, null if successful",
                         },
                         {
                             name: "type",
-                            type: "string", 
-                            description: "Message type identifier (TICK_NOTIFICATION)"
+                            type: "string",
+                            description:
+                                "Message type identifier (TICK_NOTIFICATION)",
                         },
                         {
                             name: "tick",
                             type: "Tick.I_Tick",
-                            description: "Detailed information about the tick that completed"
-                        }
-                    ]
-                }
-            }
+                            description:
+                                "Detailed information about the tick that completed",
+                        },
+                    ],
+                },
+            },
         };
 
         interface BaseMessage {
@@ -534,42 +560,48 @@ export namespace Communication {
                     timestamp: Date.now(),
                     error,
                 }),
-                description: "Validates a user session token from an authentication provider",
+                description:
+                    "Validates a user session token from an authentication provider",
                 parameters: [
                     {
                         name: "token",
                         type: "string",
                         required: true,
-                        description: "Authentication token to validate"
+                        description: "Authentication token to validate",
                     },
                     {
                         name: "provider",
                         type: "string",
                         required: true,
-                        description: "Name of the authentication provider (e.g., 'oauth', 'local')"
-                    }
+                        description:
+                            "Name of the authentication provider (e.g., 'oauth', 'local')",
+                    },
                 ],
                 returns: {
                     type: "object",
-                    description: "Response indicating whether the session is valid",
+                    description:
+                        "Response indicating whether the session is valid",
                     fields: [
                         {
                             name: "success",
                             type: "boolean",
-                            description: "Indicates if the validation was successful"
+                            description:
+                                "Indicates if the validation was successful",
                         },
                         {
                             name: "timestamp",
                             type: "number",
-                            description: "Unix timestamp when the response was generated"
+                            description:
+                                "Unix timestamp when the response was generated",
                         },
                         {
                             name: "error",
                             type: "string",
-                            description: "Error message (only present when success is false)"
-                        }
-                    ]
-                }
+                            description:
+                                "Error message (only present when success is false)",
+                        },
+                    ],
+                },
             },
         } as const;
     }
@@ -707,12 +739,6 @@ export namespace Service {
                 error,
             }),
         } as const;
-    }
-}
-
-export namespace Client {
-    export enum E_Client {
-        WEB_BABYLON_JS = "web_babylon_js",
     }
 }
 

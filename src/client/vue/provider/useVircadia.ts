@@ -10,12 +10,12 @@ import {
     VircadiaClientCore,
     type VircadiaClientCoreConfig,
     type ConnectionInfo,
-} from "../../../core/browser/vircadia.browser.client.core";
+} from "../../../core/browser/vircadia.client.browser.core";
 
 /**
  * Options for creating a Vircadia instance
  */
-export interface VircadiaOptions {
+export interface I_Vue_VircadiaOptions {
     /**
      * Configuration for the Vircadia client
      */
@@ -25,7 +25,7 @@ export interface VircadiaOptions {
 /**
  * Return type for the useVircadia function
  */
-export interface VircadiaInstance {
+export interface I_Vue_VircadiaInstance {
     client: VircadiaClientCore;
     connectionInfo: Ref<ConnectionInfo>;
     dispose: () => void;
@@ -38,7 +38,9 @@ export interface VircadiaInstance {
  * @param options Configuration options for the Vircadia client
  * @returns Vircadia client instance and connection info
  */
-export function useVircadia(options: VircadiaOptions): VircadiaInstance {
+export function useVircadia(
+    options: I_Vue_VircadiaOptions,
+): I_Vue_VircadiaInstance {
     const { config } = options;
 
     // Initialize client with provided config
@@ -89,6 +91,8 @@ export function useVircadia(options: VircadiaOptions): VircadiaInstance {
     };
 }
 
-export function getInstanceKey(name: string): InjectionKey<VircadiaInstance> {
-    return name as string & InjectionKey<VircadiaInstance>;
+export function getInstanceKey(
+    name: string,
+): InjectionKey<I_Vue_VircadiaInstance> {
+    return name as string & InjectionKey<I_Vue_VircadiaInstance>;
 }

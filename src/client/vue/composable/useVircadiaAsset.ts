@@ -1,6 +1,7 @@
 import { ref, readonly, type Ref } from "vue"; // Removed watch
-import type { VircadiaInstance } from "../provider/useVircadia";
+import type { I_Vue_VircadiaInstance } from "../provider/useVircadia";
 import { openDB, deleteDB, type DBSchema, type IDBPDatabase } from "idb";
+import type { Entity } from "../../../../schema/vircadia.schema.general";
 
 // Cache expiration duration in milliseconds (1 hour)
 const CACHE_EXPIRATION_MS = 60 * 60 * 1000;
@@ -27,7 +28,7 @@ interface CacheEntry {
     timestamp: number;
 }
 
-export interface VircadiaAssetData {
+interface VircadiaAssetData {
     arrayBuffer: ArrayBuffer;
     blob: Blob;
     mimeType: string;
@@ -40,7 +41,7 @@ export interface VircadiaAssetData {
 export interface UseVircadiaAssetOptions {
     /** A Ref containing the name of the asset file to load. */
     fileName: Ref<string | null | undefined>; // Allow null/undefined
-    instance: VircadiaInstance;
+    instance: I_Vue_VircadiaInstance;
     /** Whether to use local storage caching (default: true) */
     useCache?: boolean;
 }
@@ -272,15 +273,14 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
             // Fetch from database
             const queryResult =
                 await vircadia.client.Utilities.Connection.query<
-                    {
+                    (Pick<Entity.Asset.I_Asset, "asset__mime_type"> & {
                         asset__data__bytea:
                             | ArrayBufferLike
                             | {
                                   type: string;
                                   data: number[];
                               };
-                        asset__mime_type: string;
-                    }[]
+                    })[]
                 >({
                     query: `
             SELECT asset__data__bytea, asset__mime_type
@@ -295,8 +295,17 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
                 throw new Error(`Asset ${assetFileName} not found`);
             }
 
+            if (!queryResult.result[0].asset__data__bytea) {
+                throw new Error(`Asset ${assetFileName} has no data`);
+            }
+
             // Process bytea data
             const rawData = queryResult.result[0].asset__data__bytea;
+
+            if (!queryResult.result[0].asset__mime_type) {
+                throw new Error(`Asset ${assetFileName} has no mime type`);
+            }
+
             const mimeType = queryResult.result[0].asset__mime_type;
 
             // Handle bytea data in different formats

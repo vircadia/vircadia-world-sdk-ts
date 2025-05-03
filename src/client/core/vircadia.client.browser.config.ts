@@ -2,8 +2,6 @@ import { z } from "zod";
 
 // Browser Client environment schema
 const browserClientEnvSchema = z.object({
-    VRCA_CLIENT_CONTAINER_NAME: z.string().default("vircadia_world_client"),
-
     // Web Babylon JS Client
     VRCA_CLIENT_WEB_BABYLON_JS_DEBUG: z
         .union([
@@ -59,27 +57,13 @@ const browserClientEnvSchema = z.object({
         ])
         .default(false),
 
-    // Production Web Babylon JS Client
-    VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_CONTAINER_NAME: z
-        .string()
-        .default("vircadia_world_client_web_babylon_js_prod"),
-    VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_HOST_CONTAINER_BIND_EXTERNAL: z
-        .string()
-        .default("0.0.0.0"),
-    VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
-        .number()
-        .default(3025),
-    VRCA_CLIENT_WEB_BABYLON_JS_PRODUCTION_PORT_CONTAINER_BIND_INTERNAL: z.coerce
-        .number()
-        .default(3025),
+    VRCA_CLIENT_WEB_BABYLON_JS_PROD_HOST: z.string().default("0.0.0.0"),
+    VRCA_CLIENT_WEB_BABYLON_JS_PROD_PORT: z.coerce.number().default(3025),
 
     // Development Web Babylon JS Client
     VRCA_CLIENT_WEB_BABYLON_JS_DEV_HOST: z.string().default("0.0.0.0"),
     VRCA_CLIENT_WEB_BABYLON_JS_DEV_PORT: z.coerce.number().default(3066),
 });
-
-// Define env record type based on our schema
-type EnvRecord = z.infer<typeof browserClientEnvSchema>;
 
 // Parse client environment variables
 export const VircadiaConfig_BROWSER_CLIENT = browserClientEnvSchema.parse(

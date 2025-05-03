@@ -2,7 +2,9 @@ import { build } from "bun";
 
 try {
     const result = await build({
-        entrypoints: ["./src/index.browser.ts"],
+        entrypoints: [
+            "./src/index.browser.ts",
+        ],
         outdir: "./dist/browser",
         format: "esm",
         target: "browser",

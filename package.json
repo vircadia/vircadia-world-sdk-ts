@@ -1,8 +1,8 @@
 {
-    "name": "@vircadia/world-sdk-ts",
+    "name": "@vircadia/world-sdk",
     "type": "module",
     "version": "0.0.1-dev",
-    "description": "Vircadia World SDK for TypeScript",
+    "description": "Vircadia World SDK for TypeScript (Browser and Bun)",
     "license": "Apache-2.0",
     "author": "Vircadia",
     "repository": {
@@ -20,6 +20,10 @@
         "./browser": {
             "import": "./dist/browser/index.browser.js",
             "types": "./dist/types/browser/index.browser.d.ts"
+        },
+        "./browser/framework/vue": {
+            "import": "./dist/browser/framework/vue/vue.js",
+            "types": "./dist/types/browser/framework/vue/vue.d.ts"
         },
         "./bun": {
             "import": "./dist/bun/index.bun.js",
@@ -54,7 +58,6 @@
         "build:types": "tsc --build tsconfig.json",
         "build:browser": "bun run build.browser.js",
         "build:bun": "bun run build.bun.js",
-        "prepublishOnly": "bun run build",
-        "publish": "npm publish"
+        "prepublishOnly": "bun run build"
     }
 }
