@@ -1,7 +1,10 @@
-import { ref, readonly, type Ref } from "vue"; // Removed watch
-import type { I_Vue_VircadiaInstance } from "../provider/useVircadia";
+import { ref, readonly, type Ref, inject } from "vue"; // Removed watch
+import {
+    type I_VircadiaInstance_Vue,
+    getVircadiaInstanceKey_Vue,
+} from "../provider/useVircadia";
 import { openDB, deleteDB, type DBSchema, type IDBPDatabase } from "idb";
-import type { Entity } from "../../../../schema/vircadia.schema.general";
+import type { Entity } from "../../../schema/vircadia.schema.general";
 
 // Cache expiration duration in milliseconds (1 hour)
 const CACHE_EXPIRATION_MS = 60 * 60 * 1000;
@@ -41,7 +44,8 @@ interface VircadiaAssetData {
 export interface UseVircadiaAssetOptions {
     /** A Ref containing the name of the asset file to load. */
     fileName: Ref<string | null | undefined>; // Allow null/undefined
-    instance: I_Vue_VircadiaInstance;
+    /** The Vircadia instance to use. If not provided, will try to inject from component context. */
+    instance?: I_VircadiaInstance_Vue;
     /** Whether to use local storage caching (default: true) */
     useCache?: boolean;
 }
@@ -63,22 +67,23 @@ const getDB = async () => {
  *
  * @param options - An object containing the configuration options.
  * @param options.fileName - A Ref containing the name of the asset file to load.
+ * @param options.instance - Optional Vircadia instance. If not provided, will try to inject from context.
  * @returns Reactive refs for asset data, loading state, error state, the manual load function, and cleanup function.
  */
 export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
     // Destructure fileName from options
-    const { fileName, instance } = options;
-    const useCache = options.useCache !== false; // Default to true if not specified
+    const { fileName, useCache = true } = options;
 
     const assetData = ref<VircadiaAssetData | null>(null);
     const loading = ref(false);
     const error = ref<Error | null>(null);
 
-    const vircadia = instance;
+    // Use provided instance or try to inject from context
+    const vircadia = options.instance || inject(getVircadiaInstanceKey_Vue());
 
     if (!vircadia) {
         throw new Error(
-            `Vircadia instance (${options.instance}) not found. Ensure you are using this composable within a Vircadia context.`,
+            "Vircadia instance not found. Either provide an instance in options or ensure this composable is used within a component with a provided Vircadia instance.",
         );
     }
 

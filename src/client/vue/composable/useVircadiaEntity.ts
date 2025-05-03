@@ -1,9 +1,23 @@
-import { ref, readonly, shallowRef, type Ref, toRaw } from "vue"; // Removed watch, Import toRaw
-import type { I_Vue_VircadiaInstance } from "../provider/useVircadia";
-import type { Entity } from "../../../../schema/vircadia.schema.general"; // Import the Entity namespace
+import { ref, readonly, shallowRef, type Ref, toRaw, inject } from "vue"; // Removed watch, Import toRaw
+import {
+    type I_VircadiaInstance_Vue,
+    getVircadiaInstanceKey_Vue,
+} from "../provider/useVircadia";
+import type { Entity } from "../../../schema/vircadia.schema.general"; // Import the Entity namespace
 import { isEqual } from "lodash-es"; // Import isEqual for deep comparison
 
-export interface UseVircadiaEntityOptions {
+/**
+ * Composable for manually managing a specific Vircadia entity's properties
+ * from the 'entity.entities' table using 'general__entity_name' as the key.
+ * Allows specifying which columns to fetch via a SELECT clause string,
+ * executing updates via a custom SET clause string, and creating
+ * the entity using a specific INSERT clause. All operations (retrieve, update, create)
+ * must be triggered manually via the returned functions.
+ *
+ * @param options - Configuration options including entityName, SELECT clause, and creation behavior.
+ * @returns Reactive refs for entity data, retrieving/updating/creating state, errors, and manual action functions.
+ */
+export function useVircadiaEntity_Vue(options: {
     /**
      * A Ref containing the name (general__entity_name) of the entity to manage.
      * Required for entity retrieval.
@@ -28,22 +42,11 @@ export interface UseVircadiaEntityOptions {
      * Parameters to use with the createInsertClause when creating a new entity.
      */
     insertParams?: unknown[];
-    /** Vircadia instance */
-    instance: I_Vue_VircadiaInstance;
-}
-
-/**
- * Composable for manually managing a specific Vircadia entity's properties
- * from the 'entity.entities' table using 'general__entity_name' as the key.
- * Allows specifying which columns to fetch via a SELECT clause string,
- * executing updates via a custom SET clause string, and creating
- * the entity using a specific INSERT clause. All operations (retrieve, update, create)
- * must be triggered manually via the returned functions.
- *
- * @param options - Configuration options including entityName, SELECT clause, and creation behavior.
- * @returns Reactive refs for entity data, retrieving/updating/creating state, errors, and manual action functions.
- */
-export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
+    /**
+     * Vircadia instance. If not provided, will try to inject from component context.
+     */
+    instance?: I_VircadiaInstance_Vue;
+}) {
     const {
         entityName,
         selectClause = "*",
@@ -51,7 +54,6 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
         // insertIfNotExist is removed as creation is now manual
         insertClause: createInsertClause = "",
         insertParams: createInsertParams = [],
-        instance,
     } = options;
 
     // Hardcoded table and ID column name based on schema
@@ -63,11 +65,13 @@ export function useVircadiaEntity(options: UseVircadiaEntityOptions) {
     const updating = ref(false);
     const creating = ref(false);
     const error = ref<Error | null>(null);
-    const vircadia = instance;
+
+    // Use provided instance or try to inject from context
+    const vircadia = options.instance || inject(getVircadiaInstanceKey_Vue());
 
     if (!vircadia) {
         throw new Error(
-            `Vircadia instance (${options.instance}) not found. Ensure you are using this composable within a Vircadia context.`,
+            "Vircadia instance not found. Either provide an instance in options or ensure this composable is used within a component with a provided Vircadia instance.",
         );
     }
 

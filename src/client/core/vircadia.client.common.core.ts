@@ -1,5 +1,4 @@
 import { Communication } from "../../schema/vircadia.schema.general";
-import { log } from "../module/bun/vircadia.log";
 
 // Define event types
 export type ConnectionState =
@@ -22,7 +21,7 @@ export type ConnectionInfo = {
 };
 type ConnectionEventListener = () => void;
 
-export interface VircadiaClientBrowserCoreConfig {
+export interface VircadiaClientCoreConfig {
     // Connection settings
     serverUrl: string;
     authToken: string;
@@ -55,7 +54,7 @@ class ConnectionManager {
     private connectionStartTime: number | null = null;
     private connectionPromise: Promise<ConnectionInfo> | null = null;
 
-    constructor(private config: VircadiaClientBrowserCoreConfig) {}
+    constructor(private config: VircadiaClientCoreConfig) {}
 
     // Event handling methods
     addEventListener(event: string, listener: ConnectionEventListener): void {
@@ -320,13 +319,15 @@ class ConnectionManager {
                 request.resolve(message);
             }
         } catch (error) {
-            log({
-                message: "Error handling WebSocket message:",
-                type: "error",
-                error,
-                debug: this.config.debug,
-                suppress: this.config.suppress,
-            });
+            console.error(
+                JSON.stringify({
+                    message: "Error handling WebSocket message:",
+                    type: "error",
+                    error,
+                    debug: this.config.debug,
+                    suppress: this.config.suppress,
+                }),
+            );
         }
     }
 
@@ -347,13 +348,15 @@ class ConnectionManager {
 
         this.updateConnectionStatus("disconnected");
 
-        log({
-            message: "WebSocket error:",
-            type: "error",
-            error: errorMessage,
-            debug: this.config.debug,
-            suppress: this.config.suppress,
-        });
+        console.error(
+            JSON.stringify({
+                message: "WebSocket error:",
+                type: "error",
+                error: errorMessage,
+                debug: this.config.debug,
+                suppress: this.config.suppress,
+            }),
+        );
     }
 
     private attemptReconnect(): void {
@@ -363,12 +366,14 @@ class ConnectionManager {
         const delay = this.config.reconnectDelay ?? 5000;
 
         if (this.reconnectCount >= maxAttempts) {
-            log({
-                message: "Max reconnection attempts reached",
-                type: "error",
-                debug: this.config.debug,
-                suppress: this.config.suppress,
-            });
+            console.error(
+                JSON.stringify({
+                    message: "Max reconnection attempts reached",
+                    type: "error",
+                    debug: this.config.debug,
+                    suppress: this.config.suppress,
+                }),
+            );
             return;
         }
 
@@ -381,23 +386,25 @@ class ConnectionManager {
             try {
                 await this.connect();
             } catch (error) {
-                log({
-                    message: "Reconnection attempt failed:",
-                    type: "error",
-                    error,
-                    debug: this.config.debug,
-                    suppress: this.config.suppress,
-                });
+                console.error(
+                    JSON.stringify({
+                        message: "Reconnection attempt failed:",
+                        type: "error",
+                        error,
+                        debug: this.config.debug,
+                        suppress: this.config.suppress,
+                    }),
+                );
             }
         }, delay);
     }
 }
 
 // Main class that coordinates all components and exposes utilities
-export class VircadiaClientBrowserCore {
+export class VircadiaClientCore {
     private connectionManager: ConnectionManager;
 
-    constructor(private config: VircadiaClientBrowserCoreConfig) {
+    constructor(private config: VircadiaClientCoreConfig) {
         this.connectionManager = new ConnectionManager(config);
     }
 

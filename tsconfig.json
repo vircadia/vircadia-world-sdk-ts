@@ -20,8 +20,8 @@
     },
     "include": [
         "src/**/*",
-        "../../server/vircadia.server.config.ts",
-        "../../server/vircadia.world.server.consts.ts"
+        "src/server/config/vircadia.server.config.ts",
+        "src/server/config/vircadia.server.consts.ts"
     ],
     "exclude": [
         "node_modules",

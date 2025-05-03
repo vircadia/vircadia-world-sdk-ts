@@ -11,7 +11,7 @@ bun install @vircadia/world-sdk-ts
 
 ```typescript
 // Browser
-import { VircadiaConfig_BROWSER_CLIENT, useVircadia } from '@vircadia/world-sdk-ts/browser';
+import { VircadiaConfig_BROWSER_CLIENT, Vue_useVircadia } from '@vircadia/world-sdk-ts/browser';
 
 // Bun
 import { VircadiaConfig_SERVER } from '@vircadia/world-sdk-ts/bun';
