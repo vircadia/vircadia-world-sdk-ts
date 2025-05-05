@@ -6,15 +6,15 @@ This package provides TypeScript bindings for Vircadia World SDK with support fo
 ## Usage
 
 ```bash
-bun install @vircadia/world-sdk-ts
+bun install @vircadia/world-sdk
 ```
 
 ```typescript
 // Browser
-import { VircadiaConfig_BROWSER_CLIENT, Vue_useVircadia } from '@vircadia/world-sdk-ts/browser';
+import { VircadiaConfig_BROWSER_CLIENT, Vue_useVircadia } from '@vircadia/world-sdk/browser';
 
 // Bun
-import { VircadiaConfig_SERVER } from '@vircadia/world-sdk-ts/bun';
+import { VircadiaConfig_SERVER } from '@vircadia/world-sdk/bun';
 ``` 
 
 ## Build

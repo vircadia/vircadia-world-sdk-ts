@@ -8,6 +8,7 @@ import type { Entity } from "../../../schema/vircadia.schema.general";
 
 // Cache expiration duration in milliseconds (1 hour)
 const CACHE_EXPIRATION_MS = 60 * 60 * 1000;
+const MAX_CACHE_SIZE_BYTES = 100 * 1024 * 1024; // 100MB limit
 
 // Define DB schema for TypeScript support
 interface AssetDBSchema extends DBSchema {
@@ -40,16 +41,6 @@ interface VircadiaAssetData {
     fromCache?: boolean; // Flag to indicate if the data came from cache
 }
 
-// Define options interface
-export interface UseVircadiaAssetOptions {
-    /** A Ref containing the name of the asset file to load. */
-    fileName: Ref<string | null | undefined>; // Allow null/undefined
-    /** The Vircadia instance to use. If not provided, will try to inject from component context. */
-    instance?: I_VircadiaInstance_Vue;
-    /** Whether to use local storage caching (default: true) */
-    useCache?: boolean;
-}
-
 // Create and get the database instance
 const getDB = async () => {
     return openDB<AssetDBSchema>("vircadia-assets", 1, {
@@ -62,24 +53,121 @@ const getDB = async () => {
 };
 
 /**
+ * Gets the total size of all assets in the cache
+ * @returns The total size in bytes
+ */
+const getCacheSize = async (): Promise<number> => {
+    try {
+        const db = await getDB();
+        const tx = db.transaction("assets", "readonly");
+        const store = tx.objectStore("assets");
+
+        let totalSize = 0;
+        let cursor = await store.openCursor();
+
+        while (cursor) {
+            totalSize += cursor.value.data.byteLength;
+            cursor = await cursor.continue();
+        }
+
+        await tx.done;
+        return totalSize;
+    } catch (err) {
+        console.warn("Failed to get cache size:", err);
+        return 0;
+    }
+};
+
+/**
+ * Makes room in the cache by removing oldest assets until target size is achieved
+ * @param targetSize The amount of space needed in bytes
+ */
+const makeRoomInCache = async (targetSize: number): Promise<void> => {
+    try {
+        const db = await getDB();
+        const tx = db.transaction("assets", "readwrite");
+        const index = tx.store.index("by-timestamp");
+
+        let cursor = await index.openCursor();
+        let freedSpace = 0;
+        const neededSpace = targetSize;
+
+        // Sort by timestamp (oldest first) and delete until we have enough space
+        while (cursor && freedSpace < neededSpace) {
+            const entry = cursor.value;
+            freedSpace += entry.data.byteLength;
+
+            await cursor.delete();
+            console.log(
+                `Removed asset ${cursor.primaryKey} to free up space (${entry.data.byteLength} bytes)`,
+            );
+
+            cursor = await cursor.continue();
+        }
+
+        await tx.done;
+        console.log(`Freed ${freedSpace} bytes from cache`);
+    } catch (err) {
+        console.warn("Failed to make room in cache:", err);
+    }
+};
+
+/**
  * Composable for manually loading Vircadia assets from the database.
  * Loading must be triggered explicitly by calling the returned `executeLoad` function.
  *
  * @param options - An object containing the configuration options.
  * @param options.fileName - A Ref containing the name of the asset file to load.
  * @param options.instance - Optional Vircadia instance. If not provided, will try to inject from context.
+ * @param options.debug - Enable detailed debug logging (default: false)
  * @returns Reactive refs for asset data, loading state, error state, the manual load function, and cleanup function.
  */
-export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
+export function useVircadiaAsset(options: {
+    /** A Ref containing the name of the asset file to load. */
+    fileName: Ref<string | null | undefined>; // Allow null/undefined
+    /** The Vircadia instance to use. If not provided, will try to inject from component context. */
+    instance?: I_VircadiaInstance_Vue;
+    /** Whether to use local storage caching (default: true) */
+    useCache?: boolean;
+    /** Enable detailed debug logging (default: false) */
+    debug?: boolean;
+}) {
     // Destructure fileName from options
-    const { fileName, useCache = true } = options;
+    const { fileName, useCache = true, debug = false } = options;
 
     const assetData = ref<VircadiaAssetData | null>(null);
     const loading = ref(false);
     const error = ref<Error | null>(null);
 
+    // Debug log helper function - only logs when debug is enabled
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    const debugLog = (message: string, ...args: any[]) => {
+        if (debug) {
+            console.log(message, ...args);
+        }
+    };
+
+    // Debug error helper - only logs errors when debug is enabled
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    const debugError = (message: string, ...args: any[]) => {
+        if (debug) {
+            console.error(message, ...args);
+        }
+    };
+
+    // Debug warn helper - only logs warnings when debug is enabled
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    const debugWarn = (message: string, ...args: any[]) => {
+        if (debug) {
+            console.warn(message, ...args);
+        }
+    };
+
+    // Move instance key creation inside the function
+    const instanceKey = getVircadiaInstanceKey_Vue();
+
     // Use provided instance or try to inject from context
-    const vircadia = options.instance || inject(getVircadiaInstanceKey_Vue());
+    const vircadia = options.instance || inject(instanceKey);
 
     if (!vircadia) {
         throw new Error(
@@ -98,6 +186,8 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
         if (!assetFileName) return null;
 
         try {
+            debugLog("Getting asset hash for: ", assetFileName);
+
             const queryResult =
                 await vircadia.client.Utilities.Connection.query<
                     { hash: string }[]
@@ -115,12 +205,13 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
                 return null;
             }
 
+            debugLog(
+                `Asset hash for ${assetFileName}: ${queryResult.result[0].hash}`,
+            );
+
             return queryResult.result[0].hash;
         } catch (err) {
-            console.error(
-                `Error getting asset hash for ${assetFileName}:`,
-                err,
-            );
+            debugError(`Error getting asset hash for ${assetFileName}:`, err);
             return null;
         }
     };
@@ -137,6 +228,23 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
         if (!useCache || !hash) return;
 
         try {
+            // Check if adding this asset would exceed the cache size limit
+            const assetSize = data.byteLength;
+            const currentCacheSize = await getCacheSize();
+
+            // Log cache status
+            debugLog(
+                `Current cache size: ${(currentCacheSize / (1024 * 1024)).toFixed(2)}MB, Asset size: ${(assetSize / (1024 * 1024)).toFixed(2)}MB, Limit: ${(MAX_CACHE_SIZE_BYTES / (1024 * 1024)).toFixed(2)}MB`,
+            );
+
+            // Make room if we need to
+            if (currentCacheSize + assetSize > MAX_CACHE_SIZE_BYTES) {
+                debugLog(
+                    "Cache size limit would be exceeded. Removing older assets...",
+                );
+                await makeRoomInCache(assetSize);
+            }
+
             const db = await getDB();
             const cacheKey = `vircadia_asset_${fileName}`;
             const cacheEntry: CacheEntry = {
@@ -147,12 +255,11 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
             };
 
             await db.put("assets", cacheEntry, cacheKey);
-            console.log(`Cached asset ${fileName} in IndexedDB`);
-        } catch (err) {
-            console.warn(
-                `Failed to cache asset ${fileName} in IndexedDB:`,
-                err,
+            debugLog(
+                `Cached asset ${fileName} in IndexedDB (${(assetSize / (1024 * 1024)).toFixed(2)}MB)`,
             );
+        } catch (err) {
+            debugWarn(`Failed to cache asset ${fileName} in IndexedDB:`, err);
             // If IndexedDB has issues, just continue without caching
         }
     };
@@ -177,14 +284,14 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
 
             // Check if cache is expired
             if (now - cachedItem.timestamp > CACHE_EXPIRATION_MS) {
-                console.log(`Cache for ${fileName} has expired`);
+                debugLog(`Cache for ${fileName} has expired`);
                 await db.delete("assets", cacheKey);
                 return null;
             }
 
             return cachedItem;
         } catch (err) {
-            console.warn(`Failed to retrieve cached asset ${fileName}:`, err);
+            debugWarn(`Failed to retrieve cached asset ${fileName}:`, err);
             return null;
         }
     };
@@ -192,7 +299,7 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
     // Function to clean up resources
     const cleanup = () => {
         if (assetData.value?.blobUrl) {
-            console.log(`Manually revoking Object URL for: ${fileName.value}`);
+            debugLog(`Manually revoking Object URL for: ${fileName.value}`);
             URL.revokeObjectURL(assetData.value.blobUrl);
             assetData.value = null;
         }
@@ -201,13 +308,14 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
         error.value = null;
     };
 
-    // Renamed from loadAsset, now public and uses the fileName ref directly
     const executeLoad = async () => {
+        debugLog("[executeLoad] Starting with fileName:", fileName.value);
         const assetFileName = fileName.value; // Get current value from ref
 
         if (!assetFileName) {
-            console.warn("executeLoad skipped: fileName is not provided.");
+            console.warn("[executeLoad] skipped: fileName is not provided.");
             // Clean up existing data if filename becomes null/undefined
+            debugLog("[executeLoad] Calling cleanup due to missing fileName");
             cleanup();
             return;
         }
@@ -215,67 +323,120 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
         // Prevent load if already loading
         if (loading.value) {
             console.warn(
-                `executeLoad skipped for ${assetFileName}: Load already in progress.`,
+                `[executeLoad] Skipped for ${assetFileName}: Load already in progress.`,
             );
             return;
         }
 
+        debugLog(
+            `[executeLoad] Setting loading flag to true for ${assetFileName}`,
+        );
         loading.value = true;
         error.value = null;
+
         // Clean up previous URL if it exists before loading new one
         if (assetData.value?.blobUrl) {
-            URL.revokeObjectURL(assetData.value.blobUrl);
+            debugLog(
+                `[executeLoad] Revoking Object URL for: ${assetFileName} (${assetData.value.blobUrl})`,
+            );
+            try {
+                URL.revokeObjectURL(assetData.value.blobUrl);
+                debugLog("[executeLoad] Successfully revoked URL");
+            } catch (urlErr) {
+                debugError("[executeLoad] Error revoking URL:", urlErr);
+            }
             assetData.value = null; // Clear old data
+            debugLog("[executeLoad] Cleared old asset data");
         }
 
         try {
-            console.log(`Starting to load asset: ${assetFileName}`);
+            debugLog(`[executeLoad] Starting to load asset: ${assetFileName}`);
 
             // First, check if we can use the cached version
             if (useCache) {
+                debugLog(
+                    "[executeLoad] Cache enabled, checking if we can use cached version",
+                );
+
                 // Get remote hash first to compare with cache
+                debugLog(
+                    `[executeLoad] Getting remote hash for ${assetFileName}`,
+                );
                 const remoteHash = await getAssetHash(assetFileName);
+                debugLog("[executeLoad] Remote hash result:", remoteHash);
 
                 if (remoteHash) {
+                    debugLog(
+                        `[executeLoad] Attempting to get from cache for ${assetFileName}`,
+                    );
                     const cachedEntry = await getFromCache(assetFileName);
+                    debugLog(
+                        "[executeLoad] Cache result:",
+                        cachedEntry ? "Found in cache" : "Not in cache",
+                    );
 
                     // If we have valid cache and hash matches the remote one
                     if (cachedEntry && cachedEntry.hash === remoteHash) {
-                        console.log(
-                            `Using cached version of ${assetFileName} (hash match)`,
+                        debugLog(
+                            `[executeLoad] Using cached version of ${assetFileName} (hash match)`,
                         );
 
-                        const arrayBuffer = cachedEntry.data;
-                        const blob = new Blob([arrayBuffer], {
-                            type: cachedEntry.mimeType,
-                        });
-                        const url = URL.createObjectURL(blob);
+                        try {
+                            debugLog(
+                                "[executeLoad] Creating blob from cached data",
+                            );
+                            const arrayBuffer = cachedEntry.data;
+                            const blob = new Blob([arrayBuffer], {
+                                type: cachedEntry.mimeType,
+                            });
 
-                        assetData.value = {
-                            arrayBuffer,
-                            blob,
-                            mimeType: cachedEntry.mimeType,
-                            blobUrl: url,
-                            hash: remoteHash,
-                            fromCache: true,
-                        };
+                            debugLog(
+                                "[executeLoad] Creating object URL for blob",
+                            );
+                            const url = URL.createObjectURL(blob);
+                            debugLog(`[executeLoad] Created URL: ${url}`);
 
-                        loading.value = false;
-                        console.log(
-                            `Successfully loaded cached asset: ${assetFileName}`,
-                        );
-                        return;
+                            assetData.value = {
+                                arrayBuffer,
+                                blob,
+                                mimeType: cachedEntry.mimeType,
+                                blobUrl: url,
+                                hash: remoteHash,
+                                fromCache: true,
+                            };
+
+                            loading.value = false;
+                            console.log(
+                                `Successfully loaded cached asset: ${assetFileName}`,
+                            );
+                            return;
+                        } catch (cacheErr) {
+                            debugError(
+                                "[executeLoad] Error while processing cached data:",
+                                cacheErr,
+                            );
+                            // Continue to fetch from server if cache processing fails
+                        }
                     }
 
                     if (cachedEntry) {
-                        console.log(
-                            `Cache hash mismatch for ${assetFileName}, fetching from server`,
+                        debugLog(
+                            `[executeLoad] Cache hash mismatch for ${assetFileName}, fetching from server. Cache hash: ${cachedEntry.hash}, Remote hash: ${remoteHash}`,
                         );
                     }
                 }
+            } else {
+                debugLog(
+                    "[executeLoad] Cache disabled, fetching from server directly",
+                );
             }
 
+            debugLog(
+                `[executeLoad] Fetching " + assetFileName + " from database`,
+            );
+
             // Fetch from database
+            debugLog("[executeLoad] Executing database query");
             const queryResult =
                 await vircadia.client.Utilities.Connection.query<
                     (Pick<Entity.Asset.I_Asset, "asset__mime_type"> & {
@@ -295,61 +456,181 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
                     parameters: [assetFileName],
                     timeoutMs: 100000, // Consider making this configurable
                 });
+            debugLog("[executeLoad] Query returned:", {
+                hasResult: !!queryResult.result,
+                resultLength: queryResult.result?.length || 0,
+            });
 
             if (!queryResult.result || queryResult.result.length === 0) {
+                debugError(
+                    `[executeLoad] Asset ${assetFileName} not found in query result`,
+                );
                 throw new Error(`Asset ${assetFileName} not found`);
             }
 
             if (!queryResult.result[0].asset__data__bytea) {
+                debugError(
+                    `[executeLoad] Asset ${assetFileName} has no data in query result`,
+                );
                 throw new Error(`Asset ${assetFileName} has no data`);
             }
 
             // Process bytea data
+            debugLog("[executeLoad] Processing asset data");
             const rawData = queryResult.result[0].asset__data__bytea;
+            debugLog(
+                "[executeLoad] Raw data type:",
+                typeof rawData,
+                Array.isArray(rawData) ? "isArray" : "notArray",
+                rawData instanceof ArrayBuffer
+                    ? "isArrayBuffer"
+                    : "notArrayBuffer",
+                typeof rawData === "object" && "data" in rawData
+                    ? "hasDataProperty"
+                    : "noDataProperty",
+            );
 
             if (!queryResult.result[0].asset__mime_type) {
+                debugError(
+                    `[executeLoad] Asset ${assetFileName} has no mime type in query result`,
+                );
                 throw new Error(`Asset ${assetFileName} has no mime type`);
             }
 
             const mimeType = queryResult.result[0].asset__mime_type;
+            debugLog("[executeLoad] Asset mime type:", mimeType);
 
             // Handle bytea data in different formats
+            debugLog("[executeLoad] Converting raw data to Uint8Array");
             let byteArray: Uint8Array; // Use Uint8Array directly
-            if (
-                rawData &&
-                typeof rawData === "object" &&
-                "data" in rawData &&
-                // biome-ignore lint/suspicious/noExplicitAny: Trusting driver structure
-                Array.isArray((rawData as any).data)
-            ) {
-                // biome-ignore lint/suspicious/noExplicitAny: Trusting driver structure
-                byteArray = new Uint8Array((rawData as any).data);
-            } else if (rawData instanceof ArrayBuffer) {
-                // Handle direct ArrayBuffer case if the driver returns it
-                byteArray = new Uint8Array(rawData);
-            } else if (Array.isArray(rawData)) {
-                // Handle simple array case (less likely but possible)
-                byteArray = new Uint8Array(rawData);
-            } else {
+            try {
+                if (
+                    rawData &&
+                    typeof rawData === "object" &&
+                    "data" in rawData &&
+                    // biome-ignore lint/suspicious/noExplicitAny: Trusting driver structure
+                    Array.isArray((rawData as any).data)
+                ) {
+                    debugLog("[executeLoad] Processing rawData.data array");
+                    const rawDataObj = rawData as {
+                        data: number[];
+                        type: string;
+                    };
+                    debugLog("[executeLoad] Data array info:", {
+                        type: typeof rawDataObj.data,
+                        isArray: Array.isArray(rawDataObj.data),
+                        length: rawDataObj.data.length,
+                        first10Items: rawDataObj.data.slice(0, 10),
+                        bufferType: rawDataObj.type,
+                    });
+
+                    try {
+                        // biome-ignore lint/suspicious/noExplicitAny: Trusting driver structure
+                        byteArray = new Uint8Array((rawData as any).data);
+                        debugLog(
+                            "[executeLoad] Successfully created Uint8Array from rawData.data",
+                        );
+                    } catch (innerErr) {
+                        debugError(
+                            "[executeLoad] Error creating Uint8Array from rawData.data:",
+                            innerErr,
+                        );
+                        // Fallback: try alternative approach if standard way fails
+                        try {
+                            debugLog(
+                                "[executeLoad] Trying alternative array conversion method",
+                            );
+                            // Convert data to typed number array to ensure compatibility
+                            // biome-ignore lint/suspicious/noExplicitAny: Trusting driver structure
+                            const rawItems = (rawData as any).data;
+                            const numberArray = new Array(rawItems.length);
+
+                            // Process items to ensure they are numbers
+                            for (let i = 0; i < rawItems.length; i++) {
+                                numberArray[i] = Number(rawItems[i]);
+                            }
+
+                            // Create Uint8Array from verified number array
+                            byteArray = new Uint8Array(numberArray);
+                            debugLog(
+                                "[executeLoad] Alternative conversion successful",
+                            );
+                        } catch (fallbackErr) {
+                            debugError(
+                                "[executeLoad] Fallback conversion also failed:",
+                                fallbackErr,
+                            );
+                            throw fallbackErr;
+                        }
+                    }
+                } else if (rawData instanceof ArrayBuffer) {
+                    debugLog("[executeLoad] Processing ArrayBuffer data");
+                    // Handle direct ArrayBuffer case if the driver returns it
+                    byteArray = new Uint8Array(rawData);
+                } else if (Array.isArray(rawData)) {
+                    debugLog("[executeLoad] Processing array data");
+                    // Handle simple array case (less likely but possible)
+                    byteArray = new Uint8Array(rawData);
+                } else {
+                    debugError(
+                        "[executeLoad] Unexpected data format:",
+                        rawData,
+                    );
+                    throw new Error(
+                        `Unexpected data format for asset ${assetFileName}`,
+                    );
+                }
+
+                debugLog(
+                    "[executeLoad] Successfully created Uint8Array with length:",
+                    byteArray.length,
+                );
+            } catch (conversionErr) {
+                debugError(
+                    "[executeLoad] Error converting data format:",
+                    conversionErr,
+                );
                 throw new Error(
-                    `Unexpected data format for asset ${assetFileName}`,
+                    `Failed to convert data for asset ${assetFileName}: ${conversionErr instanceof Error ? conversionErr.message : String(conversionErr)}`,
                 );
             }
 
+            debugLog("[executeLoad] Creating array buffer copy");
             // Using .slice() creates a copy of the data in a new Uint8Array,
             // and its buffer is guaranteed to be an ArrayBuffer.
             const arrayBuffer = byteArray.slice().buffer as ArrayBuffer;
+            debugLog("[executeLoad] Creating blob");
             const blob = new Blob([byteArray], { type: mimeType });
+            debugLog("[executeLoad] Creating object URL");
             const url = URL.createObjectURL(blob);
+            debugLog(`[executeLoad] Created URL: ${url}`);
 
             // Get the hash of the asset data
+            debugLog("[executeLoad] Getting asset hash again for caching");
             const hash = await getAssetHash(assetFileName);
+            debugLog("[executeLoad] Got hash for caching:", hash);
 
             // Cache the asset for future use
             if (hash) {
-                await saveToCache(assetFileName, arrayBuffer, mimeType, hash);
+                debugLog(`[executeLoad] Saving to cache with hash: ${hash}`);
+                try {
+                    await saveToCache(
+                        assetFileName,
+                        arrayBuffer,
+                        mimeType,
+                        hash,
+                    );
+                    debugLog("[executeLoad] Successfully saved to cache");
+                } catch (cacheErr) {
+                    debugWarn(
+                        "[executeLoad] Failed to save to cache:",
+                        cacheErr,
+                    );
+                    // Continue even if caching fails
+                }
             }
 
+            debugLog("[executeLoad] Setting assetData value");
             assetData.value = {
                 arrayBuffer, // This is now guaranteed to be ArrayBuffer
                 blob,
@@ -364,13 +645,23 @@ export function useVircadiaAsset(options: UseVircadiaAssetOptions) {
             );
         } catch (err) {
             console.error(`Error loading asset ${assetFileName}:`, err);
+            debugError("[executeLoad] Error details:", {
+                message: err instanceof Error ? err.message : String(err),
+                stack: err instanceof Error ? err.stack : undefined,
+            });
+
             error.value =
                 err instanceof Error ? err : new Error("Failed to load asset");
+
+            debugLog("[executeLoad] Set error value and calling cleanup");
             // Ensure data is null on error and cleanup URL
             cleanup(); // Use cleanup to handle URL revocation and state reset
         } finally {
             // Only set loading to false if not cleaned up (which already sets it)
             if (loading.value) {
+                debugLog(
+                    "[executeLoad] Setting loading flag to false in finally block",
+                );
                 loading.value = false;
             }
             console.log(`Finished loading attempt for asset: ${assetFileName}`);

@@ -36,6 +36,29 @@ export interface VircadiaClientCoreConfig {
     suppress?: boolean;
 }
 
+// Helper functions for debug logging
+const debugLog = (
+    config: VircadiaClientCoreConfig,
+    message: string,
+    // biome-ignore lint/suspicious/noExplicitAny: Needed for flexible debug logging
+    ...args: any[]
+) => {
+    if (config.debug && !config.suppress) {
+        console.log(message, ...args);
+    }
+};
+
+const debugError = (
+    config: VircadiaClientCoreConfig,
+    message: string,
+    // biome-ignore lint/suspicious/noExplicitAny: Needed for flexible debug logging
+    ...args: any[]
+) => {
+    if (!config.suppress) {
+        console.error(message, ...args);
+    }
+};
+
 // Handles all WebSocket communication with the server
 class ConnectionManager {
     private ws: WebSocket | null = null;
@@ -108,6 +131,12 @@ class ConnectionManager {
                 url.searchParams.set("token", this.config.authToken);
                 url.searchParams.set("provider", this.config.authProvider);
 
+                debugLog(
+                    this.config,
+                    "Connecting to WebSocket server:",
+                    url.toString(),
+                );
+
                 this.ws = new WebSocket(url);
                 this.ws.onmessage = this.handleMessage.bind(this);
                 this.ws.onclose = this.handleClose.bind(this);
@@ -142,6 +171,10 @@ class ConnectionManager {
                                 this.ws.onclose = this.handleClose.bind(this);
                             this.updateConnectionStatus("connected");
                             this.connectionStartTime = Date.now();
+                            debugLog(
+                                this.config,
+                                "WebSocket connection established",
+                            );
                             resolve();
                         };
 
@@ -210,6 +243,8 @@ class ConnectionManager {
             requestId,
             errorMessage: null,
         });
+
+        debugLog(this.config, `Sending query with requestId: ${requestId}`);
 
         return new Promise<Communication.WebSocket.QueryResponseMessage<T>>(
             (resolve, reject) => {
@@ -302,36 +337,48 @@ class ConnectionManager {
 
         this.updateConnectionStatus("disconnected");
         this.connectionStartTime = null;
+        debugLog(this.config, "WebSocket disconnected");
     }
 
     // Private methods for WebSocket handling
     private handleMessage(event: MessageEvent): void {
         try {
+            debugLog(
+                this.config,
+                "Received message:",
+                `${event.data.toString().slice(0, 200)}...`,
+            );
+
             const message = JSON.parse(
                 event.data,
             ) as Communication.WebSocket.Message;
+
+            debugLog(
+                this.config,
+                `Parsed message request ID: ${message.requestId}`,
+            );
+
             const request = this.pendingRequests.get(message.requestId);
 
             if (request) {
+                debugLog(
+                    this.config,
+                    `Processing request with ID: ${message.requestId}`,
+                );
                 clearTimeout(request.timeout);
                 this.pendingRequests.delete(message.requestId);
-
                 request.resolve(message);
             }
         } catch (error) {
-            console.error(
-                JSON.stringify({
-                    message: "Error handling WebSocket message:",
-                    type: "error",
-                    error,
-                    debug: this.config.debug,
-                    suppress: this.config.suppress,
-                }),
-            );
+            debugError(this.config, "Error handling WebSocket message:", error);
         }
     }
 
     private handleClose(event: CloseEvent): void {
+        debugLog(
+            this.config,
+            `WebSocket connection closed: ${event.reason || "No reason provided"}, code: ${event.code}`,
+        );
         this.updateConnectionStatus("disconnected");
         this.attemptReconnect();
     }
@@ -347,16 +394,7 @@ class ConnectionManager {
         }
 
         this.updateConnectionStatus("disconnected");
-
-        console.error(
-            JSON.stringify({
-                message: "WebSocket error:",
-                type: "error",
-                error: errorMessage,
-                debug: this.config.debug,
-                suppress: this.config.suppress,
-            }),
-        );
+        debugError(this.config, `WebSocket error: ${errorMessage}`);
     }
 
     private attemptReconnect(): void {
@@ -366,18 +404,15 @@ class ConnectionManager {
         const delay = this.config.reconnectDelay ?? 5000;
 
         if (this.reconnectCount >= maxAttempts) {
-            console.error(
-                JSON.stringify({
-                    message: "Max reconnection attempts reached",
-                    type: "error",
-                    debug: this.config.debug,
-                    suppress: this.config.suppress,
-                }),
-            );
+            debugError(this.config, "Max reconnection attempts reached");
             return;
         }
 
         this.updateConnectionStatus("reconnecting");
+        debugLog(
+            this.config,
+            `Attempting to reconnect (${this.reconnectCount + 1}/${maxAttempts}) in ${delay}ms`,
+        );
 
         this.reconnectTimer = setTimeout(async () => {
             this.reconnectTimer = null;
@@ -386,15 +421,7 @@ class ConnectionManager {
             try {
                 await this.connect();
             } catch (error) {
-                console.error(
-                    JSON.stringify({
-                        message: "Reconnection attempt failed:",
-                        type: "error",
-                        error,
-                        debug: this.config.debug,
-                        suppress: this.config.suppress,
-                    }),
-                );
+                debugError(this.config, "Reconnection attempt failed:", error);
             }
         }, delay);
     }
