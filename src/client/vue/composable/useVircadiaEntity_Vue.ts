@@ -1,72 +1,110 @@
-import { ref, readonly, shallowRef, type Ref, toRaw, inject } from "vue"; // Removed watch, Import toRaw
+import { ref, readonly, shallowRef, type Ref, toRaw, inject, watch } from "vue"; // Removed watch, Import toRaw
 import {
     type I_VircadiaInstance_Vue,
     getVircadiaInstanceKey_Vue,
 } from "../provider/useVircadia_Vue";
 import type { Entity } from "../../../schema/vircadia.schema.general"; // Import the Entity namespace
 import { isEqual } from "lodash-es"; // Import isEqual for deep comparison
+import type { z } from "zod"; // Import zod for schema validation
 
 /**
- * Composable for manually managing a specific Vircadia entity's properties
- * from the 'entity.entities' table using 'general__entity_name' as the key.
- * Allows specifying which columns to fetch via a SELECT clause string,
- * executing updates via a custom SET clause string, and creating
- * the entity using a specific INSERT clause. All operations (retrieve, update, create)
- * must be triggered manually via the returned functions.
+ * Composable for manually managing a Vircadia entity with typed metadata support.
  *
- * @param options - Configuration options including entityName, SELECT clause, and creation behavior.
- * @returns Reactive refs for entity data, retrieving/updating/creating state, errors, and manual action functions.
+ * This composable provides a Vue-friendly way to interact with entities in the 'entity.entities' table,
+ * using 'general__entity_name' as the primary key. It handles:
+ *
+ * - Data fetching with customizable SELECT queries
+ * - Entity creation with customizable INSERT queries
+ * - Entity updates with customizable SET clauses
+ * - Typed metadata via Zod schema validation
+ *
+ * All database operations must be triggered manually through the returned functions.
+ * The entityData returned will contain properly typed meta__data based on the provided schema.
+ *
+ * @template MetaSchema - Zod schema type used to validate and type the entity's meta__data
+ * @param options - Configuration options for entity management
+ * @returns Object containing entity data with typed metadata, status refs, and operation functions
  */
-export function useVircadiaEntity_Vue(options: {
+export function useVircadiaEntity_Vue<
+    MetaSchema extends z.ZodType = z.ZodAny,
+>(options: {
     /**
-     * A Ref containing the name (general__entity_name) of the entity to manage.
-     * Required for entity retrieval.
+     * A Ref containing the entity name (general__entity_name) to manage.
+     * Required for entity retrieval operations.
      */
     entityName: Ref<string | null | undefined>;
+
     /**
-     * The SQL SELECT clause string (e.g., "*", "general__position, general__rotation").
-     * Determines which properties are fetched. Defaults to "*".
+     * The SQL SELECT clause for data retrieval (e.g., "*", "general__position, general__rotation").
+     * Specifies which properties are fetched from the database. Defaults to "*".
      */
     selectClause?: string;
+
     /**
-     * Parameters to use with the selectClause. Empty by default.
+     * Parameters to use with the selectClause in the query.
+     * Empty by default.
      */
     selectParams?: unknown[];
+
     /**
-     * The SQL INSERT clause to execute for entity creation, following "INSERT INTO entity.entities".
+     * The SQL INSERT clause for entity creation, appended after "INSERT INTO entity.entities".
      * Example: "(general__entity_name, general__position) VALUES ($1, $2) RETURNING general__entity_name"
-     * Include "RETURNING general__entity_name" if you want the composable to return the created entity's name.
+     * Include "RETURNING general__entity_name" to get the created entity's name back.
      */
     insertClause?: string;
+
     /**
-     * Parameters to use with the createInsertClause when creating a new entity.
+     * Parameters to use with the insertClause when creating a new entity.
+     * The first parameter should be the entity name (string).
      */
     insertParams?: unknown[];
+
     /**
-     * Vircadia instance. If not provided, will try to inject from component context.
+     * Vircadia instance to use for database operations.
+     * If not provided, will be injected from the component context.
      */
     instance?: I_VircadiaInstance_Vue;
+
+    /**
+     * Zod schema for validating and typing the entity's meta__data.
+     * When provided, meta__data will be parsed and validated during retrieval.
+     */
+    metaDataSchema?: MetaSchema;
+
+    /**
+     * Default values for meta__data when validation fails.
+     * Used as a fallback when meta__data parsing encounters an error.
+     */
+    defaultMetaData?: z.infer<MetaSchema>;
 }) {
     const {
         entityName,
         selectClause = "*",
         selectParams = [],
-        // insertIfNotExist is removed as creation is now manual
         insertClause: createInsertClause = "",
         insertParams: createInsertParams = [],
     } = options;
 
-    // Hardcoded table and ID column name based on schema
-    const TABLE_NAME = "entity.entities"; // Added table name constant
+    // Database constants
+    const TABLE_NAME = "entity.entities";
     const NAME_COLUMN = "general__entity_name";
 
-    const entityData = shallowRef<Entity.I_Entity | null>(null);
+    /**
+     * Custom type that replaces the standard meta__data with a typed version
+     * based on the provided Zod schema.
+     */
+    type EntityWithTypedMeta = Omit<Entity.I_Entity, "meta__data"> & {
+        meta__data: z.infer<MetaSchema> | null;
+    };
+
+    // State refs
+    const entityData = shallowRef<EntityWithTypedMeta | null>(null);
     const retrieving = ref(false);
     const updating = ref(false);
     const creating = ref(false);
     const error = ref<Error | null>(null);
 
-    // Use provided instance or try to inject from context
+    // Get the Vircadia instance
     const vircadia = options.instance || inject(getVircadiaInstanceKey_Vue());
 
     if (!vircadia) {
@@ -77,13 +115,38 @@ export function useVircadiaEntity_Vue(options: {
 
     let isUnmounted = false;
 
-    // --- Entity Creation ---
-    // Internal function to perform the creation database query
+    /**
+     * Parses and validates raw meta__data using the provided Zod schema.
+     * Returns typed meta__data or null if parsing fails.
+     *
+     * @param rawData - Raw meta__data from the database (string or object)
+     * @returns Typed meta__data object or null if validation fails
+     */
+    const parseMetaData = (
+        rawData: string | object | null,
+    ): z.infer<MetaSchema> | null => {
+        if (!rawData || !options.metaDataSchema) return null;
+
+        try {
+            const data =
+                typeof rawData === "string" ? JSON.parse(rawData) : rawData;
+            return options.metaDataSchema.parse(data);
+        } catch (error) {
+            console.warn("Meta data validation failed:", error);
+            return options.defaultMetaData || null;
+        }
+    };
+
+    /**
+     * Creates a new entity in the database using the provided insert clause and parameters.
+     *
+     * @returns Promise resolving to the entity name if successful, or null if creation failed
+     */
     const executeCreate = async (): Promise<string | null> => {
         // Prevent create if another operation is in progress
         if (retrieving.value || creating.value || updating.value) {
             console.warn(
-                "performCreate skipped: Another operation (fetch, create, update) is already in progress.",
+                "executeCreate skipped: Another operation (retrieve, create, update) is already in progress.",
             );
             error.value = new Error(
                 "Create operation skipped: Another operation in progress.",
@@ -152,7 +215,6 @@ export function useVircadiaEntity_Vue(options: {
                     `Successfully created entity with name: ${createdName}`,
                 );
                 // Return the name obtained from RETURNING clause
-                // Do not automatically fetch or update local state here
                 return createdName;
             }
 
@@ -177,13 +239,17 @@ export function useVircadiaEntity_Vue(options: {
         }
     };
 
-    // --- Data Fetching ---
-    // Internal function to perform the fetch database query
+    /**
+     * Retrieves the entity from the database using the current entityName.
+     * Parses meta__data according to the provided schema.
+     *
+     * @returns Promise that resolves when the retrieval operation completes
+     */
     const executeRetrieve = async () => {
         // Prevent fetch if another operation is in progress
         if (retrieving.value || creating.value || updating.value) {
             console.warn(
-                "performRetrieve skipped: Another operation (fetch, create, update) is already in progress.",
+                "executeRetrieve skipped: Another operation (retrieve, create, update) is already in progress.",
             );
             error.value = new Error(
                 "Retrieve operation skipped: Another operation in progress.",
@@ -199,7 +265,7 @@ export function useVircadiaEntity_Vue(options: {
 
         if (!currentEntityName) {
             console.warn(
-                "performRetrieve skipped: entityName is not provided.",
+                "executeRetrieve skipped: entityName is not provided.",
             );
             entityData.value = null; // Ensure data is null if no identifier
             error.value = new Error(
@@ -236,13 +302,21 @@ export function useVircadiaEntity_Vue(options: {
             if (isUnmounted) return;
 
             if (queryResult.result && queryResult.result.length > 0) {
-                const newData = queryResult.result[0];
+                const rawData = queryResult.result[0];
+                const rawMetaData = rawData.meta__data;
+
+                // Create enhanced entity with parsed meta__data
+                const enhancedEntity: EntityWithTypedMeta = {
+                    ...rawData,
+                    meta__data: parseMetaData(rawMetaData), // Parse meta__data based on schema
+                };
+
                 // Deep compare new data with the raw existing data before assigning
                 if (
                     !entityData.value ||
-                    !isEqual(toRaw(entityData.value), newData)
+                    !isEqual(toRaw(entityData.value), enhancedEntity)
                 ) {
-                    entityData.value = { ...newData }; // Assign new object only if different
+                    entityData.value = enhancedEntity; // Assign enhanced entity with parsed meta__data
                     console.log("Entity data updated:", entityData.value);
                 } else {
                     console.log("Entity data fetched but unchanged.");
@@ -280,8 +354,14 @@ export function useVircadiaEntity_Vue(options: {
         }
     };
 
-    // --- Data Updating ---
-    // Internal function to perform the update database query
+    /**
+     * Updates the entity in the database using the provided SET clause and parameters.
+     * Uses the current entity name from entityData.
+     *
+     * @param setClause - SQL SET clause for the UPDATE statement (e.g., "meta__data = $1")
+     * @param updateParams - Parameters to use with the setClause
+     * @returns Promise that resolves when the update operation completes
+     */
     const executeUpdate = async (
         setClause: string,
         updateParams: unknown[],
@@ -289,7 +369,7 @@ export function useVircadiaEntity_Vue(options: {
         // Prevent update if another operation is in progress
         if (retrieving.value || creating.value || updating.value) {
             console.warn(
-                "performUpdate skipped: Another operation (fetch, create, update) is already in progress.",
+                "executeUpdate skipped: Another operation (retrieve, create, update) is already in progress.",
             );
             error.value = new Error(
                 "Update operation skipped: Another operation in progress.",
@@ -302,7 +382,7 @@ export function useVircadiaEntity_Vue(options: {
 
         if (!currentName) {
             console.warn(
-                "performUpdate skipped: Entity name not available in local data. Ensure entity is loaded via executeRetrieve first.",
+                "executeUpdate skipped: Entity name not available in local data. Ensure entity is loaded via executeRetrieve first.",
             );
             error.value = new Error(
                 "Cannot update: Entity name not available.",
@@ -311,7 +391,7 @@ export function useVircadiaEntity_Vue(options: {
         }
 
         if (!setClause.trim()) {
-            console.warn("performUpdate skipped: Empty SET clause provided.");
+            console.warn("executeUpdate skipped: Empty SET clause provided.");
             error.value = new Error("Cannot update: Empty SET clause.");
             return;
         }
@@ -352,21 +432,65 @@ export function useVircadiaEntity_Vue(options: {
         }
     };
 
-    // --- Cleanup ---
+    /**
+     * Cleanup function to prevent async operations from affecting state after unmount.
+     * Should be called when the component using this composable is unmounted.
+     */
     const cleanup = () => {
         console.log(`useVircadiaEntity cleanup called for ${entityName.value}`);
         isUnmounted = true; // Flag to prevent async operations from updating state after cleanup
     };
 
     return {
+        /**
+         * Reactive reference to the entity data with typed meta__data.
+         * Will be null if the entity doesn't exist or hasn't been retrieved yet.
+         */
         entityData: readonly(entityData),
+
+        /**
+         * Indicates whether a retrieve operation is in progress.
+         */
         retrieving: readonly(retrieving),
+
+        /**
+         * Indicates whether an update operation is in progress.
+         */
         updating: readonly(updating),
+
+        /**
+         * Indicates whether a create operation is in progress.
+         */
         creating: readonly(creating),
+
+        /**
+         * Contains any error that occurred during the last operation.
+         * Will be null if the last operation was successful.
+         */
         error: readonly(error),
-        executeRetrieve, // Manually trigger data fetching
-        executeUpdate, // Manually trigger data update
-        executeCreate, // Manually trigger entity creation
+
+        /**
+         * Retrieves the entity from the database using the current entityName.
+         * Updates entityData with the result, including typed meta__data.
+         */
+        executeRetrieve,
+
+        /**
+         * Updates the entity in the database using the provided SET clause and parameters.
+         * Requires that entityData has been populated via executeRetrieve first.
+         */
+        executeUpdate,
+
+        /**
+         * Creates a new entity in the database using the provided insert clause and parameters.
+         * Returns the entity name if successful, or null if creation failed.
+         */
+        executeCreate,
+
+        /**
+         * Cleanup function to prevent async operations from affecting state after unmount.
+         * Should be called when the component using this composable is unmounted.
+         */
         cleanup,
     };
 }
