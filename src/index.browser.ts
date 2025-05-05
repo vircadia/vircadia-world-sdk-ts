@@ -8,9 +8,9 @@ export * from "./client/core/vircadia.client.browser.config";
 export * from "./client/core/vircadia.client.common.core";
 
 // Framework exports
-export * from "./client/vue/composable/useVircadiaAsset";
-export * from "./client/vue/composable/useVircadiaEntity";
-export * from "./client/vue/provider/useVircadia";
+export * from "./client/vue/composable/useVircadiaAsset_Vue";
+export * from "./client/vue/composable/useVircadiaEntity_Vue";
+export * from "./client/vue/provider/useVircadia_Vue";
 
 // Schema exports
 export * from "./schema/vircadia.schema.general";

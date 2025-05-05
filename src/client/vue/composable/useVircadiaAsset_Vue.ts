@@ -2,7 +2,7 @@ import { ref, readonly, type Ref, inject } from "vue"; // Removed watch
 import {
     type I_VircadiaInstance_Vue,
     getVircadiaInstanceKey_Vue,
-} from "../provider/useVircadia";
+} from "../provider/useVircadia_Vue";
 import { openDB, deleteDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Entity } from "../../../schema/vircadia.schema.general";
 
@@ -122,7 +122,7 @@ const makeRoomInCache = async (targetSize: number): Promise<void> => {
  * @param options.debug - Enable detailed debug logging (default: false)
  * @returns Reactive refs for asset data, loading state, error state, the manual load function, and cleanup function.
  */
-export function useVircadiaAsset(options: {
+export function useVircadiaAsset_Vue(options: {
     /** A Ref containing the name of the asset file to load. */
     fileName: Ref<string | null | undefined>; // Allow null/undefined
     /** The Vircadia instance to use. If not provided, will try to inject from component context. */

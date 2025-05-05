@@ -2,7 +2,7 @@ import { ref, readonly, shallowRef, type Ref, toRaw, inject } from "vue"; // Rem
 import {
     type I_VircadiaInstance_Vue,
     getVircadiaInstanceKey_Vue,
-} from "../provider/useVircadia";
+} from "../provider/useVircadia_Vue";
 import type { Entity } from "../../../schema/vircadia.schema.general"; // Import the Entity namespace
 import { isEqual } from "lodash-es"; // Import isEqual for deep comparison
 
