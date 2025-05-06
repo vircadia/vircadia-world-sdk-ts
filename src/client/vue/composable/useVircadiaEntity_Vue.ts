@@ -16,14 +16,15 @@ import type { z } from "zod"; // Import zod for schema validation
  * - Data fetching with customizable SELECT queries
  * - Entity creation with customizable INSERT queries
  * - Entity updates with customizable SET clauses
- * - Typed metadata via Zod schema validation
+ * - Typed metadata via Zod schema validation, with fallback defaultMetaData on parse errors
  *
  * All database operations must be triggered manually through the returned functions.
- * The entityData returned will contain properly typed meta__data based on the provided schema.
+ * The entityData returned will contain properly typed meta__data based on the provided schema,
+ * or the provided defaultMetaData if validation fails.
  *
  * @template MetaSchema - Zod schema type used to validate and type the entity's meta__data
- * @param options - Configuration options for entity management
- * @returns Object containing entity data with typed metadata, status refs, and operation functions
+ * @param options - Configuration options for entity management, including defaultMetaData fallback values
+ * @returns Object containing reactive refs for entity data, status flags, errors, and operation functions
  */
 export function useVircadiaEntity_Vue<
     MetaSchema extends z.ZodType = z.ZodAny,
@@ -68,12 +69,13 @@ export function useVircadiaEntity_Vue<
     /**
      * Zod schema for validating and typing the entity's meta__data.
      * When provided, meta__data will be parsed and validated during retrieval.
+     * If parsing fails, the provided defaultMetaData (if any) will be used instead.
      */
     metaDataSchema?: MetaSchema;
 
     /**
-     * Default values for meta__data when validation fails.
-     * Used as a fallback when meta__data parsing encounters an error.
+     * Default values for meta__data when validation or parsing fails.
+     * Used as a fallback when meta__data parsing throws an error or raw data is invalid.
      */
     defaultMetaData?: z.infer<MetaSchema>;
 }) {
@@ -117,30 +119,33 @@ export function useVircadiaEntity_Vue<
 
     /**
      * Parses and validates raw meta__data using the provided Zod schema.
-     * Returns typed meta__data or null if parsing fails.
+     * Returns parsed meta__data, uses defaultMetaData on validation failure, or null if no data or no schema.
      *
-     * @param rawData - Raw meta__data from the database (string or object)
-     * @returns Typed meta__data object or null if validation fails
+     * @param raw - Raw meta__data from the database (string or object)
+     * @returns Parsed meta__data object, defaultMetaData on validation failure, or null
      */
     const parseMetaData = (
-        rawData: string | object | null,
+        raw: string | object | null,
     ): z.infer<MetaSchema> | null => {
-        if (!rawData || !options.metaDataSchema) return null;
-
+        if (raw == null || !options.metaDataSchema) {
+            return null;
+        }
+        const data = typeof raw === "string" ? JSON.parse(raw) : raw;
         try {
-            const data =
-                typeof rawData === "string" ? JSON.parse(rawData) : rawData;
             return options.metaDataSchema.parse(data);
-        } catch (error) {
-            console.warn("Meta data validation failed:", error);
-            return options.defaultMetaData || null;
+        } catch (err) {
+            console.warn(
+                "metaDataSchema.parse failed, using defaultMetaData if provided:",
+                err,
+            );
+            return options.defaultMetaData ?? null;
         }
     };
 
     /**
      * Creates a new entity in the database using the provided insert clause and parameters.
      *
-     * @returns Promise resolving to the entity name if successful, or null if creation failed
+     * @returns Promise<string | null> - Resolves to the entity name (from RETURNING clause or parameters) or null if creation failed
      */
     const executeCreate = async (): Promise<string | null> => {
         // Prevent create if another operation is in progress
@@ -241,9 +246,9 @@ export function useVircadiaEntity_Vue<
 
     /**
      * Retrieves the entity from the database using the current entityName.
-     * Parses meta__data according to the provided schema.
+     * Updates entityData and error refs; parses meta__data according to the provided schema.
      *
-     * @returns Promise that resolves when the retrieval operation completes
+     * @returns Promise<void> - Resolves when the retrieval operation completes
      */
     const executeRetrieve = async () => {
         // Prevent fetch if another operation is in progress
@@ -356,11 +361,11 @@ export function useVircadiaEntity_Vue<
 
     /**
      * Updates the entity in the database using the provided SET clause and parameters.
-     * Uses the current entity name from entityData.
+     * Requires that entityData has been populated via executeRetrieve first.
      *
      * @param setClause - SQL SET clause for the UPDATE statement (e.g., "meta__data = $1")
      * @param updateParams - Parameters to use with the setClause
-     * @returns Promise that resolves when the update operation completes
+     * @returns Promise<void> - Resolves when the update operation completes
      */
     const executeUpdate = async (
         setClause: string,
@@ -443,8 +448,8 @@ export function useVircadiaEntity_Vue<
 
     return {
         /**
-         * Reactive reference to the entity data with typed meta__data.
-         * Will be null if the entity doesn't exist or hasn't been retrieved yet.
+         * Reactive reference to the entity data with typed meta__data or default values.
+         * Will be null if the entity doesn't exist, hasn't been retrieved yet, or no schema provided.
          */
         entityData: readonly(entityData),
 
@@ -471,19 +476,23 @@ export function useVircadiaEntity_Vue<
 
         /**
          * Retrieves the entity from the database using the current entityName.
-         * Updates entityData with the result, including typed meta__data.
+         * Updates entityData with the result, including typed meta__data or default values.
+         *
+         * @returns Promise<void>
          */
         executeRetrieve,
 
         /**
          * Updates the entity in the database using the provided SET clause and parameters.
          * Requires that entityData has been populated via executeRetrieve first.
+         *
+         * @returns Promise<void>
          */
         executeUpdate,
 
         /**
          * Creates a new entity in the database using the provided insert clause and parameters.
-         * Returns the entity name if successful, or null if creation failed.
+         * @returns Promise<string | null>
          */
         executeCreate,
 
