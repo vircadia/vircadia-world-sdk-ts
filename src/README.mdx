@@ -1,17 +1,16 @@
-# Vircadia World SDK TypeScript
+---
+sidebar_label: Browser / Bun Usage
+---
 
-## Overview
-This package provides TypeScript bindings for Vircadia World SDK with support for both browser and Bun environments.
+import CodeBlock from '@theme/CodeBlock';
 
-## Install
 
-```bash
-bun install @vircadia/world-sdk
-```
+import indexBrowserTs from '!!raw-loader!./index.browser.ts';
+import indexBunTs from '!!raw-loader!./index.bun.ts';
 
-## Usage
+# Usage
 
-### Browser
+## Browser
 
 ```typescript
 // Browser
@@ -27,7 +26,13 @@ import {
 } from '@vircadia/world-sdk/browser';
 ```
 
-### Bun
+### Full Available API
+
+<CodeBlock language="typescript" title="index.browser.ts">
+  {indexBrowserTs}
+</CodeBlock>
+
+## Bun
 
 ```typescript
 // Bun
@@ -37,21 +42,12 @@ import {
     // Schema -> Communication
     Communication,
     // Raw core client for Bun
-    VircadiaClientCore 
+    VircadiaClientCore
 } from '@vircadia/world-sdk/bun';
 ```
 
-## Build
-```bash
-# Install dependencies
-bun install
+### Full Available API
 
-# Build for both browser and Bun
-bun run build
-```
-
-## Publish
-
-```bash
-npm publish
-```
+<CodeBlock language="typescript" title="index.bun.ts">
+  {indexBunTs}
+</CodeBlock>

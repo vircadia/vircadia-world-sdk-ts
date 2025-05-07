@@ -4,14 +4,38 @@ sidebar_label: Schema
 
 import CodeBlock from '@theme/CodeBlock';
 
-import generalSchema from '!!raw-loader!./schema.general.ts';
+import generalSchema from '!!raw-loader!./vircadia.schema.general.ts';
 
 # TypeScript Schema
 
 The schema is used throughout the codebase, and also provided in the SDK for use in development.
 
-## General Schema
+## Config Namespace
 
-<CodeBlock language="typescript" title="schema.general.ts">
-  {generalSchema}
+<CodeBlock language="typescript" title="Schema - Config Namespace">
+  {generalSchema.match(/export namespace Config {[\s\S]*?^}/m)?.[0] || 'Schema section not found'}
+</CodeBlock>
+
+## Entity Namespace
+
+<CodeBlock language="typescript" title="Schema - Entity Namespace">
+  {generalSchema.match(/export namespace Entity {[\s\S]*?^}(?=\n\nexport)/m)?.[0] || 'Schema section not found'}
+</CodeBlock>
+
+## Tick Namespace
+
+<CodeBlock language="typescript" title="Schema - Tick Namespace">
+  {generalSchema.match(/export namespace Tick {[\s\S]*?^}(?=\n\nexport)/m)?.[0] || 'Schema section not found'}
+</CodeBlock>
+
+## Auth Namespace
+
+<CodeBlock language="typescript" title="Schema - Auth Namespace">
+  {generalSchema.match(/export namespace Auth {[\s\S]*?^}(?=\n\nexport)/m)?.[0] || 'Schema section not found'}
+</CodeBlock>
+
+## Communication Namespace
+
+<CodeBlock language="typescript" title="Schema - Communication Namespace">
+  {generalSchema.match(/export namespace Communication {[\s\S]*?^}(?=\n\nexport|$)/m)?.[0] || 'Schema section not found'}
 </CodeBlock>
