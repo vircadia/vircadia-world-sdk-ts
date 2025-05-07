@@ -15,7 +15,9 @@ import { VircadiaConfig_BROWSER_CLIENT, Vue_useVircadia } from '@vircadia/world-
 
 // Bun
 import { VircadiaConfig_SERVER } from '@vircadia/world-sdk/bun';
-``` 
+```
+
+### [Vue SDK](./browser/framework/vue)
 
 ## Build
 ```bash
@@ -24,4 +26,10 @@ bun install
 
 # Build for both browser and Bun
 bun run build
+```
+
+## Publish
+
+```bash
+npm publish
 ```
