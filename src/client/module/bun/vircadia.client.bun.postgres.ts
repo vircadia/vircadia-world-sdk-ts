@@ -6,8 +6,8 @@ import { ServerConfiguration } from "../../../server/config/vircadia.server.conf
 const IDLE_TIMEOUT_S = 86400; // 24 hours
 const CONNECT_TIMEOUT_S = 10; // 10 seconds
 
-export class PostgresClientModule {
-    private static instance: PostgresClientModule | null = null;
+export class BunPostgresClientModule {
+    private static instance: BunPostgresClientModule | null = null;
     private superSql: postgres.Sql | null = null;
     private proxySql: postgres.Sql | null = null;
 
@@ -25,11 +25,13 @@ export class PostgresClientModule {
     public static getInstance(data: {
         debug: boolean;
         suppress: boolean;
-    }): PostgresClientModule {
-        if (!PostgresClientModule.instance) {
-            PostgresClientModule.instance = new PostgresClientModule(data);
+    }): BunPostgresClientModule {
+        if (!BunPostgresClientModule.instance) {
+            BunPostgresClientModule.instance = new BunPostgresClientModule(
+                data,
+            );
         }
-        return PostgresClientModule.instance;
+        return BunPostgresClientModule.instance;
     }
 
     private logIssue(error: unknown, host: string, port: number): void {
