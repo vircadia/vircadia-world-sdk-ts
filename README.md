@@ -17,7 +17,7 @@ bun install @vircadia/world-sdk
 // Browser
 import { 
     // Config
-    VircadiaConfig_BROWSER_CLIENT, 
+    ClientBrowserConfiguration, 
     // Schema -> Communication
     Communication,
     // Vue SDK composable wrapping the core client
@@ -33,7 +33,7 @@ import {
 // Bun
 import { 
     // Config
-    VircadiaConfig_SERVER,
+    ServerConfiguration,
     // Schema -> Communication
     Communication,
     // Raw core client for Bun

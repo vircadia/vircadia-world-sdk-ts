@@ -1,13 +1,13 @@
 import postgres from "postgres";
-import { log } from "./vircadia.client.bun.log";
-import { VircadiaConfig_SERVER } from "../../../server/config/vircadia.server.config";
+import { BunLogModule } from "./vircadia.client.bun.log";
+import { ServerConfiguration } from "../../../server/config/vircadia.server.config";
 // TODO: Use Bun native .sql client and use pooling to reduce latency issues.
 
 const IDLE_TIMEOUT_S = 86400; // 24 hours
 const CONNECT_TIMEOUT_S = 10; // 10 seconds
 
-export class PostgresClient {
-    private static instance: PostgresClient | null = null;
+export class PostgresClientModule {
+    private static instance: PostgresClientModule | null = null;
     private superSql: postgres.Sql | null = null;
     private proxySql: postgres.Sql | null = null;
 
@@ -25,15 +25,15 @@ export class PostgresClient {
     public static getInstance(data: {
         debug: boolean;
         suppress: boolean;
-    }): PostgresClient {
-        if (!PostgresClient.instance) {
-            PostgresClient.instance = new PostgresClient(data);
+    }): PostgresClientModule {
+        if (!PostgresClientModule.instance) {
+            PostgresClientModule.instance = new PostgresClientModule(data);
         }
-        return PostgresClient.instance;
+        return PostgresClientModule.instance;
     }
 
     private logIssue(error: unknown, host: string, port: number): void {
-        log({
+        BunLogModule({
             message: "PostgreSQL connection issue.",
             data: {
                 host,
@@ -44,13 +44,13 @@ export class PostgresClient {
             debug: this.debug,
             error,
         });
-        log({
+        BunLogModule({
             message: "PostgreSQL connection env variables:",
             type: "debug",
             debug: this.debug,
             suppress: this.suppress,
             data: {
-                ...VircadiaConfig_SERVER,
+                ...ServerConfiguration,
             },
         });
     }
@@ -84,7 +84,7 @@ export class PostgresClient {
                 // Test super user connection immediately
                 await this.superSql`SELECT 1`;
 
-                log({
+                BunLogModule({
                     message:
                         "PostgreSQL super user connection established successfully.",
                     type: "debug",
@@ -111,7 +111,7 @@ export class PostgresClient {
         try {
             if (!this.proxySql) {
                 // Create proxy account connection
-                log({
+                BunLogModule({
                     message:
                         "Initializing PostgreSQL proxy account connection...",
                     type: "debug",
@@ -136,7 +136,7 @@ export class PostgresClient {
                 // Test proxy account connection immediately
                 await this.proxySql`SELECT 1`;
 
-                log({
+                BunLogModule({
                     message:
                         "PostgreSQL proxy account connection established successfully.",
                     type: "debug",
@@ -155,7 +155,7 @@ export class PostgresClient {
         if (this.superSql) {
             await this.superSql.end();
             this.superSql = null;
-            log({
+            BunLogModule({
                 message: "PostgreSQL super user connection closed.",
                 type: "debug",
                 suppress: this.suppress,
@@ -166,7 +166,7 @@ export class PostgresClient {
         if (this.proxySql) {
             await this.proxySql.end();
             this.proxySql = null;
-            log({
+            BunLogModule({
                 message: "PostgreSQL proxy account connection closed.",
                 type: "debug",
                 suppress: this.suppress,

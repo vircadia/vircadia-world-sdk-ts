@@ -17,13 +17,9 @@
         "access": "public"
     },
     "exports": {
-        "./browser": {
-            "import": "./dist/browser/index.browser.js",
-            "types": "./dist/types/browser/index.browser.d.ts"
-        },
-        "./browser/framework/vue": {
-            "import": "./dist/browser/framework/vue/vue.js",
-            "types": "./dist/types/browser/framework/vue/vue.d.ts"
+        "./browser/vue": {
+            "import": "./dist/browser/vue/index.browser.vue.js",
+            "types": "./dist/types/browser/vue/index.browser.vue.d.ts"
         },
         "./bun": {
             "import": "./dist/bun/index.bun.js",
@@ -33,13 +29,12 @@
     "sideEffects": false,
     "dependencies": {
         "@vueuse/core": "^13.1.0",
-        "console-log-colors": "latest",
         "eight-colors": "latest",
         "jsonwebtoken": "^9.0.2",
         "lodash-es": "^4.17.21",
-        "postgres": "latest",
+        "postgres": "3.4.5",
         "tmp": "^0.2.3",
-        "typescript": "latest",
+        "typescript": "5.8.3",
         "vue": "^3.5.13",
         "zod": "3.24.4",
         "idb": "^8.0.2"
@@ -52,11 +47,11 @@
         "bun-types": "latest"
     },
     "scripts": {
-        "build": "bun run clean && bun run build:types && bun run build:browser && bun run build:bun",
+        "build": "bun run clean && bun run build:types && bun run build:browser:vue && bun run build:bun",
         "pack": "cd package && npm pack ../",
         "clean": "rm -rf dist",
         "build:types": "tsc --build tsconfig.json",
-        "build:browser": "bun run build.browser.js",
+        "build:browser:vue": "bun run build.browser.vue.js",
         "build:bun": "bun run build.bun.js",
         "prepublishOnly": "bun run build"
     }

@@ -66,7 +66,7 @@ const browserClientEnvSchema = z.object({
 });
 
 // Parse client environment variables
-export const VircadiaConfig_BROWSER_CLIENT = browserClientEnvSchema.parse(
+export const ClientBrowserConfiguration = browserClientEnvSchema.parse(
     // Fix TypeScript error with appropriate typing
     (typeof import.meta !== "undefined"
         ? (import.meta as { env?: Record<string, unknown> }).env

@@ -3,9 +3,9 @@ import { build } from "bun";
 try {
     const result = await build({
         entrypoints: [
-            "./src/index.browser.ts",
+            "./src/index.browser.vue.ts",
         ],
-        outdir: "./dist/browser",
+        outdir: "./dist/browser/vue",
         format: "esm",
         target: "browser",
         splitting: true, // Enables code splitting for tree-shaking

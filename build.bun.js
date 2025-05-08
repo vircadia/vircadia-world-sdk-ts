@@ -15,7 +15,6 @@ try {
         sourcemap: "external",
         external: [
             // List dependencies that should not be bundled
-            "console-log-colors",
             "vue",
             "eight-colors",
             "jsonwebtoken",

@@ -1,8 +1,5 @@
 import { ref, readonly, shallowRef, type Ref, toRaw, inject, watch } from "vue"; // Removed watch, Import toRaw
-import {
-    type I_VircadiaInstance_Vue,
-    getVircadiaInstanceKey_Vue,
-} from "../provider/useVircadia_Vue";
+import { type useVircadia, useVircadiaInstance } from "../provider/useVircadia";
 import type { Entity } from "../../../schema/vircadia.schema.general"; // Import the Entity namespace
 import { isEqual } from "lodash-es"; // Import isEqual for deep comparison
 import type { z } from "zod"; // Import zod for schema validation
@@ -26,9 +23,7 @@ import type { z } from "zod"; // Import zod for schema validation
  * @param options - Configuration options for entity management, including defaultMetaData fallback values
  * @returns Object containing reactive refs for entity data, status flags, errors, and operation functions
  */
-export function useVircadiaEntity_Vue<
-    MetaSchema extends z.ZodType = z.ZodAny,
->(options: {
+export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
     /**
      * A Ref containing the entity name (general__entity_name) to manage.
      * Required for entity retrieval operations.
@@ -64,7 +59,7 @@ export function useVircadiaEntity_Vue<
      * Vircadia instance to use for database operations.
      * If not provided, will be injected from the component context.
      */
-    instance?: I_VircadiaInstance_Vue;
+    instance?: ReturnType<typeof useVircadia>;
 
     /**
      * Zod schema for validating and typing the entity's meta__data.
@@ -107,7 +102,7 @@ export function useVircadiaEntity_Vue<
     const error = ref<Error | null>(null);
 
     // Get the Vircadia instance
-    const vircadia = options.instance || inject(getVircadiaInstanceKey_Vue());
+    const vircadia = options.instance || inject(useVircadiaInstance());
 
     if (!vircadia) {
         throw new Error(
@@ -442,7 +437,7 @@ export function useVircadiaEntity_Vue<
      * Should be called when the component using this composable is unmounted.
      */
     const cleanup = () => {
-        console.log(`useVircadiaEntity cleanup called for ${entityName.value}`);
+        console.log(`useEntity cleanup called for ${entityName.value}`);
         isUnmounted = true; // Flag to prevent async operations from updating state after cleanup
     };
 

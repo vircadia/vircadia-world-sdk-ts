@@ -7,38 +7,9 @@ import {
 } from "vue";
 
 import {
-    VircadiaClientCore,
-    type VircadiaClientCoreConfig,
-    type ConnectionInfo,
+    ClientCore,
+    type ClientCoreConnectionInfo,
 } from "../../core/vircadia.client.common.core";
-
-/**
- * Options for creating a Vircadia instance
- */
-export interface I_VircadiaOptions_Vue {
-    /**
-     * Configuration for the Vircadia client
-     */
-    config: VircadiaClientCoreConfig;
-}
-
-/**
- * Return type for the Vue_useVircadia function
- */
-export interface I_VircadiaInstance_Vue {
-    client: VircadiaClientCore;
-    connectionInfo: Ref<ConnectionInfo>;
-    dispose: () => void;
-}
-
-export const VUE_DEFAULT_INSTANCE_KEY = "vircadiaWorld";
-
-export function getVircadiaInstanceKey_Vue(
-    name?: string,
-): InjectionKey<I_VircadiaInstance_Vue> {
-    const instanceKey = name || VUE_DEFAULT_INSTANCE_KEY;
-    return instanceKey as string & InjectionKey<I_VircadiaInstance_Vue>;
-}
 
 /**
  * Creates a Vircadia client instance with Vue reactivity.
@@ -47,16 +18,20 @@ export function getVircadiaInstanceKey_Vue(
  * @param options Configuration options for the Vircadia client
  * @returns Vircadia client instance and connection info
  */
-export function useVircadia_Vue(
-    options: I_VircadiaOptions_Vue,
-): I_VircadiaInstance_Vue {
-    const { config } = options;
+export function useVircadia(data: {
+    config: ConstructorParameters<typeof ClientCore>[0];
+}): {
+    client: ClientCore;
+    connectionInfo: Ref<ClientCoreConnectionInfo>;
+    dispose: () => void;
+} {
+    const { config } = data;
 
     // Initialize client with provided config
-    const client = new VircadiaClientCore(config);
+    const client = new ClientCore(config);
 
     // Create reactive connection info
-    const connectionInfo = ref<ConnectionInfo>(
+    const connectionInfo = ref<ClientCoreConnectionInfo>(
         client.Utilities.Connection.getConnectionInfo(),
     );
 
@@ -98,4 +73,13 @@ export function useVircadia_Vue(
         connectionInfo,
         dispose,
     };
+}
+
+const VUE_DEFAULT_INSTANCE_KEY = "vircadiaWorld";
+
+export function useVircadiaInstance(
+    name?: string,
+): InjectionKey<ReturnType<typeof useVircadia>> {
+    const instanceKey = name || VUE_DEFAULT_INSTANCE_KEY;
+    return instanceKey as string & InjectionKey<ReturnType<typeof useVircadia>>;
 }

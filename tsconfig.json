@@ -18,19 +18,15 @@
         },
         "lib": ["DOM", "ESNext"]
     },
-    "include": [
-        "src/**/*",
-        "src/server/config/vircadia.server.config.ts",
-        "src/server/config/vircadia.server.consts.ts"
-    ],
+    "include": ["src/**/*"],
     "exclude": [
         "node_modules",
         "dist",
-        "src/**/*.browser.ts",
+        "src/**/*.browser.vue.ts",
         "src/**/*.bun.ts"
     ],
     "references": [
-        { "path": "./tsconfig.browser.json" },
+        { "path": "./tsconfig.browser.vue.json" },
         { "path": "./tsconfig.bun.json" }
     ]
 }

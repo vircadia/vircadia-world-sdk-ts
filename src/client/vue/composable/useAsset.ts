@@ -1,10 +1,7 @@
-import { ref, readonly, type Ref, inject } from "vue"; // Removed watch
-import {
-    type I_VircadiaInstance_Vue,
-    getVircadiaInstanceKey_Vue,
-} from "../provider/useVircadia_Vue";
 import { openDB, deleteDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Entity } from "../../../schema/vircadia.schema.general";
+import { type Ref, ref, inject, readonly } from "vue";
+import { type useVircadia, useVircadiaInstance } from "../provider/useVircadia";
 
 // Cache expiration duration in milliseconds (1 hour)
 const CACHE_EXPIRATION_MS = 60 * 60 * 1000;
@@ -122,11 +119,11 @@ const makeRoomInCache = async (targetSize: number): Promise<void> => {
  * @param options.debug - Enable detailed debug logging (default: false)
  * @returns Reactive refs for asset data, loading state, error state, the manual load function, and cleanup function.
  */
-export function useVircadiaAsset_Vue(options: {
+export function useAsset(options: {
     /** A Ref containing the name of the asset file to load. */
     fileName: Ref<string | null | undefined>; // Allow null/undefined
     /** The Vircadia instance to use. If not provided, will try to inject from component context. */
-    instance?: I_VircadiaInstance_Vue;
+    instance?: ReturnType<typeof useVircadia>;
     /** Whether to use local storage caching (default: true) */
     useCache?: boolean;
     /** Enable detailed debug logging (default: false) */
@@ -163,11 +160,8 @@ export function useVircadiaAsset_Vue(options: {
         }
     };
 
-    // Move instance key creation inside the function
-    const instanceKey = getVircadiaInstanceKey_Vue();
-
     // Use provided instance or try to inject from context
-    const vircadia = options.instance || inject(instanceKey);
+    const vircadia = options.instance || inject(useVircadiaInstance());
 
     if (!vircadia) {
         throw new Error(

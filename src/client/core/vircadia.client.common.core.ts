@@ -1,44 +1,77 @@
 import { Communication } from "../../schema/vircadia.schema.general";
 
-// Define event types
-export type ConnectionState =
+import { version as version_package } from "../../../package.json";
+
+/**
+ * Represents the possible connection states for the client
+ */
+export type ClientCoreConnectionState =
     | "connected"
     | "connecting"
     | "reconnecting"
     | "disconnected";
 
-export type ConnectionInfo = {
-    status: ConnectionState;
+/**
+ * Contains detailed information about the current connection state
+ */
+export type ClientCoreConnectionInfo = {
+    /** Current connection status */
+    status: ClientCoreConnectionState;
+    /** Whether the client is currently connected */
     isConnected: boolean;
+    /** Whether the client is currently connecting */
     isConnecting: boolean;
+    /** Whether the client is currently reconnecting */
     isReconnecting: boolean;
+    /** Duration of the current connection in milliseconds */
     connectionDuration?: number;
+    /** Number of reconnection attempts made */
     reconnectAttempts: number;
+    /** List of pending requests with their IDs and elapsed time */
     pendingRequests: Array<{
         requestId: string;
         elapsedMs: number;
     }>;
 };
-type ConnectionEventListener = () => void;
 
-export interface VircadiaClientCoreConfig {
+/**
+ * Event listener function type for connection events
+ */
+export type ClientCoreConnectionEventListener = () => void;
+
+/**
+ * Configuration options for the ClientCore
+ */
+interface ClientCoreConfig {
     // Connection settings
+    /** URL of the Vircadia server to connect to */
     serverUrl: string;
+    /** Authentication token for the server */
     authToken: string;
+    /** Authentication provider name */
     authProvider: string;
 
     // Reconnection settings
+    /** Maximum number of reconnection attempts (default: 5) */
     reconnectAttempts?: number;
+    /** Delay between reconnection attempts in milliseconds (default: 5000) */
     reconnectDelay?: number;
 
     // Debug settings
+    /** Enable debug logging */
     debug?: boolean;
+    /** Suppress all console output */
     suppress?: boolean;
 }
 
-// Helper functions for debug logging
+/**
+ * Helper function for debug logging when debug mode is enabled
+ * @param {ClientCoreConfig} config - The client configuration
+ * @param {string} message - The message to log
+ * @param {...any} args - Additional arguments to log
+ */
 const debugLog = (
-    config: VircadiaClientCoreConfig,
+    config: ClientCoreConfig,
     message: string,
     // biome-ignore lint/suspicious/noExplicitAny: Needed for flexible debug logging
     ...args: any[]
@@ -48,8 +81,14 @@ const debugLog = (
     }
 };
 
+/**
+ * Helper function for error logging
+ * @param {ClientCoreConfig} config - The client configuration
+ * @param {string} message - The error message to log
+ * @param {...any} args - Additional arguments to log
+ */
 const debugError = (
-    config: VircadiaClientCoreConfig,
+    config: ClientCoreConfig,
     message: string,
     // biome-ignore lint/suspicious/noExplicitAny: Needed for flexible debug logging
     ...args: any[]
@@ -59,7 +98,10 @@ const debugError = (
     }
 };
 
-// Handles all WebSocket communication with the server
+/**
+ * Handles all WebSocket communication with the Vircadia server
+ * Manages connection, reconnection, and message passing
+ */
 class ConnectionManager {
     private ws: WebSocket | null = null;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -72,28 +114,52 @@ class ConnectionManager {
             timeout: ReturnType<typeof setTimeout>;
         }
     >();
-    private eventListeners = new Map<string, Set<ConnectionEventListener>>();
-    private lastStatus: ConnectionState = "disconnected";
+    private eventListeners = new Map<
+        string,
+        Set<ClientCoreConnectionEventListener>
+    >();
+    private lastStatus: ClientCoreConnectionState = "disconnected";
     private connectionStartTime: number | null = null;
-    private connectionPromise: Promise<ConnectionInfo> | null = null;
+    private connectionPromise: Promise<ClientCoreConnectionInfo> | null = null;
 
-    constructor(private config: VircadiaClientCoreConfig) {}
+    /**
+     * Creates a new ConnectionManager instance
+     * @param {ClientCoreConfig} config - Configuration for the connection
+     */
+    constructor(private config: ClientCoreConfig) {}
 
-    // Event handling methods
-    addEventListener(event: string, listener: ConnectionEventListener): void {
+    /**
+     * Adds an event listener for connection events
+     * @param {string} event - The event name to listen for
+     * @param {ClientCoreConnectionEventListener} listener - The callback function
+     */
+    addEventListener(
+        event: string,
+        listener: ClientCoreConnectionEventListener,
+    ): void {
         if (!this.eventListeners.has(event)) {
             this.eventListeners.set(event, new Set());
         }
         this.eventListeners.get(event)?.add(listener);
     }
 
+    /**
+     * Removes an event listener
+     * @param {string} event - The event name
+     * @param {ClientCoreConnectionEventListener} listener - The callback function to remove
+     */
     removeEventListener(
         event: string,
-        listener: ConnectionEventListener,
+        listener: ClientCoreConnectionEventListener,
     ): void {
         this.eventListeners.get(event)?.delete(listener);
     }
 
+    /**
+     * Emits an event to all registered listeners
+     * @param {string} event - The event name to emit
+     * @private
+     */
     private emitEvent(event: string): void {
         const listeners = this.eventListeners.get(event);
         if (listeners) {
@@ -103,15 +169,28 @@ class ConnectionManager {
         }
     }
 
-    private updateConnectionStatus(status: ConnectionState): void {
+    /**
+     * Updates the connection status and emits a statusChange event if changed
+     * @param {ClientCoreConnectionState} status - The new connection status
+     * @private
+     */
+    private updateConnectionStatus(status: ClientCoreConnectionState): void {
         if (this.lastStatus !== status) {
             this.lastStatus = status;
             this.emitEvent("statusChange");
         }
     }
 
-    // Connect to the server and handle authentication
-    async connect(options?: { timeoutMs?: number }): Promise<ConnectionInfo> {
+    /**
+     * Connects to the Vircadia server with authentication
+     * @param {Object} options - Connection options
+     * @param {number} [options.timeoutMs] - Connection timeout in milliseconds (default: 30000)
+     * @returns {Promise<ClientCoreConnectionInfo>} - Promise resolving to connection information
+     * @throws {Error} If connection or authentication fails
+     */
+    async connect(options?: {
+        timeoutMs?: number;
+    }): Promise<ClientCoreConnectionInfo> {
         // If already connected, return immediately
         if (this.isClientConnected()) {
             return this.getConnectionInfo();
@@ -226,7 +305,16 @@ class ConnectionManager {
         return this.connectionPromise;
     }
 
-    // Send a query to the server and wait for response
+    /**
+     * Sends a query to the server and waits for a response
+     * @template T - Type of the expected response data
+     * @param {Object} data - Query data
+     * @param {string} data.query - The query string/command to send
+     * @param {unknown[]} [data.parameters] - Optional parameters for the query
+     * @param {number} [data.timeoutMs] - Timeout in milliseconds (default: 10000)
+     * @returns {Promise<Communication.WebSocket.QueryResponseMessage<T>>} The server's response
+     * @throws {Error} If not connected or if the request times out
+     */
     async query<T = unknown>(data: {
         query: string;
         parameters?: unknown[];
@@ -263,21 +351,38 @@ class ConnectionManager {
         );
     }
 
-    // Connection state methods - keep these as internal methods
+    /**
+     * Checks if the client is currently connecting
+     * @returns {boolean} True if connecting
+     * @private
+     */
     private isConnecting(): boolean {
         return this.ws !== null && this.ws.readyState === WebSocket.CONNECTING;
     }
 
+    /**
+     * Checks if the client is currently connected
+     * @returns {boolean} True if connected
+     * @private
+     */
     private isClientConnected(): boolean {
         return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
     }
 
+    /**
+     * Checks if the client is currently attempting to reconnect
+     * @returns {boolean} True if reconnecting
+     * @private
+     */
     private isReconnecting(): boolean {
         return this.reconnectTimer !== null;
     }
 
-    // Enhanced connection status method that replaces individual status methods
-    getConnectionInfo(): ConnectionInfo {
+    /**
+     * Gets detailed information about the current connection state
+     * @returns {ClientCoreConnectionInfo} Current connection information
+     */
+    getConnectionInfo(): ClientCoreConnectionInfo {
         const now = Date.now();
 
         const connectionDuration = this.connectionStartTime
@@ -302,7 +407,10 @@ class ConnectionManager {
         };
     }
 
-    // Clean up and disconnect
+    /**
+     * Disconnects from the server and cleans up resources
+     * Cancels any pending requests and stops reconnection attempts
+     */
     disconnect(): void {
         // Clear any reconnect timer
         if (this.reconnectTimer !== null) {
@@ -340,7 +448,11 @@ class ConnectionManager {
         debugLog(this.config, "WebSocket disconnected");
     }
 
-    // Private methods for WebSocket handling
+    /**
+     * Handles incoming WebSocket messages
+     * @param {MessageEvent} event - The WebSocket message event
+     * @private
+     */
     private handleMessage(event: MessageEvent): void {
         try {
             debugLog(
@@ -374,6 +486,11 @@ class ConnectionManager {
         }
     }
 
+    /**
+     * Handles WebSocket close events
+     * @param {CloseEvent} event - The WebSocket close event
+     * @private
+     */
     private handleClose(event: CloseEvent): void {
         debugLog(
             this.config,
@@ -383,6 +500,11 @@ class ConnectionManager {
         this.attemptReconnect();
     }
 
+    /**
+     * Handles WebSocket error events
+     * @param {Event} event - The WebSocket error event
+     * @private
+     */
     private handleError(event: Event): void {
         let errorMessage = "Unknown WebSocket error";
 
@@ -397,6 +519,11 @@ class ConnectionManager {
         debugError(this.config, `WebSocket error: ${errorMessage}`);
     }
 
+    /**
+     * Attempts to reconnect to the server after a disconnection
+     * Uses exponential backoff based on configuration settings
+     * @private
+     */
     private attemptReconnect(): void {
         if (this.reconnectTimer !== null) return;
 
@@ -427,15 +554,25 @@ class ConnectionManager {
     }
 }
 
-// Main class that coordinates all components and exposes utilities
-export class VircadiaClientCore {
+/**
+ * Main class that coordinates all components and manages communication with Vircadia servers.
+ * Handles connection management, authentication, and provides utility methods.
+ */
+export class ClientCore {
     private connectionManager: ConnectionManager;
 
-    constructor(private config: VircadiaClientCoreConfig) {
+    /**
+     * Creates a new ClientCore instance
+     * @param {ClientCoreConfig} config - Configuration options for the client
+     */
+    constructor(private config: ClientCoreConfig) {
         this.connectionManager = new ConnectionManager(config);
     }
 
-    // Expose utilities
+    /**
+     * Provides access to utility methods for connection management
+     * @returns {Object} Object containing connection utilities
+     */
     get Utilities() {
         const cm = this.connectionManager;
 
@@ -452,7 +589,17 @@ export class VircadiaClientCore {
         };
     }
 
-    // Clean up resources
+    /**
+     * Returns the current SDK version
+     * @returns {string} The SDK version string
+     */
+    get version() {
+        return version_package;
+    }
+
+    /**
+     * Cleans up resources and disconnects from the server
+     */
     dispose(): void {
         if (this.connectionManager) {
             this.connectionManager.disconnect();

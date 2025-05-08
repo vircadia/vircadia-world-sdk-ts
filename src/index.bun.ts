@@ -1,13 +1,16 @@
-import { version } from "../package.json";
+import { ClientCore } from "./client/core/vircadia.client.common.core";
+import { BunLogModule } from "./client/module/bun/vircadia.client.bun.log";
+import { PostgresClientModule } from "./client/module/bun/vircadia.client.bun.postgres";
 
-// Version information
-export const VERSION = version;
+// Config exports
+// Nothing yet.
 
 // Client exports
-export * from "./client/core/vircadia.client.common.core";
+export const clientCore = ClientCore;
+
+// Module exports
+export const logModule = BunLogModule;
+export const postgresClientModule = PostgresClientModule;
 
 // Schema exports
 export * from "./schema/vircadia.schema.general";
-
-// Module exports
-export * from "./client/module/bun/vircadia.client.bun.log";

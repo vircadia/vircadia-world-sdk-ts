@@ -1,6 +1,6 @@
 import EC from "eight-colors";
 
-export function log(data: {
+export function BunLogModule(data: {
     message: string;
     type?: "info" | "success" | "error" | "warning" | "warn" | "debug";
     debug?: boolean;
