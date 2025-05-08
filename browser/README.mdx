@@ -5,10 +5,17 @@ sidebar_label: Vue
 import CodeBlock from '@theme/CodeBlock';
 
 import mainTs from '!!raw-loader!../../../client/web_babylon_js/src/main.ts';
+import useVircadiaContextTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useVircadiaContext.ts';
+import useEnvironmentLoaderTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useEnvironmentLoader.ts';
+import useAvatarEntityTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useAvatarEntity.ts';
 
 # Vue SDK
 
-## Provider Setup
+
+
+## Provider
+
+### Provide (useVircadia)
 
 First setup your `main.ts` file to use the Vircadia World SDK. Here is an example:
 
@@ -16,4 +23,24 @@ First setup your `main.ts` file to use the Vircadia World SDK. Here is an exampl
   {mainTs}
 </CodeBlock>
 
-## 
+### Inject (useVircadiaContext)
+
+Then, in your component, you can inject the Vircadia instance using the `useVircadiaInstance` composable:
+
+<CodeBlock language="typescript" title="composables/useVircadiaContext.ts">
+  {useVircadiaContextTs}
+</CodeBlock>
+
+## Composable
+
+### Asset (useVircadiaAsset)
+
+<CodeBlock language="typescript" title="composables/useEnvironmentLoader.ts">
+  {useEnvironmentLoaderTs}
+</CodeBlock>
+
+### Entity (useVircadiaEntity)
+
+<CodeBlock language="typescript" title="composables/useAvatarEntity.ts">
+  {useAvatarEntityTs}
+</CodeBlock>
