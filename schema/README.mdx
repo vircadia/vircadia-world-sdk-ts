@@ -4,7 +4,7 @@ sidebar_label: Schema
 
 import CodeBlock from '@theme/CodeBlock';
 
-import generalSchema from '!!raw-loader!./src/index.schema.ts';
+import generalSchema from '!!raw-loader!./src/vircadia.schema.general.ts';
 
 # TypeScript Schema
 
@@ -12,30 +12,30 @@ The schema is used throughout the codebase, and also provided in the SDK for use
 
 ## Config Namespace
 
-<CodeBlock language="typescript" title="Schema - Config Namespace">
+<CodeBlock language="typescript" title='import { Config } from "@vircadia/world-sdk/browser/vue";'>
   {generalSchema.match(/export namespace Config {[\s\S]*?^}/m)?.[0] || 'Schema section not found'}
 </CodeBlock>
 
 ## Entity Namespace
 
-<CodeBlock language="typescript" title="Schema - Entity Namespace">
+<CodeBlock language="typescript" title='import { Entity } from "@vircadia/world-sdk/browser/vue";'>
   {generalSchema.match(/export namespace Entity {[\s\S]*?^}(?=\n\nexport)/m)?.[0] || 'Schema section not found'}
 </CodeBlock>
 
 ## Tick Namespace
 
-<CodeBlock language="typescript" title="Schema - Tick Namespace">
+<CodeBlock language="typescript" title='import { Tick } from "@vircadia/world-sdk/browser/vue";'>
   {generalSchema.match(/export namespace Tick {[\s\S]*?^}(?=\n\nexport)/m)?.[0] || 'Schema section not found'}
 </CodeBlock>
 
 ## Auth Namespace
 
-<CodeBlock language="typescript" title="Schema - Auth Namespace">
+<CodeBlock language="typescript" title='import { Auth } from "@vircadia/world-sdk/browser/vue";'>
   {generalSchema.match(/export namespace Auth {[\s\S]*?^}(?=\n\nexport)/m)?.[0] || 'Schema section not found'}
 </CodeBlock>
 
 ## Communication Namespace
 
-<CodeBlock language="typescript" title="Schema - Communication Namespace">
+<CodeBlock language="typescript" title='import { Communication } from "@vircadia/world-sdk/browser/vue";'>
   {generalSchema.match(/export namespace Communication {[\s\S]*?^}(?=\n\nexport|$)/m)?.[0] || 'Schema section not found'}
 </CodeBlock>

@@ -1,53 +1,17 @@
 ---
-sidebar_label: Browser / Bun Usage
+sidebar_label: Vue
 ---
 
 import CodeBlock from '@theme/CodeBlock';
 
+import mainTs from '!!raw-loader!../../../../client/web_babylon_js/src/main.ts';
 
-import indexBrowserTs from '!!raw-loader!./index.browser.ts';
-import indexBunTs from '!!raw-loader!./index.bun.ts';
+## Provider Setup
 
-# Usage
+First setup your `main.ts` file to use the Vircadia World SDK. Here is an example:
 
-## Browser
-
-```typescript
-// Browser
-import { 
-    // Config
-    clientBrowserConfiguration, 
-    // Schema -> Communication
-    Communication,
-    // Vue SDK composable wrapping the core client
-    Vue_useVircadia, 
-    // Raw core client for any framework
-    VircadiaClientCore 
-} from '@vircadia/world-sdk/browser';
-```
-
-### Full Available API
-
-<CodeBlock language="typescript" title="index.browser.ts">
-  {indexBrowserTs}
+<CodeBlock language="typescript" title="main.ts">
+  {mainTs}
 </CodeBlock>
 
-## Bun
-
-```typescript
-// Bun
-import { 
-    // Config
-    serverConfiguration,
-    // Schema -> Communication
-    Communication,
-    // Raw core client for Bun
-    VircadiaClientCore
-} from '@vircadia/world-sdk/bun';
-```
-
-### Full Available API
-
-<CodeBlock language="typescript" title="index.bun.ts">
-  {indexBunTs}
-</CodeBlock>
+## 

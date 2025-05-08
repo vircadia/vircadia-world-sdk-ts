@@ -1,6 +1,3 @@
-// Client exports
-export * from "./config/vircadia.client.browser.config";
-
 // Vue exports
 export * from "./vue/composable/useAsset";
 export * from "./vue/composable/useEntity";
