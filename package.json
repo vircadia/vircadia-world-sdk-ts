@@ -1,7 +1,7 @@
 {
     "name": "@vircadia/world-sdk",
     "type": "module",
-    "version": "0.0.6-dev",
+    "version": "0.0.1",
     "description": "Vircadia World SDK for TypeScript (Browser) (Bun coming soon)",
     "license": "Apache-2.0",
     "author": "Vircadia",
