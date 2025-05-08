@@ -1,8 +1,8 @@
 {
     "name": "@vircadia/world-sdk",
     "type": "module",
-    "version": "0.0.5-dev",
-    "description": "Vircadia World SDK for TypeScript (Browser and Bun)",
+    "version": "0.0.6-dev",
+    "description": "Vircadia World SDK for TypeScript (Browser) (Bun coming soon)",
     "license": "Apache-2.0",
     "author": "Vircadia",
     "repository": {
@@ -10,7 +10,7 @@
         "url": "git+https://github.com/vircadia/vircadia-world.git"
     },
     "files": [
-        "dist",
+        "./browser/dist",
         "README.md"
     ],
     "publishConfig": {
@@ -18,12 +18,8 @@
     },
     "exports": {
         "./browser/vue": {
-            "import": "./dist/browser/vue/index.browser.vue.js",
-            "types": "./dist/types/browser/vue/index.browser.vue.d.ts"
-        },
-        "./bun": {
-            "import": "./dist/bun/index.bun.js",
-            "types": "./dist/types/bun/index.bun.d.ts"
+            "import": "./browser/dist/browser/src/index.browser.vue.js",
+            "types": "./browser/dist/types/browser/src/index.browser.vue.d.ts"
         }
     },
     "sideEffects": false,
@@ -47,12 +43,10 @@
         "bun-types": "latest"
     },
     "scripts": {
-        "build": "bun run clean && bun run build:types && bun run build:browser:vue && bun run build:bun",
+        "build": "bun run clean && bun run build:browser:vue",
         "pack": "cd package && npm pack ../",
-        "clean": "rm -rf dist",
-        "build:types": "tsc --build tsconfig.json",
-        "build:browser:vue": "bun run build.browser.vue.js",
-        "build:bun": "bun run build.bun.js",
+        "clean": "rm -rf ./browser/dist",
+        "build:browser:vue": "tsc --build ./browser/tsconfig.browser.vue.json",
         "prepublishOnly": "bun run build"
     }
 }

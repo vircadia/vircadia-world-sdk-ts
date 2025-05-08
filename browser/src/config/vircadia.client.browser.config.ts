@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // Browser Client environment schema
-const browserClientEnvSchema = z.object({
+const clientBrowserEnvSchema = z.object({
     // Web Babylon JS Client
     VRCA_CLIENT_WEB_BABYLON_JS_DEBUG: z
         .union([
@@ -66,7 +66,7 @@ const browserClientEnvSchema = z.object({
 });
 
 // Parse client environment variables
-export const ClientBrowserConfiguration = browserClientEnvSchema.parse(
+export const clientBrowserConfiguration = clientBrowserEnvSchema.parse(
     // Fix TypeScript error with appropriate typing
     (typeof import.meta !== "undefined"
         ? (import.meta as { env?: Record<string, unknown> }).env

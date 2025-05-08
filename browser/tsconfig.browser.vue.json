@@ -1,0 +1,13 @@
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "outDir": "./dist",
+        "declarationDir": "./dist/types",
+        "tsBuildInfoFile": "./dist/tsconfig.browser.tsbuildinfo",
+        "sourceMap": true,
+        "lib": ["DOM", "ESNext"],
+        "types": ["@types/node"]
+    },
+    "include": ["src/**/*", "../schema/src/**/*"],
+    "files": ["src/index.browser.vue.ts", "../schema/src/index.schema.ts"]
+}

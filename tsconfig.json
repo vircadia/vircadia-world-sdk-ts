@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "rootDir": "./src",
+        "rootDir": "./",
         "target": "ES2022",
         "module": "ESNext",
         "moduleResolution": "bundler",
@@ -10,23 +10,16 @@
         "forceConsistentCasingInFileNames": true,
         "isolatedModules": true,
         "declaration": true,
-        "emitDeclarationOnly": true,
+        "emitDeclarationOnly": false,
+        "outDir": "./dist",
         "composite": true,
+        "sourceMap": true,
         "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
         "paths": {
-            "@/*": ["./src/*"]
+            "@/*": ["./*"],
+            "@vircadia/world-sdk/browser/vue": ["./browser/src"]
         },
         "lib": ["DOM", "ESNext"]
     },
-    "include": ["src/**/*"],
-    "exclude": [
-        "node_modules",
-        "dist",
-        "src/**/*.browser.vue.ts",
-        "src/**/*.bun.ts"
-    ],
-    "references": [
-        { "path": "./tsconfig.browser.vue.json" },
-        { "path": "./tsconfig.bun.json" }
-    ]
+    "exclude": ["node_modules", "dist"]
 }

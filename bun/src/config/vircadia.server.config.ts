@@ -112,4 +112,4 @@ const serverEnvSchema = z.object({
         .default(5437),
 });
 
-export const ServerConfiguration = serverEnvSchema.parse(process.env);
+export const serverConfiguration = serverEnvSchema.parse(process.env);

@@ -1,6 +1,4 @@
-import { Communication } from "../../schema/vircadia.schema.general";
-
-import { version as version_package } from "../../../package.json";
+import { Communication } from "../../../schema/src/index.schema";
 
 /**
  * Represents the possible connection states for the client
@@ -587,14 +585,6 @@ export class ClientCore {
                 getConnectionInfo: cm.getConnectionInfo.bind(cm),
             },
         };
-    }
-
-    /**
-     * Returns the current SDK version
-     * @returns {string} The SDK version string
-     */
-    get version() {
-        return version_package;
     }
 
     /**

@@ -9,7 +9,7 @@ import {
 import {
     ClientCore,
     type ClientCoreConnectionInfo,
-} from "../../core/vircadia.client.common.core";
+} from "../../core/vircadia.client.browser.core";
 
 /**
  * Creates a Vircadia client instance with Vue reactivity.
@@ -75,11 +75,11 @@ export function useVircadia(data: {
     };
 }
 
-const VUE_DEFAULT_INSTANCE_KEY = "vircadiaWorld";
+export const DEFAULT_VIRCADIA_INSTANCE_KEY = "vircadiaWorld";
 
 export function useVircadiaInstance(
     name?: string,
 ): InjectionKey<ReturnType<typeof useVircadia>> {
-    const instanceKey = name || VUE_DEFAULT_INSTANCE_KEY;
+    const instanceKey = name || DEFAULT_VIRCADIA_INSTANCE_KEY;
     return instanceKey as string & InjectionKey<ReturnType<typeof useVircadia>>;
 }

@@ -1,4 +1,4 @@
-export function log(data: {
+export function BrowserLogModule(data: {
     message: string;
     type?: "info" | "success" | "error" | "warning" | "warn" | "debug";
     debug?: boolean;
