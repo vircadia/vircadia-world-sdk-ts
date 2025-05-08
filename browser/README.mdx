@@ -19,7 +19,7 @@ import useAvatarEntityTs from '!!raw-loader!../../../client/web_babylon_js/src/c
 
 First setup your `main.ts` file to use the Vircadia World SDK. Here is an example:
 
-<CodeBlock language="typescript" title="main.ts">
+<CodeBlock language="typescript" title="/client/web_babylon_js/src/main.ts">
   {mainTs}
 </CodeBlock>
 
@@ -27,7 +27,7 @@ First setup your `main.ts` file to use the Vircadia World SDK. Here is an exampl
 
 Then, in your component, you can inject the Vircadia instance using the `useVircadiaInstance` composable:
 
-<CodeBlock language="typescript" title="composables/useVircadiaContext.ts">
+<CodeBlock language="typescript" title="/client/web_babylon_js/src/composables/useVircadiaContext.ts">
   {useVircadiaContextTs}
 </CodeBlock>
 
@@ -35,12 +35,12 @@ Then, in your component, you can inject the Vircadia instance using the `useVirc
 
 ### Asset (useVircadiaAsset)
 
-<CodeBlock language="typescript" title="composables/useEnvironmentLoader.ts">
+<CodeBlock language="typescript" title="/client/web_babylon_js/src/composables/useEnvironmentLoader.ts">
   {useEnvironmentLoaderTs}
 </CodeBlock>
 
 ### Entity (useVircadiaEntity)
 
-<CodeBlock language="typescript" title="composables/useAvatarEntity.ts">
+<CodeBlock language="typescript" title="/client/web_babylon_js/src/composables/useAvatarEntity.ts">
   {useAvatarEntityTs}
 </CodeBlock>
