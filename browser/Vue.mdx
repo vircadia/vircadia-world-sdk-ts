@@ -1,7 +1,3 @@
----
-sidebar_label: Vue
----
-
 import CodeBlock from '@theme/CodeBlock';
 
 import mainTs from '!!raw-loader!../../../client/web_babylon_js/src/main.ts';
@@ -9,23 +5,33 @@ import useVircadiaContextTs from '!!raw-loader!../../../client/web_babylon_js/sr
 import useEnvironmentLoaderTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useEnvironmentLoader.ts';
 import useAvatarEntityTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useAvatarEntity.ts';
 
-# Vue SDK
-
-
+# Vue
 
 ## Provider
 
 ### Provide (useVircadia)
 
-First setup your `main.ts` file to use the Vircadia World SDK. Here is an example:
+First setup your `main.ts` file to use the Vircadia World SDK using the `useVircadia` provider composable. Here is an example:
 
 <CodeBlock language="typescript" title="Example: /client/web_babylon_js/src/main.ts">
   {mainTs}
 </CodeBlock>
 
+This registers the client via:
+
+```ts
+app.provide(DEFAULT_VIRCADIA_INSTANCE_KEY, vircadiaWorld);
+```
+
+And optionally auto-connect after mounting:
+
+```ts
+vircadiaWorld.client.Utilities.Connection.connect();
+```
+
 ### Inject (useVircadiaContext)
 
-Then, in your component, you can inject the Vircadia instance using the `useVircadiaInstance` composable:
+Then, in your components, you can inject the Vircadia instance using the `useVircadiaInstance` composable:
 
 <CodeBlock language="typescript" title="Example: /client/web_babylon_js/src/composables/useVircadiaContext.ts">
   {useVircadiaContextTs}
@@ -35,11 +41,15 @@ Then, in your component, you can inject the Vircadia instance using the `useVirc
 
 ### Asset (useVircadiaAsset)
 
+In our client, we have a composable that manages the environment assets. It leverages the `useVircadiaAsset` composable:
+
 <CodeBlock language="typescript" title="Example: /client/web_babylon_js/src/composables/useEnvironmentLoader.ts">
   {useEnvironmentLoaderTs}
 </CodeBlock>
 
 ### Entity (useVircadiaEntity)
+
+In our client, we have a composable that manages the avatar entity. It leverages the `useVircadiaEntity` composable:
 
 <CodeBlock language="typescript" title="Example: /client/web_babylon_js/src/composables/useAvatarEntity.ts">
   {useAvatarEntityTs}

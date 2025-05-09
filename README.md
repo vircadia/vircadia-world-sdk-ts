@@ -2,17 +2,11 @@
 
 ## Overview
 
-This TypeScript SDK provides for browser frameworks to interface with Vircadia World.
+This TypeScript SDK enables you to easily interface with the Vircadia World API.
 
 :::warning
 
 This package is currently in the early stages of development, and subject to change.
-
-:::
-
-:::note
-
-Bun support is not yet available.
 
 :::
 
@@ -22,16 +16,17 @@ Bun support is not yet available.
 bun install @vircadia/world-sdk
 ```
 
-## Build
+## Development
+
+### Build
+
 ```bash
-# Install dependencies
 bun install
 
-# Build for both browser and Bun
 bun run build
 ```
 
-## Publish
+### Publish
 
 ```bash
 npm publish
