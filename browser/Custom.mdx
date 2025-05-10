@@ -1,0 +1,23 @@
+---
+sidebar_label: Custom (Any Framework)
+---
+
+import CodeBlock from '@theme/CodeBlock';
+
+import vircadiaClientBrowserCore from '!!raw-loader!../../../sdk/vircadia-world-sdk-ts/browser/src/core/vircadia.client.browser.core.ts';
+
+## Custom (Any Framework)
+
+All of our SDKs (Vue, React, etc.) are built on top of a core that is framework agnostic.
+
+You can use this as a starting point to build your own SDK for any framework.
+
+:::tip
+
+This core will be made available to be directly wrapped from the SDK in the next release.
+
+:::
+
+<CodeBlock language="typescript" title="vircadia.client.browser.core.ts">
+  {vircadiaClientBrowserCore}
+</CodeBlock>
