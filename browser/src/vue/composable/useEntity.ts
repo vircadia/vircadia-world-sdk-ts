@@ -189,11 +189,6 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
         }
 
         const query = `INSERT INTO ${TABLE_NAME} ${createInsertClause}`;
-        console.log(
-            `Attempting to create entity using query: ${query}`,
-            createInsertParams,
-        );
-
         try {
             const createResult =
                 await vircadia.client.Utilities.Connection.query<
@@ -211,10 +206,6 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
                 createResult.result[0].general__entity_name
             ) {
                 const createdName = createResult.result[0].general__entity_name;
-                console.log(
-                    `Successfully created entity with name: ${createdName}`,
-                );
-                // Return the name obtained from RETURNING clause
                 return createdName;
             }
 
@@ -260,9 +251,6 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
         // Get current value from name ref
         const currentEntityName = entityName.value;
 
-        // Log what we're working with for debugging
-        console.log(`Entity retrieve called with name: ${currentEntityName}`);
-
         if (!currentEntityName) {
             console.warn(
                 "executeRetrieve skipped: entityName is not provided.",
@@ -286,9 +274,6 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
                     : `${selectClause}, ${NAME_COLUMN}`;
 
             const query = `SELECT ${effectiveSelectClause} FROM ${TABLE_NAME} WHERE ${NAME_COLUMN} = '${currentEntityName}'`;
-            console.log(
-                `Fetching entity by ${NAME_COLUMN} = ${currentEntityName} with clause: ${effectiveSelectClause}`,
-            );
 
             const queryResult =
                 await vircadia.client.Utilities.Connection.query<
@@ -317,9 +302,6 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
                     !isEqual(toRaw(entityData.value), enhancedEntity)
                 ) {
                     entityData.value = enhancedEntity; // Assign enhanced entity with parsed meta__data
-                    console.log("Entity data updated:", entityData.value);
-                } else {
-                    console.log("Entity data fetched but unchanged.");
                 }
                 error.value = null; // Clear error on successful fetch/update
             } else {
@@ -401,8 +383,6 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
 
         const query = `UPDATE ${TABLE_NAME} SET ${setClause} WHERE ${NAME_COLUMN} = '${currentName}'`;
 
-        console.log(`Executing update for entity ${currentName}: ${query}`);
-
         try {
             await vircadia.client.Utilities.Connection.query({
                 query,
@@ -411,9 +391,6 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
             });
 
             if (isUnmounted) return;
-            console.log(
-                `Successfully executed update for entity ${currentName}`,
-            );
             error.value = null; // Clear error on success
         } catch (err) {
             if (isUnmounted) return;
@@ -437,7 +414,6 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
      * Should be called when the component using this composable is unmounted.
      */
     const cleanup = () => {
-        console.log(`useEntity cleanup called for ${entityName.value}`);
         isUnmounted = true; // Flag to prevent async operations from updating state after cleanup
     };
 
