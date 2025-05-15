@@ -302,6 +302,17 @@ export function useAsset(options: {
         error.value = null;
     };
 
+    // Helper to convert Blob to a base64 data URL (bypasses XHR)
+    const blobToDataUrl = (blob: Blob): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = () =>
+                reject(new Error("Failed to convert blob to data URL"));
+            reader.readAsDataURL(blob);
+        });
+    };
+
     const executeLoad = async () => {
         debugLog("[executeLoad] Starting with fileName:", fileName.value);
         const assetFileName = fileName.value; // Get current value from ref
@@ -377,17 +388,33 @@ export function useAsset(options: {
 
                         try {
                             debugLog(
-                                "[executeLoad] Creating blob from cached data",
+                                "[executeLoad] Creating Uint8Array view from cached data",
                             );
-                            const arrayBuffer = cachedEntry.data;
+                            const byteArray = new Uint8Array(cachedEntry.data);
+                            debugLog(
+                                "[executeLoad] Slicing byteArray to create fresh ArrayBuffer for cached data",
+                            );
+                            const arrayBuffer = byteArray.slice()
+                                .buffer as ArrayBuffer;
+                            debugLog(
+                                "[executeLoad] Creating blob from Uint8Array view",
+                            );
+                            // Use raw ArrayBuffer for blob to satisfy BlobPart typing
                             const blob = new Blob([arrayBuffer], {
                                 type: cachedEntry.mimeType,
                             });
-
-                            debugLog(
-                                "[executeLoad] Creating object URL for blob",
-                            );
-                            const url = URL.createObjectURL(blob);
+                            let url: string;
+                            if (cachedEntry.mimeType.startsWith("model/")) {
+                                debugLog(
+                                    "[executeLoad] Converting blob to data URL for model",
+                                );
+                                url = await blobToDataUrl(blob);
+                            } else {
+                                debugLog(
+                                    "[executeLoad] Creating object URL for blob",
+                                );
+                                url = URL.createObjectURL(blob);
+                            }
                             debugLog(`[executeLoad] Created URL: ${url}`);
 
                             assetData.value = {
@@ -594,9 +621,16 @@ export function useAsset(options: {
             // and its buffer is guaranteed to be an ArrayBuffer.
             const arrayBuffer = byteArray.slice().buffer as ArrayBuffer;
             debugLog("[executeLoad] Creating blob");
-            const blob = new Blob([byteArray], { type: mimeType });
-            debugLog("[executeLoad] Creating object URL");
-            const url = URL.createObjectURL(blob);
+            // Use raw ArrayBuffer for blob to satisfy BlobPart typing
+            const blob = new Blob([arrayBuffer], { type: mimeType });
+            let url: string;
+            if (mimeType.startsWith("model/")) {
+                debugLog("[executeLoad] Converting blob to data URL for model");
+                url = await blobToDataUrl(blob);
+            } else {
+                debugLog("[executeLoad] Creating object URL");
+                url = URL.createObjectURL(blob);
+            }
             debugLog(`[executeLoad] Created URL: ${url}`);
 
             // Get the hash of the asset data
