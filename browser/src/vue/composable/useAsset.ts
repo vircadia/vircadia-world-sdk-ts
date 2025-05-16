@@ -1,6 +1,6 @@
 import { openDB, deleteDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Entity } from "../../../../schema/src/index.schema";
-import { type Ref, ref, inject, readonly } from "vue";
+import { type Ref, ref, inject, readonly, computed } from "vue";
 import { type useVircadia, useVircadiaInstance } from "../provider/useVircadia";
 
 // Cache expiration duration in milliseconds (1 hour)
@@ -135,6 +135,24 @@ export function useAsset(options: {
     const assetData = ref<VircadiaAssetData | null>(null);
     const loading = ref(false);
     const error = ref<Error | null>(null);
+
+    // Add computed fileExtension based on mimeType
+    const fileExtension = computed(() => {
+        const mimeType = assetData.value?.mimeType;
+        if (!mimeType) {
+            return "";
+        }
+        switch (mimeType) {
+            case "model/gltf-binary":
+                return ".glb";
+            case "model/gltf+json":
+                return ".gltf";
+            case "model/fbx":
+                return ".fbx";
+            default:
+                return "";
+        }
+    });
 
     // Debug log helper function - only logs when debug is enabled
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -772,6 +790,7 @@ export function useAsset(options: {
     // Plus the new executeLoad and cleanup functions
     return {
         assetData: readonly(assetData),
+        fileExtension: readonly(fileExtension),
         loading: readonly(loading),
         error: readonly(error),
         executeLoad, // Expose manual load function
