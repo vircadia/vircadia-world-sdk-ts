@@ -132,9 +132,9 @@ export function useAsset(options: {
     // Destructure fileName from options
     const { fileName, useCache = true, debug = false } = options;
 
-    const assetData = ref<VircadiaAssetData | null>(null);
-    const loading = ref(false);
-    const error = ref<Error | null>(null);
+    const assetData: Ref<VircadiaAssetData | null> = ref(null);
+    const loading: Ref<boolean> = ref(false);
+    const error: Ref<Error | null> = ref(null);
 
     // Add computed fileExtension based on mimeType
     const fileExtension = computed(() => {

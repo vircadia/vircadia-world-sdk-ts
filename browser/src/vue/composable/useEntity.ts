@@ -99,7 +99,7 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
     const retrieving = ref(false);
     const updating = ref(false);
     const creating = ref(false);
-    const error = ref<Error | null>(null);
+    const error: Ref<Error | null> = ref(null);
 
     // Get the Vircadia instance
     const vircadia = options.instance || inject(useVircadiaInstance());
