@@ -100,7 +100,7 @@ const debugError = (
  * Handles all WebSocket communication with the Vircadia server
  * Manages connection, reconnection, and message passing
  */
-class ConnectionManager {
+class CoreConnectionManager {
     private ws: WebSocket | null = null;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private reconnectCount = 0;
@@ -121,7 +121,7 @@ class ConnectionManager {
     private connectionPromise: Promise<ClientCoreConnectionInfo> | null = null;
 
     /**
-     * Creates a new ConnectionManager instance
+     * Creates a new CoreConnectionManager instance
      * @param {ClientCoreConfig} config - Configuration for the connection
      */
     constructor(private config: ClientCoreConfig) {}
@@ -557,14 +557,14 @@ class ConnectionManager {
  * Handles connection management, authentication, and provides utility methods.
  */
 export class ClientCore {
-    private connectionManager: ConnectionManager;
+    private coreConnectionManager: CoreConnectionManager;
 
     /**
      * Creates a new ClientCore instance
      * @param {ClientCoreConfig} config - Configuration options for the client
      */
     constructor(private config: ClientCoreConfig) {
-        this.connectionManager = new ConnectionManager(config);
+        this.coreConnectionManager = new CoreConnectionManager(config);
     }
 
     /**
@@ -572,7 +572,7 @@ export class ClientCore {
      * @returns {Object} Object containing connection utilities
      */
     get Utilities() {
-        const cm = this.connectionManager;
+        const cm = this.coreConnectionManager;
 
         return {
             Connection: {
@@ -584,6 +584,21 @@ export class ClientCore {
                 query: cm.query.bind(cm),
                 getConnectionInfo: cm.getConnectionInfo.bind(cm),
             },
+            WebRTC: {
+                createPeerConnection: WebRTC.createPeerConnection,
+                createDataChannel: WebRTC.createDataChannel,
+                createOffer: WebRTC.createOffer,
+                handleOffer: WebRTC.handleOffer,
+                handleAnswer: WebRTC.handleAnswer,
+                addIceCandidate: WebRTC.addIceCandidate,
+                handleDataChannelMessage: WebRTC.handleDataChannelMessage,
+                setupDataChannelListeners: WebRTC.setupDataChannelListeners,
+                setOutgoingAudioStreamOnConnection:
+                    WebRTC.setOutgoingAudioStreamOnConnection,
+                setupIceCandidateListener: WebRTC.setupIceCandidateListener,
+                setupOnTrackListener: WebRTC.setupOnTrackListener,
+                closeConnection: WebRTC.closeConnection,
+            },
         };
     }
 
@@ -591,8 +606,159 @@ export class ClientCore {
      * Cleans up resources and disconnects from the server
      */
     dispose(): void {
-        if (this.connectionManager) {
-            this.connectionManager.disconnect();
+        if (this.coreConnectionManager) {
+            this.coreConnectionManager.disconnect();
         }
     }
+}
+
+// WebRTC helpers
+export namespace WebRTC {
+    export const WEBRTC_LOG_PREFIX = "[WEBRTC]";
+
+    // Define local interfaces and types for signaling messages and connection
+    export interface OfferMessage {
+        type: "offer";
+        sdp: RTCSessionDescriptionInit;
+    }
+    export interface AnswerMessage {
+        type: "answer";
+        sdp: RTCSessionDescriptionInit;
+    }
+    export interface IceCandidateMessage {
+        type: "ice-candidate";
+        candidate: RTCIceCandidateInit;
+    }
+    export interface DataChannelMessage<T = unknown> {
+        type: "data";
+        data: T;
+    }
+    export interface ConnectionData {
+        rtcConnection: RTCPeerConnection;
+        dataChannel?: RTCDataChannel;
+        incomingAudioMediaStream?: MediaStream;
+        outgoingAudioMediaStream?: MediaStream;
+    }
+
+    // Helper functions
+    export const createPeerConnection = (
+        iceServers: RTCIceServer[],
+    ): RTCPeerConnection => new RTCPeerConnection({ iceServers });
+
+    export const createDataChannel = (
+        peerConnection: RTCPeerConnection,
+        label: string,
+    ): RTCDataChannel => peerConnection.createDataChannel(label);
+
+    export const createOffer = async (
+        peerConnection: RTCPeerConnection,
+    ): Promise<RTCSessionDescriptionInit> => {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        return offer;
+    };
+
+    export const handleOffer = async (
+        peerConnection: RTCPeerConnection,
+        offer: RTCSessionDescriptionInit,
+    ): Promise<RTCSessionDescriptionInit> => {
+        await peerConnection.setRemoteDescription(
+            new RTCSessionDescription(offer),
+        );
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        return answer;
+    };
+
+    export const handleAnswer = async (
+        peerConnection: RTCPeerConnection,
+        answer: RTCSessionDescriptionInit,
+    ): Promise<void> => {
+        await peerConnection.setRemoteDescription(
+            new RTCSessionDescription(answer),
+        );
+    };
+
+    export const addIceCandidate = async (
+        peerConnection: RTCPeerConnection,
+        candidate: RTCIceCandidateInit,
+    ): Promise<void> => {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+    };
+
+    export const handleDataChannelMessage = (
+        agentId: string,
+        event: MessageEvent,
+    ) => {
+        console.info(
+            `${WebRTC.WEBRTC_LOG_PREFIX} Received message from agent ${agentId}: ${event.data}`,
+        );
+        // Implement your logic for handling different types of messages here
+    };
+
+    export const setupDataChannelListeners = (
+        dataChannel: RTCDataChannel | null,
+        onOpen: () => void,
+        onClose: () => void,
+        onMessage: (event: MessageEvent) => void,
+    ) => {
+        if (dataChannel) {
+            dataChannel.onopen = onOpen;
+            dataChannel.onclose = onClose;
+            dataChannel.onmessage = onMessage;
+        }
+    };
+
+    export const setOutgoingAudioStreamOnConnection = (data: {
+        rtcConnection: RTCPeerConnection;
+        outgoingAudioMediaStream: MediaStream;
+    }) => {
+        // Remove existing tracks
+        const senders = data.rtcConnection.getSenders();
+        for (const sender of senders) {
+            data.rtcConnection.removeTrack(sender);
+        }
+
+        // Add new tracks
+        for (const track of data.outgoingAudioMediaStream.getTracks()) {
+            data.rtcConnection.addTrack(track, data.outgoingAudioMediaStream);
+        }
+    };
+
+    // Setup ICE candidate event listener to send candidates through signaling
+    export const setupIceCandidateListener = (
+        rtcConnection: RTCPeerConnection,
+        onIceCandidate: (candidate: RTCIceCandidateInit) => void,
+    ): void => {
+        rtcConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                onIceCandidate(event.candidate.toJSON());
+            }
+        };
+    };
+
+    // Setup track event listener to handle incoming remote media streams
+    export const setupOnTrackListener = (
+        rtcConnection: RTCPeerConnection,
+        onTrack: (stream: MediaStream) => void,
+    ): void => {
+        const remoteStream = new MediaStream();
+        rtcConnection.ontrack = (event) => {
+            remoteStream.addTrack(event.track);
+            onTrack(remoteStream);
+        };
+    };
+
+    // Cleanup connection, close data channel, stop tracks and close peer connection
+    export const closeConnection = (connection: ConnectionData): void => {
+        if (connection.dataChannel) {
+            connection.dataChannel.close();
+        }
+        if (connection.incomingAudioMediaStream) {
+            for (const track of connection.incomingAudioMediaStream.getTracks()) {
+                track.stop();
+            }
+        }
+        connection.rtcConnection.close();
+    };
 }
