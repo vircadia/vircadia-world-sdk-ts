@@ -1,9 +1,8 @@
 import CodeBlock from '@theme/CodeBlock';
 
 import mainTs from '!!raw-loader!../../../client/web_babylon_js/src/main.ts';
-import useVircadiaContextTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useVircadiaContext.ts';
-import useEnvironmentLoaderTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useEnvironmentLoader.ts';
-import useAvatarEntityTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useAvatarEntity.ts';
+import useBabylonEnvironmentTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useBabylonEnvironment.ts';
+import useBabylonAvatarEntityTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useBabylonAvatarEntity.ts';
 
 # Vue
 
@@ -31,11 +30,16 @@ vircadiaWorld.client.Utilities.Connection.connect();
 
 ### Inject (useVircadiaContext)
 
-Then, in your components, you can inject the Vircadia instance using the `useVircadiaInstance` composable:
+Then, in your components, you can inject the Vircadia instance using the `useVircadiaInstance` helper:
 
-<CodeBlock language="typescript" title="Example: /client/web_babylon_js/src/composables/useVircadiaContext.ts">
-  {useVircadiaContextTs}
-</CodeBlock>
+```ts
+import { useVircadiaInstance } from "@vircadia/world-sdk/browser/vue";
+
+const vircadiaWorld = useVircadiaInstance();
+if (!vircadiaWorld) {
+    throw new Error('Vircadia instance not found');
+}
+```
 
 ## Composable
 
@@ -43,14 +47,14 @@ Then, in your components, you can inject the Vircadia instance using the `useVir
 
 In our client, we have a composable that manages the environment assets. It leverages the `useVircadiaAsset` composable:
 
-<CodeBlock language="typescript" title="Example: /client/web_babylon_js/src/composables/useEnvironmentLoader.ts">
-  {useEnvironmentLoaderTs}
+<CodeBlock language="typescript" title="Example: /client/web_babylon_js/src/composables/useBabylonEnvironment.ts">
+  {useBabylonEnvironmentTs}
 </CodeBlock>
 
 ### Entity (useVircadiaEntity)
 
 In our client, we have a composable that manages the avatar entity. It leverages the `useVircadiaEntity` composable:
 
-<CodeBlock language="typescript" title="Example: /client/web_babylon_js/src/composables/useAvatarEntity.ts">
-  {useAvatarEntityTs}
+<CodeBlock language="typescript" title="Example: /client/web_babylon_js/src/composables/useBabylonAvatarEntity.ts">
+  {useBabylonAvatarEntityTs}
 </CodeBlock>
