@@ -177,7 +177,8 @@ export namespace Communication {
             QUERY_REQUEST = "QUERY_REQUEST",
             QUERY_RESPONSE = "QUERY_RESPONSE",
             SYNC_GROUP_UPDATES_RESPONSE = "SYNC_GROUP_UPDATES_RESPONSE",
-            TICK_NOTIFICATION = "TICK_NOTIFICATION",
+            TICK_NOTIFICATION_RESPONSE = "TICK_NOTIFICATION_RESPONSE",
+            SESSION_INFO_RESPONSE = "SESSION_INFO_RESPONSE",
         }
 
         // Message type documentation
@@ -370,7 +371,7 @@ export namespace Communication {
                     ],
                 },
             },
-            [MessageType.TICK_NOTIFICATION]: {
+            [MessageType.TICK_NOTIFICATION_RESPONSE]: {
                 description: "Notification sent when a server tick occurs",
                 messageFormat: {
                     type: "object",
@@ -397,13 +398,60 @@ export namespace Communication {
                             name: "type",
                             type: "string",
                             description:
-                                "Message type identifier (TICK_NOTIFICATION)",
+                                "Message type identifier (TICK_NOTIFICATION_RESPONSE)",
                         },
                         {
                             name: "tick",
                             type: "Tick.I_Tick",
                             description:
                                 "Detailed information about the tick that completed",
+                        },
+                    ],
+                },
+            },
+            [MessageType.SESSION_INFO_RESPONSE]: {
+                description:
+                    "Session info sent to client on connection establishment",
+                messageFormat: {
+                    type: "object",
+                    description:
+                        "Information about the session assigned by the server",
+                    fields: [
+                        {
+                            name: "timestamp",
+                            type: "number",
+                            description:
+                                "Unix timestamp when the session info was sent",
+                        },
+                        {
+                            name: "requestId",
+                            type: "string",
+                            description:
+                                "Empty string for session info messages",
+                        },
+                        {
+                            name: "errorMessage",
+                            type: "string | null",
+                            description:
+                                "Error message, null for session info messages",
+                        },
+                        {
+                            name: "type",
+                            type: "string",
+                            description:
+                                "Message type identifier (SESSION_INFO_RESPONSE)",
+                        },
+                        {
+                            name: "agentId",
+                            type: "string",
+                            description:
+                                "The agent identifier assigned by the server",
+                        },
+                        {
+                            name: "sessionId",
+                            type: "string",
+                            description:
+                                "The session identifier assigned by the server",
                         },
                     ],
                 },
@@ -477,7 +525,7 @@ export namespace Communication {
         }
 
         export class TickNotificationMessage implements BaseMessage {
-            public readonly type = MessageType.TICK_NOTIFICATION;
+            public readonly type = MessageType.TICK_NOTIFICATION_RESPONSE;
             public readonly timestamp: number;
             public requestId: string;
             public errorMessage: string | null;
@@ -495,10 +543,28 @@ export namespace Communication {
             }
         }
 
+        export class SessionInfoMessage implements BaseMessage {
+            public readonly type = MessageType.SESSION_INFO_RESPONSE;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public agentId: string;
+            public sessionId: string;
+
+            constructor(data: { agentId: string; sessionId: string }) {
+                this.timestamp = Date.now();
+                this.requestId = "";
+                this.errorMessage = null;
+                this.agentId = data.agentId;
+                this.sessionId = data.sessionId;
+            }
+        }
+
         export type Message =
             | QueryRequestMessage
             | QueryResponseMessage
-            | TickNotificationMessage;
+            | TickNotificationMessage
+            | SessionInfoMessage;
 
         export function isMessageType<T extends Message>(
             message: Message,

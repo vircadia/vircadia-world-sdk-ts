@@ -30,6 +30,10 @@ export type ClientCoreConnectionInfo = {
         requestId: string;
         elapsedMs: number;
     }>;
+    /** Identifier of the agent assigned by the server */
+    agentId: string | null;
+    /** Identifier of the session assigned by the server */
+    sessionId: string | null;
 };
 
 /**
@@ -119,6 +123,9 @@ class CoreConnectionManager {
     private lastStatus: ClientCoreConnectionState = "disconnected";
     private connectionStartTime: number | null = null;
     private connectionPromise: Promise<ClientCoreConnectionInfo> | null = null;
+    // Fields to store session information received from the server
+    private agentId: string | null = null;
+    private sessionId: string | null = null;
 
     /**
      * Creates a new CoreConnectionManager instance
@@ -402,6 +409,8 @@ class CoreConnectionManager {
             connectionDuration,
             reconnectAttempts: this.reconnectCount,
             pendingRequests,
+            agentId: this.agentId,
+            sessionId: this.sessionId,
         };
     }
 
@@ -462,6 +471,19 @@ class CoreConnectionManager {
             const message = JSON.parse(
                 event.data,
             ) as Communication.WebSocket.Message;
+
+            // Handle session info message from server
+            if (
+                message.type ===
+                Communication.WebSocket.MessageType.SESSION_INFO_RESPONSE
+            ) {
+                const sessionMsg =
+                    message as Communication.WebSocket.SessionInfoMessage;
+                this.agentId = sessionMsg.agentId;
+                this.sessionId = sessionMsg.sessionId;
+                this.emitEvent("statusChange");
+                return;
+            }
 
             debugLog(
                 this.config,
