@@ -4,6 +4,15 @@ import type { Entity } from "../../../../schema/src/index.schema"; // Import the
 import { isEqual } from "lodash-es"; // Import isEqual for deep comparison
 import type { z } from "zod"; // Import zod for schema validation
 
+// Add operation types for the queue
+type Operation = {
+    type: "retrieve" | "create" | "update";
+    params?: unknown[];
+    resolve: (value: unknown) => void;
+    reject: (reason: unknown) => void;
+    setClause?: string;
+};
+
 /**
  * Composable for manually managing a Vircadia entity with typed metadata support.
  *
@@ -15,7 +24,7 @@ import type { z } from "zod"; // Import zod for schema validation
  * - Entity updates with customizable SET clauses
  * - Typed metadata via Zod schema validation, with fallback defaultMetaData on parse errors
  *
- * All database operations must be triggered manually through the returned functions.
+ * All database operations are queued to prevent race conditions and ensure proper sequencing.
  * The entityData returned will contain properly typed meta__data based on the provided schema,
  * or the provided defaultMetaData if validation fails.
  *
@@ -112,6 +121,71 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
 
     let isUnmounted = false;
 
+    // Queue system for operations
+    const operationQueue: Operation[] = [];
+    let processingQueue = false;
+
+    /**
+     * Processes queued operations sequentially to prevent race conditions.
+     */
+    const processQueue = async () => {
+        if (processingQueue || operationQueue.length === 0 || isUnmounted) {
+            return;
+        }
+
+        processingQueue = true;
+
+        while (operationQueue.length > 0 && !isUnmounted) {
+            const operation = operationQueue.shift();
+            if (!operation) break;
+
+            try {
+                let result: unknown;
+                switch (operation.type) {
+                    case "retrieve":
+                        result = await _executeRetrieve();
+                        break;
+                    case "create":
+                        result = await _executeCreate();
+                        break;
+                    case "update":
+                        if (operation.setClause && operation.params) {
+                            result = await _executeUpdate(
+                                operation.setClause,
+                                operation.params,
+                            );
+                        }
+                        break;
+                }
+                operation.resolve(result);
+            } catch (err) {
+                operation.reject(err);
+            }
+        }
+
+        processingQueue = false;
+    };
+
+    /**
+     * Adds an operation to the queue and processes it.
+     */
+    const queueOperation = <T>(
+        type: Operation["type"],
+        setClause?: string,
+        params?: unknown[],
+    ): Promise<T> => {
+        return new Promise<T>((resolve, reject) => {
+            operationQueue.push({
+                type,
+                setClause,
+                params,
+                resolve: (value: unknown) => resolve(value as T),
+                reject,
+            });
+            processQueue().catch(reject);
+        });
+    };
+
     /**
      * Parses and validates raw meta__data using the provided Zod schema.
      * Returns parsed meta__data, uses defaultMetaData on validation failure, or null if no data or no schema.
@@ -144,22 +218,9 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
     };
 
     /**
-     * Creates a new entity in the database using the provided insert clause and parameters.
-     *
-     * @returns Promise<string | null> - Resolves to the entity name (from RETURNING clause or parameters) or null if creation failed
+     * Internal create implementation without queue management.
      */
-    const executeCreate = async (): Promise<string | null> => {
-        // Prevent create if another operation is in progress
-        if (retrieving.value || creating.value || updating.value) {
-            console.warn(
-                "executeCreate skipped: Another operation (retrieve, create, update) is already in progress.",
-            );
-            error.value = new Error(
-                "Create operation skipped: Another operation in progress.",
-            );
-            return null;
-        }
-
+    const _executeCreate = async (): Promise<string | null> => {
         creating.value = true;
         error.value = null;
 
@@ -237,29 +298,15 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
     };
 
     /**
-     * Retrieves the entity from the database using the current entityName.
-     * Updates entityData and error refs; parses meta__data according to the provided schema.
-     *
-     * @returns Promise<void> - Resolves when the retrieval operation completes
+     * Internal retrieve implementation without queue management.
      */
-    const executeRetrieve = async () => {
-        // Prevent fetch if another operation is in progress
-        if (retrieving.value || creating.value || updating.value) {
-            console.warn(
-                "executeRetrieve skipped: Another operation (retrieve, create, update) is already in progress.",
-            );
-            error.value = new Error(
-                "Retrieve operation skipped: Another operation in progress.",
-            );
-            return;
-        }
-
+    const _executeRetrieve = async () => {
         // Get current value from name ref
         const currentEntityName = entityName.value;
 
         if (!currentEntityName) {
             console.warn(
-                "executeRetrieve skipped: entityName is not provided.",
+                "_executeRetrieve skipped: entityName is not provided.",
             );
             entityData.value = null; // Ensure data is null if no identifier
             error.value = new Error(
@@ -343,34 +390,18 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
     };
 
     /**
-     * Updates the entity in the database using the provided SET clause and parameters.
-     * Requires that entityData has been populated via executeRetrieve first.
-     *
-     * @param setClause - SQL SET clause for the UPDATE statement (e.g., "meta__data = $1")
-     * @param updateParams - Parameters to use with the setClause
-     * @returns Promise<boolean> - Resolves to true if the update was successful, false otherwise
+     * Internal update implementation without queue management.
      */
-    const executeUpdate = async (
+    const _executeUpdate = async (
         setClause: string,
         updateParams: unknown[],
     ): Promise<boolean> => {
-        // Prevent update if another operation is in progress
-        if (retrieving.value || creating.value || updating.value) {
-            console.warn(
-                "executeUpdate skipped: Another operation (retrieve, create, update) is already in progress.",
-            );
-            error.value = new Error(
-                "Update operation skipped: Another operation in progress.",
-            );
-            return false;
-        }
-
         // Use the name from the potentially just updated entityData
         const currentName = entityData.value?.general__entity_name;
 
         if (!currentName) {
             console.warn(
-                "executeUpdate skipped: Entity name not available in local data. Ensure entity is loaded via executeRetrieve first.",
+                "_executeUpdate skipped: Entity name not available in local data. Ensure entity is loaded via executeRetrieve first.",
             );
             error.value = new Error(
                 "Cannot update: Entity name not available.",
@@ -379,7 +410,7 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
         }
 
         if (!setClause.trim()) {
-            console.warn("executeUpdate skipped: Empty SET clause provided.");
+            console.warn("_executeUpdate skipped: Empty SET clause provided.");
             error.value = new Error("Cannot update: Empty SET clause.");
             return false;
         }
@@ -424,22 +455,45 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
     };
 
     /**
+     * Creates a new entity in the database using the provided insert clause and parameters.
+     *
+     * @returns Promise<string | null> - Resolves to the entity name (from RETURNING clause or parameters) or null if creation failed
+     */
+    const executeCreate = async (): Promise<string | null> => {
+        return queueOperation<string | null>("create");
+    };
+
+    /**
+     * Retrieves the entity from the database using the current entityName.
+     * Updates entityData and error refs; parses meta__data according to the provided schema.
+     *
+     * @returns Promise<void> - Resolves when the retrieval operation completes
+     */
+    const executeRetrieve = async () => {
+        return queueOperation<void>("retrieve");
+    };
+
+    /**
+     * Updates the entity in the database using the provided SET clause and parameters.
+     * Requires that entityData has been populated via executeRetrieve first.
+     *
+     * @param setClause - SQL SET clause for the UPDATE statement (e.g., "meta__data = $1")
+     * @param updateParams - Parameters to use with the setClause
+     * @returns Promise<boolean> - Resolves to true if the update was successful, false otherwise
+     */
+    const executeUpdate = async (
+        setClause: string,
+        updateParams: unknown[],
+    ): Promise<boolean> => {
+        return queueOperation<boolean>("update", setClause, updateParams);
+    };
+
+    /**
      * Checks if the entity exists in the database.
      *
      * @returns Promise<boolean> - Resolves to true if the entity exists, false otherwise.
      */
     const exists = async (): Promise<boolean> => {
-        // Prevent existence check if another operation is in progress
-        if (retrieving.value || creating.value || updating.value) {
-            console.warn(
-                "exists skipped: Another operation (retrieve, create, update) is already in progress.",
-            );
-            error.value = new Error(
-                "Exists operation skipped: Another operation in progress.",
-            );
-            return false;
-        }
-
         // Get current value from name ref
         const currentEntityName = entityName.value;
         if (!currentEntityName) {
@@ -450,9 +504,7 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
             return false;
         }
 
-        retrieving.value = true;
-        error.value = null;
-
+        // Use a simple query that doesn't go through the main queue to avoid deadlocks
         try {
             const query = `SELECT 1 FROM ${TABLE_NAME} WHERE ${NAME_COLUMN} = '${currentEntityName}' LIMIT 1`;
             const result = await vircadia.client.Utilities.Connection.query<
@@ -477,10 +529,6 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
                     ? err
                     : new Error("Failed to check entity existence");
             return false;
-        } finally {
-            if (!isUnmounted) {
-                retrieving.value = false;
-            }
         }
     };
 
@@ -490,6 +538,8 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
      */
     const cleanup = () => {
         isUnmounted = true; // Flag to prevent async operations from updating state after cleanup
+        // Clear the operation queue
+        operationQueue.length = 0;
     };
 
     return {
