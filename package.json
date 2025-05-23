@@ -9,10 +9,7 @@
         "type": "git",
         "url": "git+https://github.com/vircadia/vircadia-world.git"
     },
-    "files": [
-        "./browser/dist",
-        "README.md"
-    ],
+    "files": ["./browser/dist", "README.md"],
     "publishConfig": {
         "access": "public"
     },
@@ -28,7 +25,7 @@
         "eight-colors": "latest",
         "jsonwebtoken": "^9.0.2",
         "lodash-es": "^4.17.21",
-        "postgres": "3.4.5",
+        "postgres": "^3.4.7",
         "tmp": "^0.2.3",
         "typescript": "5.8.3",
         "vue": "^3.5.14",

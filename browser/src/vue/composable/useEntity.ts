@@ -121,19 +121,25 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
      */
     const parseMetaData = (
         raw: string | object | null,
-    ): z.infer<MetaSchema> | null => {
-        if (raw == null || !options.metaDataSchema) {
+    ): z.infer<MetaSchema> | object | null => {
+        if (raw == null) {
+            console.debug("parseMetaData: raw is null");
             return null;
         }
         const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+
+        // if no schema, just hand back whatever you got
+        if (!options.metaDataSchema) {
+            console.debug("parseMetaData: no schema, returning raw data");
+            return data;
+        }
+
         try {
             return options.metaDataSchema.parse(data);
         } catch (err) {
-            console.warn(
-                "metaDataSchema.parse failed, using defaultMetaData if provided:",
-                err,
-            );
-            return options.defaultMetaData ?? null;
+            console.warn("parseMetaData: failed, using fallback:", err);
+            // either defaultMetaData or the raw data, whichever makes more sense
+            return options.defaultMetaData ?? data;
         }
     };
 
@@ -342,12 +348,12 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
      *
      * @param setClause - SQL SET clause for the UPDATE statement (e.g., "meta__data = $1")
      * @param updateParams - Parameters to use with the setClause
-     * @returns Promise<void> - Resolves when the update operation completes
+     * @returns Promise<boolean> - Resolves to true if the update was successful, false otherwise
      */
     const executeUpdate = async (
         setClause: string,
         updateParams: unknown[],
-    ) => {
+    ): Promise<boolean> => {
         // Prevent update if another operation is in progress
         if (retrieving.value || creating.value || updating.value) {
             console.warn(
@@ -356,7 +362,7 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
             error.value = new Error(
                 "Update operation skipped: Another operation in progress.",
             );
-            return;
+            return false;
         }
 
         // Use the name from the potentially just updated entityData
@@ -369,31 +375,38 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
             error.value = new Error(
                 "Cannot update: Entity name not available.",
             );
-            return;
+            return false;
         }
 
         if (!setClause.trim()) {
             console.warn("executeUpdate skipped: Empty SET clause provided.");
             error.value = new Error("Cannot update: Empty SET clause.");
-            return;
+            return false;
         }
 
         updating.value = true;
         error.value = null;
 
-        const query = `UPDATE ${TABLE_NAME} SET ${setClause} WHERE ${NAME_COLUMN} = '${currentName}'`;
+        const query = `UPDATE ${TABLE_NAME} SET ${setClause} WHERE ${NAME_COLUMN} = '${currentName}' RETURNING ${NAME_COLUMN}`;
 
         try {
-            await vircadia.client.Utilities.Connection.query({
+            const result = await vircadia.client.Utilities.Connection.query<
+                Pick<Entity.I_Entity, typeof NAME_COLUMN>[]
+            >({
                 query,
                 parameters: updateParams,
                 timeoutMs: 10000,
             });
-
-            if (isUnmounted) return;
-            error.value = null; // Clear error on success
+            if (isUnmounted) return false;
+            const rows = result.result || [];
+            if (rows.length > 0) {
+                error.value = null; // Clear error on success
+                return true;
+            }
+            console.warn(`No rows updated for entity ${currentName}`);
+            return false;
         } catch (err) {
-            if (isUnmounted) return;
+            if (isUnmounted) return false;
             console.error(
                 `Error executing update for entity ${currentName}:`,
                 err,
@@ -402,9 +415,71 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
                 err instanceof Error
                     ? err
                     : new Error("Failed to execute entity update");
+            return false;
         } finally {
             if (!isUnmounted) {
                 updating.value = false;
+            }
+        }
+    };
+
+    /**
+     * Checks if the entity exists in the database.
+     *
+     * @returns Promise<boolean> - Resolves to true if the entity exists, false otherwise.
+     */
+    const exists = async (): Promise<boolean> => {
+        // Prevent existence check if another operation is in progress
+        if (retrieving.value || creating.value || updating.value) {
+            console.warn(
+                "exists skipped: Another operation (retrieve, create, update) is already in progress.",
+            );
+            error.value = new Error(
+                "Exists operation skipped: Another operation in progress.",
+            );
+            return false;
+        }
+
+        // Get current value from name ref
+        const currentEntityName = entityName.value;
+        if (!currentEntityName) {
+            console.warn("exists skipped: entityName is not provided.");
+            error.value = new Error(
+                "Exists operation skipped: No entity name provided.",
+            );
+            return false;
+        }
+
+        retrieving.value = true;
+        error.value = null;
+
+        try {
+            const query = `SELECT 1 FROM ${TABLE_NAME} WHERE ${NAME_COLUMN} = '${currentEntityName}' LIMIT 1`;
+            const result = await vircadia.client.Utilities.Connection.query<
+                unknown[]
+            >({
+                query,
+                parameters: [],
+                timeoutMs: 10000,
+            });
+
+            if (isUnmounted) return false;
+
+            return result.result && result.result.length > 0;
+        } catch (err) {
+            if (isUnmounted) return false;
+            console.error(
+                `Error checking existence of entity ${currentEntityName}:`,
+                err,
+            );
+            error.value =
+                err instanceof Error
+                    ? err
+                    : new Error("Failed to check entity existence");
+            return false;
+        } finally {
+            if (!isUnmounted) {
+                retrieving.value = false;
             }
         }
     };
@@ -457,7 +532,7 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
          * Updates the entity in the database using the provided SET clause and parameters.
          * Requires that entityData has been populated via executeRetrieve first.
          *
-         * @returns Promise<void>
+         * @returns Promise<boolean>
          */
         executeUpdate,
 
@@ -466,6 +541,12 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
          * @returns Promise<string | null>
          */
         executeCreate,
+
+        /**
+         * Checks if the entity exists in the database.
+         * @returns Promise<boolean> - Indicates whether the entity exists.
+         */
+        exists,
 
         /**
          * Cleanup function to prevent async operations from affecting state after unmount.
