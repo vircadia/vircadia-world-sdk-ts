@@ -211,9 +211,16 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
         try {
             return options.metaDataSchema.parse(data);
         } catch (err) {
-            console.warn("parseMetaData: failed, using fallback:", err);
-            // either defaultMetaData or the raw data, whichever makes more sense
-            return options.defaultMetaData ?? data;
+            if (options.defaultMetaData) {
+                console.warn(
+                    "parseMetaData: failed, using fallback defaultMetaData:",
+                    options.defaultMetaData,
+                );
+                return options.defaultMetaData;
+            }
+
+            console.warn("parseMetaData: failed, returning raw data:", data);
+            return data;
         }
     };
 
