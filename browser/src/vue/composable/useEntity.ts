@@ -21,7 +21,7 @@ type Operation = {
  *
  * - Data fetching with customizable SELECT queries
  * - Entity creation with customizable INSERT queries
- * - Entity updates with customizable SET clauses
+ * - Entity updates with customizable SET clauses (including JSON path operations)
  * - Typed metadata via Zod schema validation, with fallback defaultMetaData on parse errors
  *
  * All database operations are queued to prevent race conditions and ensure proper sequencing.
