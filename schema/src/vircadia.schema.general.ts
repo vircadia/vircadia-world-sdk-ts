@@ -684,40 +684,86 @@ export namespace Service {
     }
 
     export namespace API {
+        export interface I_QueryMetrics {
+            queriesPerSecond: {
+                current: number;
+                average: number;
+                peak: number;
+            };
+            queryCompletionTime: {
+                averageMs: number;
+                p99Ms: number;
+                p999Ms: number;
+            };
+            requestSize: {
+                averageKB: number;
+                p99KB: number;
+                p999KB: number;
+            };
+            responseSize: {
+                averageKB: number;
+                p99KB: number;
+                p999KB: number;
+            };
+            totalQueries: number;
+            failedQueries: number;
+            successRate: number;
+        }
+
+        export interface I_SystemMetrics {
+            current: number;
+            average: number;
+            p99: number;
+            p999: number;
+        }
+
+        export interface I_ConnectionMetrics {
+            active: I_SystemMetrics;
+            total: number;
+            failed: number;
+            successRate: number;
+        }
+
         export const Stats_Endpoint = {
             path: "/stats",
             method: "GET",
             createRequest: (): string => "",
             createSuccess: (data: {
                 uptime: number;
-                connections: {
-                    active: number;
-                };
+                connections: I_ConnectionMetrics;
                 database: {
                     connected: boolean;
+                    connections: I_SystemMetrics;
                 };
                 memory: {
-                    heapUsed: number;
+                    heapUsed: I_SystemMetrics;
+                    heapTotal: I_SystemMetrics;
+                    external: I_SystemMetrics;
+                    rss: I_SystemMetrics;
                 };
                 cpu: {
-                    user: number;
-                    system: number;
+                    user: I_SystemMetrics;
+                    system: I_SystemMetrics;
                 };
+                queries?: I_QueryMetrics;
             }): {
                 uptime: number;
-                connections: {
-                    active: number;
-                };
+                connections: I_ConnectionMetrics;
                 database: {
                     connected: boolean;
+                    connections: I_SystemMetrics;
                 };
                 memory: {
-                    heapUsed: number;
+                    heapUsed: I_SystemMetrics;
+                    heapTotal: I_SystemMetrics;
+                    external: I_SystemMetrics;
+                    rss: I_SystemMetrics;
                 };
                 cpu: {
-                    user: number;
-                    system: number;
+                    user: I_SystemMetrics;
+                    system: I_SystemMetrics;
                 };
+                queries?: I_QueryMetrics;
                 success: true;
                 timestamp: number;
             } => ({
@@ -726,6 +772,7 @@ export namespace Service {
                 database: data.database,
                 memory: data.memory,
                 cpu: data.cpu,
+                queries: data.queries,
                 success: true,
                 timestamp: Date.now(),
             }),
