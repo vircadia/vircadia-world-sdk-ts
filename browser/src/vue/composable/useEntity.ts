@@ -7,10 +7,10 @@ import type { z } from "zod"; // Import zod for schema validation
 // Add operation types for the queue
 type Operation = {
     type: "retrieve" | "create" | "update";
+    clause: string;
     params?: unknown[];
     resolve: (value: unknown) => void;
     reject: (reason: unknown) => void;
-    setClause?: string;
 };
 
 /**
@@ -19,9 +19,9 @@ type Operation = {
  * This composable provides a Vue-friendly way to interact with entities in the 'entity.entities' table,
  * using 'general__entity_name' as the primary key. It handles:
  *
- * - Data fetching with customizable SELECT queries
- * - Entity creation with customizable INSERT queries
- * - Entity updates with customizable SET clauses (including JSON path operations)
+ * - Data fetching with customizable SELECT queries (passed to executeRetrieve)
+ * - Entity creation with customizable INSERT queries (passed to executeCreate)
+ * - Entity updates with customizable SET clauses (passed to executeUpdate, including JSON path operations)
  * - Typed metadata via Zod schema validation, with fallback defaultMetaData on parse errors
  *
  * All database operations are queued to prevent race conditions and ensure proper sequencing.
@@ -38,31 +38,6 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
      * Required for entity retrieval operations.
      */
     entityName: Ref<string | null | undefined>;
-
-    /**
-     * The SQL SELECT clause for data retrieval (e.g., "*", "general__position, general__rotation").
-     * Specifies which properties are fetched from the database. Defaults to "*".
-     */
-    selectClause?: string;
-
-    /**
-     * Parameters to use with the selectClause in the query.
-     * Empty by default.
-     */
-    selectParams?: unknown[];
-
-    /**
-     * The SQL INSERT clause for entity creation, appended after "INSERT INTO entity.entities".
-     * Example: "(general__entity_name, general__position) VALUES ($1, $2) RETURNING general__entity_name"
-     * Include "RETURNING general__entity_name" to get the created entity's name back.
-     */
-    insertClause?: string;
-
-    /**
-     * Parameters to use with the insertClause when creating a new entity.
-     * The first parameter should be the entity name (string).
-     */
-    insertParams?: unknown[];
 
     /**
      * Vircadia instance to use for database operations.
@@ -83,13 +58,7 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
      */
     defaultMetaData?: z.infer<MetaSchema>;
 }) {
-    const {
-        entityName,
-        selectClause = "*",
-        selectParams = [],
-        insertClause: createInsertClause = "",
-        insertParams: createInsertParams = [],
-    } = options;
+    const { entityName } = options;
 
     // Database constants
     const TABLE_NAME = "entity.entities";
@@ -143,18 +112,22 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
                 let result: unknown;
                 switch (operation.type) {
                     case "retrieve":
-                        result = await _executeRetrieve();
+                        result = await _executeRetrieve(
+                            operation.clause,
+                            operation.params || [],
+                        );
                         break;
                     case "create":
-                        result = await _executeCreate();
+                        result = await _executeCreate(
+                            operation.clause,
+                            operation.params || [],
+                        );
                         break;
                     case "update":
-                        if (operation.setClause && operation.params) {
-                            result = await _executeUpdate(
-                                operation.setClause,
-                                operation.params,
-                            );
-                        }
+                        result = await _executeUpdate(
+                            operation.clause,
+                            operation.params || [],
+                        );
                         break;
                 }
                 operation.resolve(result);
@@ -171,13 +144,13 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
      */
     const queueOperation = <T>(
         type: Operation["type"],
-        setClause?: string,
-        params?: unknown[],
+        clause: string,
+        params: unknown[] = [],
     ): Promise<T> => {
         return new Promise<T>((resolve, reject) => {
             operationQueue.push({
                 type,
-                setClause,
+                clause,
                 params,
                 resolve: (value: unknown) => resolve(value as T),
                 reject,
@@ -227,13 +200,16 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
     /**
      * Internal create implementation without queue management.
      */
-    const _executeCreate = async (): Promise<string | null> => {
+    const _executeCreate = async (
+        insertClause: string,
+        insertParams: unknown[],
+    ): Promise<string | null> => {
         creating.value = true;
         error.value = null;
 
-        if (!createInsertClause.trim()) {
+        if (!insertClause.trim()) {
             console.error(
-                "Cannot create entity: `insertClause` option is missing or empty.",
+                "Cannot create entity: `insertClause` is missing or empty.",
             );
             error.value = new Error(
                 "Entity creation failed: Missing INSERT clause.",
@@ -244,11 +220,8 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
 
         // Get the entity name from the parameters
         let entityNameToUse = null;
-        if (
-            createInsertParams.length > 0 &&
-            typeof createInsertParams[0] === "string"
-        ) {
-            entityNameToUse = createInsertParams[0];
+        if (insertParams.length > 0 && typeof insertParams[0] === "string") {
+            entityNameToUse = insertParams[0];
         }
 
         if (!entityNameToUse) {
@@ -262,14 +235,14 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
             return null;
         }
 
-        const query = `INSERT INTO ${TABLE_NAME} ${createInsertClause}`;
+        const query = `INSERT INTO ${TABLE_NAME} ${insertClause}`;
         try {
             const createResult =
                 await vircadia.client.Utilities.Connection.query<
                     Pick<Entity.I_Entity, "general__entity_name">[]
                 >({
                     query,
-                    parameters: createInsertParams,
+                    parameters: insertParams,
                     timeoutMs: 10000,
                 });
 
@@ -307,7 +280,10 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
     /**
      * Internal retrieve implementation without queue management.
      */
-    const _executeRetrieve = async () => {
+    const _executeRetrieve = async (
+        selectClause = "*",
+        selectParams: unknown[] = [],
+    ) => {
         // Get current value from name ref
         const currentEntityName = entityName.value;
 
@@ -462,22 +438,18 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
     };
 
     /**
-     * Creates a new entity in the database using the provided insert clause and parameters.
-     *
-     * @returns Promise<string | null> - Resolves to the entity name (from RETURNING clause or parameters) or null if creation failed
-     */
-    const executeCreate = async (): Promise<string | null> => {
-        return queueOperation<string | null>("create");
-    };
-
-    /**
      * Retrieves the entity from the database using the current entityName.
      * Updates entityData and error refs; parses meta__data according to the provided schema.
      *
+     * @param selectClause - SQL SELECT clause for data retrieval (e.g., "*", "general__position, general__rotation"). Defaults to "*".
+     * @param selectParams - Parameters to use with the selectClause in the query. Defaults to empty array.
      * @returns Promise<void> - Resolves when the retrieval operation completes
      */
-    const executeRetrieve = async () => {
-        return queueOperation<void>("retrieve");
+    const executeRetrieve = async (
+        selectClause = "*",
+        selectParams: unknown[] = [],
+    ) => {
+        return queueOperation<void>("retrieve", selectClause, selectParams);
     };
 
     /**
@@ -493,6 +465,24 @@ export function useEntity<MetaSchema extends z.ZodType = z.ZodAny>(options: {
         updateParams: unknown[],
     ): Promise<boolean> => {
         return queueOperation<boolean>("update", setClause, updateParams);
+    };
+
+    /**
+     * Creates a new entity in the database using the provided insert clause and parameters.
+     *
+     * @param insertClause - SQL INSERT clause (e.g., "(general__entity_name, general__position) VALUES ($1, $2) RETURNING general__entity_name")
+     * @param insertParams - Parameters to use with the insertClause. The first parameter should be the entity name (string).
+     * @returns Promise<string | null> - Resolves to the entity name (from RETURNING clause or parameters) or null if creation failed
+     */
+    const executeCreate = async (
+        insertClause: string,
+        insertParams: unknown[],
+    ): Promise<string | null> => {
+        return queueOperation<string | null>(
+            "create",
+            insertClause,
+            insertParams,
+        );
     };
 
     /**

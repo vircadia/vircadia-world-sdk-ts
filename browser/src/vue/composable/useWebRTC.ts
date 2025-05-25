@@ -70,15 +70,15 @@ export function useWebRTC(options: {
         const offerEntity = useEntity({
             instance: vircadia,
             entityName,
-            insertClause:
-                "(general__entity_name, meta__data) VALUES ($1, $2) RETURNING general__entity_name",
-            insertParams: [
+            metaDataSchema: offerSchema,
+        });
+        await offerEntity.executeCreate(
+            "(general__entity_name, meta__data) VALUES ($1, $2) RETURNING general__entity_name",
+            [
                 offerId,
                 JSON.stringify({ type: "offer", sdp: description.sdp ?? "" }),
             ],
-            metaDataSchema: offerSchema,
-        });
-        await offerEntity.executeCreate();
+        );
         return description;
     };
 
@@ -91,13 +91,12 @@ export function useWebRTC(options: {
         const offerEntity = useEntity({
             instance: vircadia,
             entityName,
-            selectClause: "meta__data",
             metaDataSchema: sdpSchema,
         });
         // Initial fetch and periodic polling
-        offerEntity.executeRetrieve();
+        offerEntity.executeRetrieve("meta__data", []);
         const interval = setInterval(() => {
-            offerEntity.executeRetrieve();
+            offerEntity.executeRetrieve("meta__data", []);
         }, 2000);
         cleanupFunctions.push(() => {
             clearInterval(interval);
@@ -144,12 +143,11 @@ export function useWebRTC(options: {
         const answerEntity = useEntity({
             instance: vircadia,
             entityName,
-            selectClause: "meta__data",
             metaDataSchema: sdpSchema,
         });
-        answerEntity.executeRetrieve();
+        answerEntity.executeRetrieve("meta__data", []);
         const interval = setInterval(() => {
-            answerEntity.executeRetrieve();
+            answerEntity.executeRetrieve("meta__data", []);
         }, 2000);
         cleanupFunctions.push(() => {
             clearInterval(interval);
