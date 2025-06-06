@@ -1,5 +1,5 @@
 import { openDB, deleteDB, type DBSchema, type IDBPDatabase } from "idb";
-import type { Entity } from "../../../../schema/src/index.schema";
+import type { Entity } from "../../../../schema/src/vircadia.schema.general";
 import { type Ref, ref, inject, readonly, computed } from "vue";
 import { type useVircadia, useVircadiaInstance } from "../provider/useVircadia";
 

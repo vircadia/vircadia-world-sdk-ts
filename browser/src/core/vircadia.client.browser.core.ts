@@ -1,4 +1,4 @@
-import { Communication } from "../../../schema/src/index.schema";
+import { Communication } from "../../../schema/src/vircadia.schema.general";
 
 /**
  * Represents the possible connection states for the client

@@ -5,4 +5,4 @@ export * from "./vue/composable/useWebRTC";
 export * from "./vue/provider/useVircadia";
 
 // Schema exports
-export * from "../../schema/src/index.schema";
+export * from "../../schema/src/vircadia.schema.general";
