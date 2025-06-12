@@ -11,7 +11,7 @@ export namespace Entity {
         general__updated_at?: string;
         general__updated_by?: string;
         general__expiry__delete_on_inactive_ms?: number;
-        general__expiry__delete_on_general_ms?: number;
+        general__expiry__delete_ms?: number;
         group__load_priority: number;
         general__initialized_at?: string;
         general__initialized_by?: string;
