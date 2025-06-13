@@ -15,8 +15,7 @@ export namespace Entity {
         group__load_priority: number;
         general__initialized_at?: string;
         general__initialized_by?: string;
-        // biome-ignore lint/suspicious/noExplicitAny: Anything is allowed as a value.
-        meta__data: Record<string, { value: any }>;
+        meta__data: Record<string, { value: unknown }>;
         group__sync: string;
 
         // Add timestamp tracking fields for specific properties
