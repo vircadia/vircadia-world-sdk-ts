@@ -61,10 +61,10 @@ export namespace Tick {
         tick__db__is_delayed: boolean | null;
 
         // Manager-specific metrics
-        tick__manager__start_time: Date | null;
-        tick__manager__end_time: Date | null;
-        tick__manager__duration_ms: number | null;
-        tick__manager__is_delayed: boolean | null;
+        tick__service__start_time: Date | null;
+        tick__service__end_time: Date | null;
+        tick__service__duration_ms: number | null;
+        tick__service__is_delayed: boolean | null;
     }
 
     export interface I_TickNotification {
@@ -677,7 +677,7 @@ export namespace Communication {
 export namespace Service {
     export enum E_Service {
         WORLD_API_MANAGER = "vircadia_world_api_manager",
-        WORLD_TICK_MANAGER = "vircadia_world_tick_manager",
+        WORLD_STATE_MANAGER = "vircadia_world_state_manager",
         POSTGRES = "vircadia_world_postgres",
         PGWEB = "vircadia_world_pgweb",
     }
@@ -793,7 +793,7 @@ export namespace Service {
 
     export namespace PGWeb {}
 
-    export namespace Tick {
+    export namespace State {
         export const Stats_Endpoint = {
             method: "GET",
             path: "/stats",
