@@ -1,5 +1,10 @@
 export namespace Config {
     export type E_OperationType = "INSERT" | "UPDATE" | "DELETE";
+
+    export interface I_EntityConfig {
+        entity_config__script_compilation_timeout_ms: number;
+        entity_config__expiry_check_interval_ms: number;
+    }
 }
 
 export namespace Entity {
@@ -10,8 +15,8 @@ export namespace Entity {
         general__created_by?: string;
         general__updated_at?: string;
         general__updated_by?: string;
-        general__expiry__delete_on_inactive_ms?: number;
-        general__expiry__delete_ms?: number;
+        general__expiry__delete_since_updated_at_ms?: number;
+        general__expiry__delete_since_created_at_ms?: number;
         group__load_priority: number;
         general__initialized_at?: string;
         general__initialized_by?: string;
