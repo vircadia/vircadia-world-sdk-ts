@@ -20,11 +20,20 @@ export namespace Entity {
         group__load_priority: number;
         general__initialized_at?: string;
         general__initialized_by?: string;
-        meta__data: Record<string, { value: unknown }>;
         group__sync: string;
+    }
 
-        // Add timestamp tracking fields for specific properties
-        meta_data_updated_at: string;
+    export namespace Metadata {
+        export interface I_Metadata {
+            general__entity_name: string;
+            metadata__key: string;
+            metadata__value: unknown;
+            group__sync: string;
+            general__created_at?: string;
+            general__created_by?: string;
+            general__updated_at?: string;
+            general__updated_by?: string;
+        }
     }
 
     export namespace Asset {
