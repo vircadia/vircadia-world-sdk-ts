@@ -19,6 +19,7 @@ export namespace Entity {
         general__expiry__delete_since_updated_at_ms?: number;
         general__expiry__delete_since_created_at_ms?: number;
         group__load_priority: number;
+        meta__data?: unknown;
         general__initialized_at?: string;
         general__initialized_by?: string;
         group__sync: string;
