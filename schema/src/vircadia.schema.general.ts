@@ -4,6 +4,7 @@ export namespace Config {
     export interface I_EntityConfig {
         entity_config__script_compilation_timeout_ms: number;
         entity_config__expiry_check_interval_ms: number;
+        entity_config__metadata_expiry_check_interval_ms: number;
     }
 }
 
@@ -33,6 +34,8 @@ export namespace Entity {
             general__created_by?: string;
             general__updated_at?: string;
             general__updated_by?: string;
+            general__expiry__delete_since_updated_at_ms?: number;
+            general__expiry__delete_since_created_at_ms?: number;
         }
     }
 
