@@ -2,7 +2,6 @@ import CodeBlock from '@theme/CodeBlock';
 
 import mainTs from '!!raw-loader!../../../client/web_babylon_js/src/main.ts';
 import useBabylonEnvironmentTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useBabylonEnvironment.ts';
-import useBabylonAvatarEntityTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useBabylonAvatarEntity.ts';
 
 # Vue
 
@@ -43,7 +42,7 @@ if (!vircadiaWorld) {
 
 ## Composable
 
-### Asset (useVircadiaAsset)
+### Asset
 
 In our client, we have a composable that manages the environment assets. It leverages the `useVircadiaAsset` composable:
 
@@ -51,10 +50,19 @@ In our client, we have a composable that manages the environment assets. It leve
   {useBabylonEnvironmentTs}
 </CodeBlock>
 
-### Entity (useVircadiaEntity)
+### Entity
 
-In our client, we have a composable that manages the avatar entity. It leverages the `useVircadiaEntity` composable:
+To interact with the client, you simply query to the tables in the database using the `vircadiaWorld.client.Utilities.Connection.query` method.
 
-<CodeBlock language="typescript" title="Example: /client/web_babylon_js/src/composables/useBabylonAvatarEntity.ts">
-  {useBabylonAvatarEntityTs}
-</CodeBlock>
+For example, to create an entity, you can do the following:
+
+```ts
+const result = await vircadiaWorld.client.Utilities.Connection.query({
+    query: "INSERT INTO entity.entities (general__entity_name, group__sync, general__expiry__delete_since_updated_at_ms) VALUES ($1, $2, $3) RETURNING general__entity_name",
+    parameters: [
+        entityName.value,
+        "public.NORMAL",
+        120000, // 120 seconds timeout for inactivity
+    ],
+});
+```
