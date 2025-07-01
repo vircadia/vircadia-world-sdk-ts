@@ -1,4 +1,4 @@
-import { Communication } from "../../../schema/src/index.schema";
+import { Communication } from "../../../schema/src/vircadia.schema.general";
 
 /**
  * Represents the possible connection states for the client
@@ -30,6 +30,10 @@ export type ClientCoreConnectionInfo = {
         requestId: string;
         elapsedMs: number;
     }>;
+    /** Identifier of the agent assigned by the server */
+    agentId: string | null;
+    /** Identifier of the session assigned by the server */
+    sessionId: string | null;
 };
 
 /**
@@ -100,7 +104,7 @@ const debugError = (
  * Handles all WebSocket communication with the Vircadia server
  * Manages connection, reconnection, and message passing
  */
-class ConnectionManager {
+class CoreConnectionManager {
     private ws: WebSocket | null = null;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private reconnectCount = 0;
@@ -119,9 +123,12 @@ class ConnectionManager {
     private lastStatus: ClientCoreConnectionState = "disconnected";
     private connectionStartTime: number | null = null;
     private connectionPromise: Promise<ClientCoreConnectionInfo> | null = null;
+    // Fields to store session information received from the server
+    private agentId: string | null = null;
+    private sessionId: string | null = null;
 
     /**
-     * Creates a new ConnectionManager instance
+     * Creates a new CoreConnectionManager instance
      * @param {ClientCoreConfig} config - Configuration for the connection
      */
     constructor(private config: ClientCoreConfig) {}
@@ -402,6 +409,8 @@ class ConnectionManager {
             connectionDuration,
             reconnectAttempts: this.reconnectCount,
             pendingRequests,
+            agentId: this.agentId,
+            sessionId: this.sessionId,
         };
     }
 
@@ -462,6 +471,19 @@ class ConnectionManager {
             const message = JSON.parse(
                 event.data,
             ) as Communication.WebSocket.Message;
+
+            // Handle session info message from server
+            if (
+                message.type ===
+                Communication.WebSocket.MessageType.SESSION_INFO_RESPONSE
+            ) {
+                const sessionMsg =
+                    message as Communication.WebSocket.SessionInfoMessage;
+                this.agentId = sessionMsg.agentId;
+                this.sessionId = sessionMsg.sessionId;
+                this.emitEvent("statusChange");
+                return;
+            }
 
             debugLog(
                 this.config,
@@ -557,14 +579,14 @@ class ConnectionManager {
  * Handles connection management, authentication, and provides utility methods.
  */
 export class ClientCore {
-    private connectionManager: ConnectionManager;
+    private coreConnectionManager: CoreConnectionManager;
 
     /**
      * Creates a new ClientCore instance
      * @param {ClientCoreConfig} config - Configuration options for the client
      */
     constructor(private config: ClientCoreConfig) {
-        this.connectionManager = new ConnectionManager(config);
+        this.coreConnectionManager = new CoreConnectionManager(config);
     }
 
     /**
@@ -572,7 +594,7 @@ export class ClientCore {
      * @returns {Object} Object containing connection utilities
      */
     get Utilities() {
-        const cm = this.connectionManager;
+        const cm = this.coreConnectionManager;
 
         return {
             Connection: {
@@ -591,8 +613,8 @@ export class ClientCore {
      * Cleans up resources and disconnects from the server
      */
     dispose(): void {
-        if (this.connectionManager) {
-            this.connectionManager.disconnect();
+        if (this.coreConnectionManager) {
+            this.coreConnectionManager.disconnect();
         }
     }
 }

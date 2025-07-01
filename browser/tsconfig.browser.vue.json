@@ -9,5 +9,8 @@
         "types": ["@types/node"]
     },
     "include": ["src/**/*", "../schema/src/**/*"],
-    "files": ["src/index.browser.vue.ts", "../schema/src/index.schema.ts"]
+    "files": [
+        "src/index.browser.vue.ts",
+        "../schema/src/vircadia.schema.general.ts"
+    ]
 }

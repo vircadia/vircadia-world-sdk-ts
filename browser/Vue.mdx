@@ -1,9 +1,7 @@
 import CodeBlock from '@theme/CodeBlock';
 
 import mainTs from '!!raw-loader!../../../client/web_babylon_js/src/main.ts';
-import useVircadiaContextTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useVircadiaContext.ts';
-import useEnvironmentLoaderTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useEnvironmentLoader.ts';
-import useAvatarEntityTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useAvatarEntity.ts';
+import useBabylonEnvironmentTs from '!!raw-loader!../../../client/web_babylon_js/src/composables/useBabylonEnvironment.ts';
 
 # Vue
 
@@ -31,26 +29,40 @@ vircadiaWorld.client.Utilities.Connection.connect();
 
 ### Inject (useVircadiaContext)
 
-Then, in your components, you can inject the Vircadia instance using the `useVircadiaInstance` composable:
+Then, in your components, you can inject the Vircadia instance using the `useVircadiaInstance` helper:
 
-<CodeBlock language="typescript" title="Example: /client/web_babylon_js/src/composables/useVircadiaContext.ts">
-  {useVircadiaContextTs}
-</CodeBlock>
+```ts
+import { useVircadiaInstance } from "@vircadia/world-sdk/browser/vue";
+
+const vircadiaWorld = useVircadiaInstance();
+if (!vircadiaWorld) {
+    throw new Error('Vircadia instance not found');
+}
+```
 
 ## Composable
 
-### Asset (useVircadiaAsset)
+### Asset
 
 In our client, we have a composable that manages the environment assets. It leverages the `useVircadiaAsset` composable:
 
-<CodeBlock language="typescript" title="Example: /client/web_babylon_js/src/composables/useEnvironmentLoader.ts">
-  {useEnvironmentLoaderTs}
+<CodeBlock language="typescript" title="Example: /client/web_babylon_js/src/composables/useBabylonEnvironment.ts">
+  {useBabylonEnvironmentTs}
 </CodeBlock>
 
-### Entity (useVircadiaEntity)
+### Entity
 
-In our client, we have a composable that manages the avatar entity. It leverages the `useVircadiaEntity` composable:
+To interact with the client, you simply query to the tables in the database using the `vircadiaWorld.client.Utilities.Connection.query` method.
 
-<CodeBlock language="typescript" title="Example: /client/web_babylon_js/src/composables/useAvatarEntity.ts">
-  {useAvatarEntityTs}
-</CodeBlock>
+For example, to create an entity, you can do the following:
+
+```ts
+const result = await vircadiaWorld.client.Utilities.Connection.query({
+    query: "INSERT INTO entity.entities (general__entity_name, group__sync, general__expiry__delete_since_updated_at_ms) VALUES ($1, $2, $3) RETURNING general__entity_name",
+    parameters: [
+        entityName.value,
+        "public.NORMAL",
+        120000, // 120 seconds timeout for inactivity
+    ],
+});
+```

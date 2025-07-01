@@ -1,5 +1,11 @@
 export namespace Config {
     export type E_OperationType = "INSERT" | "UPDATE" | "DELETE";
+
+    export interface I_EntityConfig {
+        entity_config__script_compilation_timeout_ms: number;
+        entity_config__expiry_check_interval_ms: number;
+        entity_config__metadata_expiry_check_interval_ms: number;
+    }
 }
 
 export namespace Entity {
@@ -10,15 +16,28 @@ export namespace Entity {
         general__created_by?: string;
         general__updated_at?: string;
         general__updated_by?: string;
+        general__expiry__delete_since_updated_at_ms?: number;
+        general__expiry__delete_since_created_at_ms?: number;
         group__load_priority: number;
+        meta__data?: unknown;
         general__initialized_at?: string;
         general__initialized_by?: string;
-        // biome-ignore lint/suspicious/noExplicitAny: Anything is allowed as a value.
-        meta__data: Record<string, { value: any }>;
         group__sync: string;
+    }
 
-        // Add timestamp tracking fields for specific properties
-        meta_data_updated_at: string;
+    export namespace Metadata {
+        export interface I_Metadata {
+            general__entity_name: string;
+            metadata__key: string;
+            metadata__value: unknown;
+            group__sync: string;
+            general__created_at?: string;
+            general__created_by?: string;
+            general__updated_at?: string;
+            general__updated_by?: string;
+            general__expiry__delete_since_updated_at_ms?: number;
+            general__expiry__delete_since_created_at_ms?: number;
+        }
     }
 
     export namespace Asset {
@@ -60,10 +79,10 @@ export namespace Tick {
         tick__db__is_delayed: boolean | null;
 
         // Manager-specific metrics
-        tick__manager__start_time: Date | null;
-        tick__manager__end_time: Date | null;
-        tick__manager__duration_ms: number | null;
-        tick__manager__is_delayed: boolean | null;
+        tick__service__start_time: Date | null;
+        tick__service__end_time: Date | null;
+        tick__service__duration_ms: number | null;
+        tick__service__is_delayed: boolean | null;
     }
 
     export interface I_TickNotification {
@@ -177,7 +196,8 @@ export namespace Communication {
             QUERY_REQUEST = "QUERY_REQUEST",
             QUERY_RESPONSE = "QUERY_RESPONSE",
             SYNC_GROUP_UPDATES_RESPONSE = "SYNC_GROUP_UPDATES_RESPONSE",
-            TICK_NOTIFICATION = "TICK_NOTIFICATION",
+            TICK_NOTIFICATION_RESPONSE = "TICK_NOTIFICATION_RESPONSE",
+            SESSION_INFO_RESPONSE = "SESSION_INFO_RESPONSE",
         }
 
         // Message type documentation
@@ -370,7 +390,7 @@ export namespace Communication {
                     ],
                 },
             },
-            [MessageType.TICK_NOTIFICATION]: {
+            [MessageType.TICK_NOTIFICATION_RESPONSE]: {
                 description: "Notification sent when a server tick occurs",
                 messageFormat: {
                     type: "object",
@@ -397,13 +417,60 @@ export namespace Communication {
                             name: "type",
                             type: "string",
                             description:
-                                "Message type identifier (TICK_NOTIFICATION)",
+                                "Message type identifier (TICK_NOTIFICATION_RESPONSE)",
                         },
                         {
                             name: "tick",
                             type: "Tick.I_Tick",
                             description:
                                 "Detailed information about the tick that completed",
+                        },
+                    ],
+                },
+            },
+            [MessageType.SESSION_INFO_RESPONSE]: {
+                description:
+                    "Session info sent to client on connection establishment",
+                messageFormat: {
+                    type: "object",
+                    description:
+                        "Information about the session assigned by the server",
+                    fields: [
+                        {
+                            name: "timestamp",
+                            type: "number",
+                            description:
+                                "Unix timestamp when the session info was sent",
+                        },
+                        {
+                            name: "requestId",
+                            type: "string",
+                            description:
+                                "Empty string for session info messages",
+                        },
+                        {
+                            name: "errorMessage",
+                            type: "string | null",
+                            description:
+                                "Error message, null for session info messages",
+                        },
+                        {
+                            name: "type",
+                            type: "string",
+                            description:
+                                "Message type identifier (SESSION_INFO_RESPONSE)",
+                        },
+                        {
+                            name: "agentId",
+                            type: "string",
+                            description:
+                                "The agent identifier assigned by the server",
+                        },
+                        {
+                            name: "sessionId",
+                            type: "string",
+                            description:
+                                "The session identifier assigned by the server",
                         },
                     ],
                 },
@@ -477,7 +544,7 @@ export namespace Communication {
         }
 
         export class TickNotificationMessage implements BaseMessage {
-            public readonly type = MessageType.TICK_NOTIFICATION;
+            public readonly type = MessageType.TICK_NOTIFICATION_RESPONSE;
             public readonly timestamp: number;
             public requestId: string;
             public errorMessage: string | null;
@@ -495,10 +562,28 @@ export namespace Communication {
             }
         }
 
+        export class SessionInfoMessage implements BaseMessage {
+            public readonly type = MessageType.SESSION_INFO_RESPONSE;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public agentId: string;
+            public sessionId: string;
+
+            constructor(data: { agentId: string; sessionId: string }) {
+                this.timestamp = Date.now();
+                this.requestId = "";
+                this.errorMessage = null;
+                this.agentId = data.agentId;
+                this.sessionId = data.sessionId;
+            }
+        }
+
         export type Message =
             | QueryRequestMessage
             | QueryResponseMessage
-            | TickNotificationMessage;
+            | TickNotificationMessage
+            | SessionInfoMessage;
 
         export function isMessageType<T extends Message>(
             message: Message,
@@ -610,46 +695,92 @@ export namespace Communication {
 export namespace Service {
     export enum E_Service {
         WORLD_API_MANAGER = "vircadia_world_api_manager",
-        WORLD_TICK_MANAGER = "vircadia_world_tick_manager",
+        WORLD_STATE_MANAGER = "vircadia_world_state_manager",
         POSTGRES = "vircadia_world_postgres",
         PGWEB = "vircadia_world_pgweb",
     }
 
     export namespace API {
+        export interface I_QueryMetrics {
+            queriesPerSecond: {
+                current: number;
+                average: number;
+                peak: number;
+            };
+            queryCompletionTime: {
+                averageMs: number;
+                p99Ms: number;
+                p999Ms: number;
+            };
+            requestSize: {
+                averageKB: number;
+                p99KB: number;
+                p999KB: number;
+            };
+            responseSize: {
+                averageKB: number;
+                p99KB: number;
+                p999KB: number;
+            };
+            totalQueries: number;
+            failedQueries: number;
+            successRate: number;
+        }
+
+        export interface I_SystemMetrics {
+            current: number;
+            average: number;
+            p99: number;
+            p999: number;
+        }
+
+        export interface I_ConnectionMetrics {
+            active: I_SystemMetrics;
+            total: number;
+            failed: number;
+            successRate: number;
+        }
+
         export const Stats_Endpoint = {
             path: "/stats",
             method: "GET",
             createRequest: (): string => "",
             createSuccess: (data: {
                 uptime: number;
-                connections: {
-                    active: number;
-                };
+                connections: I_ConnectionMetrics;
                 database: {
                     connected: boolean;
+                    connections: I_SystemMetrics;
                 };
                 memory: {
-                    heapUsed: number;
+                    heapUsed: I_SystemMetrics;
+                    heapTotal: I_SystemMetrics;
+                    external: I_SystemMetrics;
+                    rss: I_SystemMetrics;
                 };
                 cpu: {
-                    user: number;
-                    system: number;
+                    user: I_SystemMetrics;
+                    system: I_SystemMetrics;
                 };
+                queries?: I_QueryMetrics;
             }): {
                 uptime: number;
-                connections: {
-                    active: number;
-                };
+                connections: I_ConnectionMetrics;
                 database: {
                     connected: boolean;
+                    connections: I_SystemMetrics;
                 };
                 memory: {
-                    heapUsed: number;
+                    heapUsed: I_SystemMetrics;
+                    heapTotal: I_SystemMetrics;
+                    external: I_SystemMetrics;
+                    rss: I_SystemMetrics;
                 };
                 cpu: {
-                    user: number;
-                    system: number;
+                    user: I_SystemMetrics;
+                    system: I_SystemMetrics;
                 };
+                queries?: I_QueryMetrics;
                 success: true;
                 timestamp: number;
             } => ({
@@ -658,6 +789,7 @@ export namespace Service {
                 database: data.database,
                 memory: data.memory,
                 cpu: data.cpu,
+                queries: data.queries,
                 success: true,
                 timestamp: Date.now(),
             }),
@@ -679,7 +811,7 @@ export namespace Service {
 
     export namespace PGWeb {}
 
-    export namespace Tick {
+    export namespace State {
         export const Stats_Endpoint = {
             method: "GET",
             path: "/stats",

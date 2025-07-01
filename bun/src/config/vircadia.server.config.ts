@@ -47,19 +47,19 @@ const serverEnvSchema = z.object({
         .number()
         .default(3020),
 
-    // Tick manager
-    VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_CONTAINER_NAME: z
+    // State manager
+    VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_CONTAINER_NAME: z
         .string()
-        .default("vircadia_world_tick_manager"),
-    VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_HOST_CONTAINER_BIND_INTERNAL: z
+        .default("vircadia_world_state_manager"),
+    VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_HOST_CONTAINER_BIND_INTERNAL: z
         .string()
         .default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_PORT_CONTAINER_BIND_INTERNAL:
+    VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_PORT_CONTAINER_BIND_INTERNAL:
         z.coerce.number().default(3021),
-    VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_HOST_CONTAINER_BIND_EXTERNAL: z
+    VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_HOST_CONTAINER_BIND_EXTERNAL: z
         .string()
         .default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_WORLD_TICK_MANAGER_PORT_CONTAINER_BIND_EXTERNAL:
+    VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_PORT_CONTAINER_BIND_EXTERNAL:
         z.coerce.number().default(3021),
 
     // Postgres
