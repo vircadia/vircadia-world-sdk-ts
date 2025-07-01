@@ -93,11 +93,19 @@ export namespace Tick {
 }
 
 export namespace Auth {
+    export enum E_Provider {
+        AZURE = "azure",
+        SYSTEM = "system",
+        ANONYMOUS = "anon",
+    }
+
     export interface I_Profile {
         general__agent_profile_id: string;
         profile__username: string;
         auth__email: string;
         auth__is_admin: boolean;
+        auth__is_anon: boolean;
+        profile__last_seen_at?: string;
         general__created_at?: string;
         general__created_by?: string;
         general__updated_at?: string;
@@ -596,6 +604,12 @@ export namespace Communication {
     export namespace REST {
         export enum E_Endpoint {
             AUTH_SESSION_VALIDATE = "AUTH_SESSION_VALIDATE",
+            AUTH_OAUTH_AUTHORIZE = "AUTH_OAUTH_AUTHORIZE",
+            AUTH_OAUTH_CALLBACK = "AUTH_OAUTH_CALLBACK",
+            AUTH_LOGOUT = "AUTH_LOGOUT",
+            AUTH_LINK_PROVIDER = "AUTH_LINK_PROVIDER",
+            AUTH_UNLINK_PROVIDER = "AUTH_UNLINK_PROVIDER",
+            AUTH_LIST_PROVIDERS = "AUTH_LIST_PROVIDERS",
         }
 
         export const Endpoint: {
@@ -672,6 +686,483 @@ export namespace Communication {
                             type: "boolean",
                             description:
                                 "Indicates if the validation was successful",
+                        },
+                        {
+                            name: "timestamp",
+                            type: "number",
+                            description:
+                                "Unix timestamp when the response was generated",
+                        },
+                        {
+                            name: "error",
+                            type: "string",
+                            description:
+                                "Error message (only present when success is false)",
+                        },
+                    ],
+                },
+            },
+            AUTH_OAUTH_AUTHORIZE: {
+                path: `${REST_BASE_PATH}/auth/oauth/authorize`,
+                method: "GET",
+                createRequest: (provider: string): string =>
+                    `?provider=${encodeURIComponent(provider)}`,
+                createSuccess: (
+                    redirectUrl: string,
+                ): {
+                    success: true;
+                    redirectUrl: string;
+                    timestamp: number;
+                } => ({
+                    success: true,
+                    redirectUrl,
+                    timestamp: Date.now(),
+                }),
+                createError: (
+                    error: string,
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+                description:
+                    "Initiates OAuth authorization flow for a specified provider",
+                parameters: [
+                    {
+                        name: "provider",
+                        type: "string",
+                        required: true,
+                        description:
+                            "The OAuth provider to use (e.g., 'azure')",
+                    },
+                ],
+                returns: {
+                    type: "object",
+                    description:
+                        "Response with redirect URL for OAuth authorization",
+                    fields: [
+                        {
+                            name: "success",
+                            type: "boolean",
+                            description:
+                                "Indicates if the request was successful",
+                        },
+                        {
+                            name: "redirectUrl",
+                            type: "string",
+                            description:
+                                "URL to redirect the user for OAuth authorization",
+                        },
+                        {
+                            name: "timestamp",
+                            type: "number",
+                            description:
+                                "Unix timestamp when the response was generated",
+                        },
+                        {
+                            name: "error",
+                            type: "string",
+                            description:
+                                "Error message (only present when success is false)",
+                        },
+                    ],
+                },
+            },
+            AUTH_OAUTH_CALLBACK: {
+                path: `${REST_BASE_PATH}/auth/oauth/callback`,
+                method: "GET",
+                createRequest: (params: {
+                    provider: string;
+                    code: string;
+                    state?: string;
+                }): string => {
+                    const searchParams = new URLSearchParams({
+                        provider: params.provider,
+                        code: params.code,
+                    });
+                    if (params.state) {
+                        searchParams.append("state", params.state);
+                    }
+                    return `?${searchParams.toString()}`;
+                },
+                createSuccess: (data: {
+                    token: string;
+                    agentId: string;
+                    sessionId: string;
+                    provider: string;
+                }): {
+                    success: true;
+                    token: string;
+                    agentId: string;
+                    sessionId: string;
+                    provider: string;
+                    timestamp: number;
+                } => ({
+                    success: true,
+                    token: data.token,
+                    agentId: data.agentId,
+                    sessionId: data.sessionId,
+                    provider: data.provider,
+                    timestamp: Date.now(),
+                }),
+                createError: (
+                    error: string,
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+                description:
+                    "Handles OAuth callback from the authorization provider",
+                parameters: [
+                    {
+                        name: "provider",
+                        type: "string",
+                        required: true,
+                        description:
+                            "The OAuth provider that sent the callback",
+                    },
+                    {
+                        name: "code",
+                        type: "string",
+                        required: true,
+                        description:
+                            "Authorization code from the OAuth provider",
+                    },
+                    {
+                        name: "state",
+                        type: "string",
+                        required: false,
+                        description: "State parameter for CSRF protection",
+                    },
+                ],
+                returns: {
+                    type: "object",
+                    description:
+                        "Response with authentication token and session information",
+                    fields: [
+                        {
+                            name: "success",
+                            type: "boolean",
+                            description:
+                                "Indicates if the authentication was successful",
+                        },
+                        {
+                            name: "token",
+                            type: "string",
+                            description: "JWT token for authenticated sessions",
+                        },
+                        {
+                            name: "agentId",
+                            type: "string",
+                            description:
+                                "Unique identifier for the authenticated agent",
+                        },
+                        {
+                            name: "sessionId",
+                            type: "string",
+                            description:
+                                "Session identifier for this authentication",
+                        },
+                        {
+                            name: "provider",
+                            type: "string",
+                            description: "The authentication provider used",
+                        },
+                        {
+                            name: "timestamp",
+                            type: "number",
+                            description:
+                                "Unix timestamp when the response was generated",
+                        },
+                        {
+                            name: "error",
+                            type: "string",
+                            description:
+                                "Error message (only present when success is false)",
+                        },
+                    ],
+                },
+            },
+            AUTH_LOGOUT: {
+                path: `${REST_BASE_PATH}/auth/logout`,
+                method: "POST",
+                createRequest: (sessionId: string): string =>
+                    JSON.stringify({ sessionId }),
+                createSuccess: (): {
+                    success: true;
+                    timestamp: number;
+                } => ({
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (
+                    error: string,
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+                description:
+                    "Logs out the current session and invalidates the token",
+                parameters: [
+                    {
+                        name: "sessionId",
+                        type: "string",
+                        required: true,
+                        description: "Session ID to invalidate",
+                    },
+                ],
+                returns: {
+                    type: "object",
+                    description: "Response indicating logout status",
+                    fields: [
+                        {
+                            name: "success",
+                            type: "boolean",
+                            description:
+                                "Indicates if the logout was successful",
+                        },
+                        {
+                            name: "timestamp",
+                            type: "number",
+                            description:
+                                "Unix timestamp when the response was generated",
+                        },
+                        {
+                            name: "error",
+                            type: "string",
+                            description:
+                                "Error message (only present when success is false)",
+                        },
+                    ],
+                },
+            },
+            AUTH_LINK_PROVIDER: {
+                path: `${REST_BASE_PATH}/auth/link-provider`,
+                method: "POST",
+                createRequest: (data: {
+                    provider: string;
+                    sessionId: string;
+                }): string =>
+                    JSON.stringify({
+                        provider: data.provider,
+                        sessionId: data.sessionId,
+                    }),
+                createSuccess: (
+                    redirectUrl: string,
+                ): {
+                    success: true;
+                    redirectUrl: string;
+                    timestamp: number;
+                } => ({
+                    success: true,
+                    redirectUrl,
+                    timestamp: Date.now(),
+                }),
+                createError: (
+                    error: string,
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+                description:
+                    "Initiates the process to link an additional authentication provider to an existing account",
+                parameters: [
+                    {
+                        name: "provider",
+                        type: "string",
+                        required: true,
+                        description:
+                            "The authentication provider to link (e.g., 'azure')",
+                    },
+                    {
+                        name: "sessionId",
+                        type: "string",
+                        required: true,
+                        description:
+                            "Current session ID to associate the new provider with",
+                    },
+                ],
+                returns: {
+                    type: "object",
+                    description:
+                        "Response with redirect URL to complete provider linking",
+                    fields: [
+                        {
+                            name: "success",
+                            type: "boolean",
+                            description:
+                                "Indicates if the request was successful",
+                        },
+                        {
+                            name: "redirectUrl",
+                            type: "string",
+                            description:
+                                "URL to redirect for provider authorization",
+                        },
+                        {
+                            name: "timestamp",
+                            type: "number",
+                            description:
+                                "Unix timestamp when the response was generated",
+                        },
+                        {
+                            name: "error",
+                            type: "string",
+                            description:
+                                "Error message (only present when success is false)",
+                        },
+                    ],
+                },
+            },
+            AUTH_UNLINK_PROVIDER: {
+                path: `${REST_BASE_PATH}/auth/unlink-provider`,
+                method: "POST",
+                createRequest: (data: {
+                    provider: string;
+                    providerUid: string;
+                    sessionId: string;
+                }): string =>
+                    JSON.stringify({
+                        provider: data.provider,
+                        providerUid: data.providerUid,
+                        sessionId: data.sessionId,
+                    }),
+                createSuccess: (): {
+                    success: true;
+                    timestamp: number;
+                } => ({
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (
+                    error: string,
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+                description:
+                    "Unlinks an authentication provider from the current account",
+                parameters: [
+                    {
+                        name: "provider",
+                        type: "string",
+                        required: true,
+                        description: "The authentication provider to unlink",
+                    },
+                    {
+                        name: "providerUid",
+                        type: "string",
+                        required: true,
+                        description: "The provider-specific user ID to unlink",
+                    },
+                    {
+                        name: "sessionId",
+                        type: "string",
+                        required: true,
+                        description: "Current session ID for authentication",
+                    },
+                ],
+                returns: {
+                    type: "object",
+                    description: "Response indicating unlink status",
+                    fields: [
+                        {
+                            name: "success",
+                            type: "boolean",
+                            description:
+                                "Indicates if the unlink was successful",
+                        },
+                        {
+                            name: "timestamp",
+                            type: "number",
+                            description:
+                                "Unix timestamp when the response was generated",
+                        },
+                        {
+                            name: "error",
+                            type: "string",
+                            description:
+                                "Error message (only present when success is false)",
+                        },
+                    ],
+                },
+            },
+            AUTH_LIST_PROVIDERS: {
+                path: `${REST_BASE_PATH}/auth/providers`,
+                method: "GET",
+                createRequest: (sessionId: string): string =>
+                    `?sessionId=${encodeURIComponent(sessionId)}`,
+                createSuccess: (
+                    providers: Auth.I_AuthProvider[],
+                ): {
+                    success: true;
+                    providers: Auth.I_AuthProvider[];
+                    timestamp: number;
+                } => ({
+                    success: true,
+                    providers,
+                    timestamp: Date.now(),
+                }),
+                createError: (
+                    error: string,
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+                description:
+                    "Lists all authentication providers linked to the current account",
+                parameters: [
+                    {
+                        name: "sessionId",
+                        type: "string",
+                        required: true,
+                        description: "Current session ID for authentication",
+                    },
+                ],
+                returns: {
+                    type: "object",
+                    description: "Response with list of linked providers",
+                    fields: [
+                        {
+                            name: "success",
+                            type: "boolean",
+                            description:
+                                "Indicates if the request was successful",
+                        },
+                        {
+                            name: "providers",
+                            type: "Auth.I_ProviderLink[]",
+                            description:
+                                "Array of authentication providers linked to the account",
                         },
                         {
                             name: "timestamp",
