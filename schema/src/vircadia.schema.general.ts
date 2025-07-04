@@ -794,12 +794,18 @@ export namespace Communication {
                     agentId: string;
                     sessionId: string;
                     provider: string;
+                    email?: string;
+                    displayName?: string;
+                    username?: string;
                 }): {
                     success: true;
                     token: string;
                     agentId: string;
                     sessionId: string;
                     provider: string;
+                    email?: string;
+                    displayName?: string;
+                    username?: string;
                     timestamp: number;
                 } => ({
                     success: true,
@@ -807,6 +813,9 @@ export namespace Communication {
                     agentId: data.agentId,
                     sessionId: data.sessionId,
                     provider: data.provider,
+                    email: data.email,
+                    displayName: data.displayName,
+                    username: data.username,
                     timestamp: Date.now(),
                 }),
                 createError: (
@@ -876,6 +885,24 @@ export namespace Communication {
                             name: "provider",
                             type: "string",
                             description: "The authentication provider used",
+                        },
+                        {
+                            name: "email",
+                            type: "string",
+                            description:
+                                "Email address of the authenticated user (optional)",
+                        },
+                        {
+                            name: "displayName",
+                            type: "string",
+                            description:
+                                "Display name from the authentication provider (optional)",
+                        },
+                        {
+                            name: "username",
+                            type: "string",
+                            description:
+                                "Username stored in the database (optional)",
                         },
                         {
                             name: "timestamp",
