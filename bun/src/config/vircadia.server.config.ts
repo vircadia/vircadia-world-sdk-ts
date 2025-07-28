@@ -60,7 +60,7 @@ const serverEnvSchema = z.object({
         .string()
         .default("0.0.0.0"),
     VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_PORT_CONTAINER_BIND_EXTERNAL:
-        z.coerce.number().default(3022),
+        z.coerce.number().default(3021),
 
     // Web Babylon JS Client service
     VRCA_SERVER_SERVICE_CLIENT_WEB_BABYLON_JS_CONTAINER_NAME: z
