@@ -60,7 +60,17 @@ const serverEnvSchema = z.object({
         .string()
         .default("0.0.0.0"),
     VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_PORT_CONTAINER_BIND_EXTERNAL:
-        z.coerce.number().default(3021),
+        z.coerce.number().default(3022),
+
+    // Web Babylon JS Client service
+    VRCA_SERVER_SERVICE_CLIENT_WEB_BABYLON_JS_CONTAINER_NAME: z
+        .string()
+        .default("vircadia_world_client_web_babylon_js"),
+    VRCA_SERVER_SERVICE_CLIENT_WEB_BABYLON_JS_HOST_CONTAINER_BIND_EXTERNAL: z
+        .string()
+        .default("0.0.0.0"),
+    VRCA_SERVER_SERVICE_CLIENT_WEB_BABYLON_JS_PORT_CONTAINER_BIND_EXTERNAL:
+        z.coerce.number().default(8080),
 
     // Postgres
     VRCA_SERVER_SERVICE_POSTGRES_CONTAINER_NAME: z
@@ -112,4 +122,5 @@ const serverEnvSchema = z.object({
         .default(5437),
 });
 
+// Parse server environment variables
 export const serverConfiguration = serverEnvSchema.parse(process.env);
