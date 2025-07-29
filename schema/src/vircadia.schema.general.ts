@@ -604,6 +604,7 @@ export namespace Communication {
     export namespace REST {
         export enum E_Endpoint {
             AUTH_SESSION_VALIDATE = "AUTH_SESSION_VALIDATE",
+            AUTH_ANONYMOUS_LOGIN = "AUTH_ANONYMOUS_LOGIN",
             AUTH_OAUTH_AUTHORIZE = "AUTH_OAUTH_AUTHORIZE",
             AUTH_OAUTH_CALLBACK = "AUTH_OAUTH_CALLBACK",
             AUTH_LOGOUT = "AUTH_LOGOUT",
@@ -686,6 +687,71 @@ export namespace Communication {
                             type: "boolean",
                             description:
                                 "Indicates if the validation was successful",
+                        },
+                        {
+                            name: "timestamp",
+                            type: "number",
+                            description:
+                                "Unix timestamp when the response was generated",
+                        },
+                        {
+                            name: "error",
+                            type: "string",
+                            description:
+                                "Error message (only present when success is false)",
+                        },
+                    ],
+                },
+            },
+            AUTH_ANONYMOUS_LOGIN: {
+                path: `${REST_BASE_PATH}/auth/anonymous`,
+                method: "POST",
+                createRequest: (): string => JSON.stringify({}),
+                createSuccess: (data: {
+                    token: string;
+                    agentId: string;
+                    sessionId: string;
+                }): {
+                    success: true;
+                    timestamp: number;
+                    data: {
+                        token: string;
+                        agentId: string;
+                        sessionId: string;
+                    };
+                } => ({
+                    success: true,
+                    timestamp: Date.now(),
+                    data,
+                }),
+                createError: (
+                    error: string,
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+                description: "Logs in a user anonymously.",
+                parameters: [],
+                returns: {
+                    type: "object",
+                    description:
+                        "Returns a session token for the anonymous user.",
+                    fields: [
+                        {
+                            name: "success",
+                            type: "boolean",
+                            description:
+                                "Indicates whether the request was successful.",
+                        },
+                        {
+                            name: "data",
+                            type: "object",
+                            description: "The response data.",
                         },
                         {
                             name: "timestamp",
