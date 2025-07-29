@@ -6,7 +6,6 @@ import { Communication } from "../../../schema/src/vircadia.schema.general";
 export type ClientCoreConnectionState =
     | "connected"
     | "connecting"
-    | "reconnecting"
     | "disconnected";
 
 /**
@@ -19,12 +18,8 @@ export type ClientCoreConnectionInfo = {
     isConnected: boolean;
     /** Whether the client is currently connecting */
     isConnecting: boolean;
-    /** Whether the client is currently reconnecting */
-    isReconnecting: boolean;
     /** Duration of the current connection in milliseconds */
     connectionDuration?: number;
-    /** Number of reconnection attempts made */
-    reconnectAttempts: number;
     /** List of pending requests with their IDs and elapsed time */
     pendingRequests: Array<{
         requestId: string;
@@ -52,12 +47,6 @@ interface ClientCoreConfig {
     authToken: string;
     /** Authentication provider name */
     authProvider: string;
-
-    // Reconnection settings
-    /** Maximum number of reconnection attempts (default: 5) */
-    reconnectAttempts?: number;
-    /** Delay between reconnection attempts in milliseconds (default: 5000) */
-    reconnectDelay?: number;
 
     // Debug settings
     /** Enable debug logging */
@@ -102,12 +91,10 @@ const debugError = (
 
 /**
  * Handles all WebSocket communication with the Vircadia server
- * Manages connection, reconnection, and message passing
+ * Manages connection and message passing
  */
 class CoreConnectionManager {
     private ws: WebSocket | null = null;
-    private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    private reconnectCount = 0;
     private pendingRequests = new Map<
         string,
         {
@@ -132,6 +119,14 @@ class CoreConnectionManager {
      * @param {ClientCoreConfig} config - Configuration for the connection
      */
     constructor(private config: ClientCoreConfig) {}
+
+    /**
+     * Updates the configuration of the connection manager.
+     * @param {ClientCoreConfig} newConfig - The new configuration object.
+     */
+    updateConfig(newConfig: ClientCoreConfig): void {
+        this.config = newConfig;
+    }
 
     /**
      * Adds an event listener for connection events
@@ -281,12 +276,8 @@ class CoreConnectionManager {
                     }),
                 ]);
 
-                this.reconnectCount = 0;
                 return this.getConnectionInfo();
             } catch (error) {
-                // Attempt reconnection
-                this.attemptReconnect();
-
                 // Re-throw with enhanced error info if possible
                 if (error instanceof Error) {
                     if (
@@ -375,15 +366,6 @@ class CoreConnectionManager {
     }
 
     /**
-     * Checks if the client is currently attempting to reconnect
-     * @returns {boolean} True if reconnecting
-     * @private
-     */
-    private isReconnecting(): boolean {
-        return this.reconnectTimer !== null;
-    }
-
-    /**
      * Gets detailed information about the current connection state
      * @returns {ClientCoreConnectionInfo} Current connection information
      */
@@ -405,9 +387,7 @@ class CoreConnectionManager {
             status: this.lastStatus,
             isConnected: this.isClientConnected(),
             isConnecting: this.isConnecting(),
-            isReconnecting: this.isReconnecting(),
             connectionDuration,
-            reconnectAttempts: this.reconnectCount,
             pendingRequests,
             agentId: this.agentId,
             sessionId: this.sessionId,
@@ -416,15 +396,9 @@ class CoreConnectionManager {
 
     /**
      * Disconnects from the server and cleans up resources
-     * Cancels any pending requests and stops reconnection attempts
+     * Cancels any pending requests
      */
     disconnect(): void {
-        // Clear any reconnect timer
-        if (this.reconnectTimer !== null) {
-            clearTimeout(this.reconnectTimer);
-            this.reconnectTimer = null;
-        }
-
         // Clear all pending requests with a disconnection error
         for (const [requestId, request] of this.pendingRequests.entries()) {
             clearTimeout(request.timeout);
@@ -434,7 +408,7 @@ class CoreConnectionManager {
 
         // Close WebSocket if it exists
         if (this.ws) {
-            // Remove event handlers first to prevent reconnection attempts
+            // Remove event handlers first
             this.ws.onclose = null;
             this.ws.onerror = null;
             this.ws.onmessage = null;
@@ -517,7 +491,6 @@ class CoreConnectionManager {
             `WebSocket connection closed: ${event.reason || "No reason provided"}, code: ${event.code}`,
         );
         this.updateConnectionStatus("disconnected");
-        this.attemptReconnect();
     }
 
     /**
@@ -538,40 +511,6 @@ class CoreConnectionManager {
         this.updateConnectionStatus("disconnected");
         debugError(this.config, `WebSocket error: ${errorMessage}`);
     }
-
-    /**
-     * Attempts to reconnect to the server after a disconnection
-     * Uses exponential backoff based on configuration settings
-     * @private
-     */
-    private attemptReconnect(): void {
-        if (this.reconnectTimer !== null) return;
-
-        const maxAttempts = this.config.reconnectAttempts ?? 5;
-        const delay = this.config.reconnectDelay ?? 5000;
-
-        if (this.reconnectCount >= maxAttempts) {
-            debugError(this.config, "Max reconnection attempts reached");
-            return;
-        }
-
-        this.updateConnectionStatus("reconnecting");
-        debugLog(
-            this.config,
-            `Attempting to reconnect (${this.reconnectCount + 1}/${maxAttempts}) in ${delay}ms`,
-        );
-
-        this.reconnectTimer = setTimeout(async () => {
-            this.reconnectTimer = null;
-            this.reconnectCount++;
-
-            try {
-                await this.connect();
-            } catch (error) {
-                debugError(this.config, "Reconnection attempt failed:", error);
-            }
-        }, delay);
-    }
 }
 
 /**
@@ -587,6 +526,51 @@ export class ClientCore {
      */
     constructor(private config: ClientCoreConfig) {
         this.coreConnectionManager = new CoreConnectionManager(config);
+    }
+
+    /**
+     * Updates the server URL.
+     * @param {string} url - The new server URL.
+     */
+    setServerUrl(url: string): void {
+        this.config.serverUrl = url;
+        this.coreConnectionManager.updateConfig(this.config);
+    }
+
+    /**
+     * Updates the authentication token.
+     * @param {string} token - The new authentication token.
+     */
+    setAuthToken(token: string): void {
+        this.config.authToken = token;
+        this.coreConnectionManager.updateConfig(this.config);
+    }
+
+    /**
+     * Updates the authentication provider.
+     * @param {string} provider - The new authentication provider.
+     */
+    setAuthProvider(provider: string): void {
+        this.config.authProvider = provider;
+        this.coreConnectionManager.updateConfig(this.config);
+    }
+
+    /**
+     * Enables or disables debug logging.
+     * @param {boolean} isDebug - True to enable, false to disable.
+     */
+    setDebug(isDebug: boolean): void {
+        this.config.debug = isDebug;
+        this.coreConnectionManager.updateConfig(this.config);
+    }
+
+    /**
+     * Suppresses or unsuppresses console output.
+     * @param {boolean} isSuppressed - True to suppress, false to unsuppress.
+     */
+    setSuppress(isSuppressed: boolean): void {
+        this.config.suppress = isSuppressed;
+        this.coreConnectionManager.updateConfig(this.config);
     }
 
     /**
