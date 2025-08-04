@@ -9,6 +9,15 @@ export type ClientCoreConnectionState =
     | "disconnected";
 
 /**
+ * Represents the possible session validation states
+ */
+export type ClientCoreSessionStatus =
+    | "valid"
+    | "validating"
+    | "expired"
+    | "invalid";
+
+/**
  * Contains detailed information about the current connection state
  */
 export type ClientCoreConnectionInfo = {
@@ -29,6 +38,15 @@ export type ClientCoreConnectionInfo = {
     agentId: string | null;
     /** Identifier of the session assigned by the server */
     sessionId: string | null;
+    /** Session validation information from REST API checks */
+    sessionValidation?: {
+        /** Current session status */
+        status: ClientCoreSessionStatus;
+        /** Timestamp when the session was last checked */
+        lastChecked: number;
+        /** Error message from session validation, if any */
+        error?: string;
+    };
 };
 
 /**
@@ -113,12 +131,88 @@ class CoreConnectionManager {
     // Fields to store session information received from the server
     private agentId: string | null = null;
     private sessionId: string | null = null;
+    // Session validation information
+    private sessionValidation: {
+        status: ClientCoreSessionStatus;
+        lastChecked: number;
+        error?: string;
+    } | null = null;
+    // Track if session was previously valid to distinguish expired vs invalid
+    private wasSessionValid = false;
 
     /**
      * Creates a new CoreConnectionManager instance
      * @param {ClientCoreConfig} config - Configuration for the connection
      */
     constructor(private config: ClientCoreConfig) {}
+
+    /**
+     * Validates the current session via REST API
+     * @param {CoreRestManager} restManager - REST manager instance to use for validation
+     * @returns {Promise<void>} Promise that resolves when validation is complete
+     * @private
+     */
+    private async validateSessionViaRest(
+        restManager: CoreRestManager,
+    ): Promise<void> {
+        // Set status to validating
+        this.sessionValidation = {
+            status: "validating",
+            lastChecked: Date.now(),
+        };
+
+        try {
+            debugLog(this.config, "Validating session via REST API");
+
+            const result = await restManager.validateSession({
+                token: this.config.authToken,
+                provider: this.config.authProvider,
+            });
+
+            const isValid = result.success === true;
+
+            // Determine the appropriate status
+            let status: ClientCoreSessionStatus;
+            if (isValid) {
+                status = "valid";
+                this.wasSessionValid = true;
+            } else {
+                // If session was valid before but now invalid, it's expired
+                // Otherwise it's just invalid
+                status = this.wasSessionValid ? "expired" : "invalid";
+            }
+
+            this.sessionValidation = {
+                status,
+                lastChecked: Date.now(),
+                error: result.success === false ? result.error : undefined,
+            };
+
+            debugLog(this.config, `Session validation result: ${status}`);
+        } catch (error) {
+            this.sessionValidation = {
+                status: this.wasSessionValid ? "expired" : "invalid",
+                lastChecked: Date.now(),
+                error:
+                    error instanceof Error
+                        ? error.message
+                        : "Unknown validation error",
+            };
+            debugError(this.config, "Session validation failed:", error);
+        }
+    }
+
+    /**
+     * Manually validates the current session via REST API
+     * @param {CoreRestManager} restManager - REST manager instance to use for validation
+     * @returns {Promise<ClientCoreConnectionInfo>} Promise that resolves with updated connection info
+     */
+    async validateSession(
+        restManager: CoreRestManager,
+    ): Promise<ClientCoreConnectionInfo> {
+        await this.validateSessionViaRest(restManager);
+        return this.getConnectionInfo();
+    }
 
     /**
      * Updates the configuration of the connection manager.
@@ -185,11 +279,13 @@ class CoreConnectionManager {
      * Connects to the Vircadia server with authentication
      * @param {Object} options - Connection options
      * @param {number} [options.timeoutMs] - Connection timeout in milliseconds (default: 30000)
+     * @param {CoreRestManager} [options.restManager] - REST manager for session validation on failure
      * @returns {Promise<ClientCoreConnectionInfo>} - Promise resolving to connection information
      * @throws {Error} If connection or authentication fails
      */
     async connect(options?: {
         timeoutMs?: number;
+        restManager?: CoreRestManager;
     }): Promise<ClientCoreConnectionInfo> {
         // If already connected, return immediately
         if (this.isClientConnected()) {
@@ -250,6 +346,10 @@ class CoreConnectionManager {
                                 this.ws.onclose = this.handleClose.bind(this);
                             this.updateConnectionStatus("connected");
                             this.connectionStartTime = Date.now();
+                            // Clear any previous session validation on successful connection
+                            this.sessionValidation = null;
+                            // Mark session as valid since connection succeeded
+                            this.wasSessionValid = true;
                             debugLog(
                                 this.config,
                                 "WebSocket connection established",
@@ -278,8 +378,39 @@ class CoreConnectionManager {
 
                 return this.getConnectionInfo();
             } catch (error) {
-                // Re-throw with enhanced error info if possible
+                // Validate session via REST when WebSocket connection fails
+                if (options?.restManager) {
+                    debugLog(
+                        this.config,
+                        "WebSocket connection failed, checking session via REST",
+                    );
+                    await this.validateSessionViaRest(options.restManager);
+                }
+
+                // Re-throw with enhanced error info based on session validation
                 if (error instanceof Error) {
+                    // Check if we have session validation info to provide better error context
+                    if (this.sessionValidation) {
+                        const status = this.sessionValidation.status;
+                        if (status === "invalid" || status === "expired") {
+                            // Session is invalid/expired - this is an authentication issue
+                            const authError =
+                                status === "expired"
+                                    ? "Session expired"
+                                    : "Invalid session";
+                            throw new Error(
+                                `Authentication failed (${authError}): ${this.sessionValidation.error || error.message}`,
+                            );
+                        } else if (status === "valid") {
+                            // Session is valid but WebSocket failed - this is likely a network/server issue
+                            throw new Error(
+                                `Connection failed (session valid): ${error.message}. This may be due to network issues or server downtime.`,
+                            );
+                        }
+                        // If status is "validating", fall through to original logic
+                    }
+
+                    // Fallback to original logic if no session validation
                     if (
                         error.message.includes("401") ||
                         error.message.includes("Invalid token") ||
@@ -391,6 +522,7 @@ class CoreConnectionManager {
             pendingRequests,
             agentId: this.agentId,
             sessionId: this.sessionId,
+            sessionValidation: this.sessionValidation || undefined,
         };
     }
 
@@ -426,6 +558,10 @@ class CoreConnectionManager {
 
         this.updateConnectionStatus("disconnected");
         this.connectionStartTime = null;
+        // Clear session validation on disconnect
+        this.sessionValidation = null;
+        // Reset session validity tracking
+        this.wasSessionValid = false;
         debugLog(this.config, "WebSocket disconnected");
     }
 
@@ -514,11 +650,218 @@ class CoreConnectionManager {
 }
 
 /**
+ * Handles all REST API communication with the Vircadia server
+ * Manages HTTP requests and responses according to the schema definitions
+ */
+class CoreRestManager {
+    /**
+     * Creates a new CoreRestManager instance
+     * @param {ClientCoreConfig} config - Configuration for the REST client
+     */
+    constructor(private config: ClientCoreConfig) {}
+
+    /**
+     * Updates the configuration of the REST manager.
+     * @param {ClientCoreConfig} newConfig - The new configuration object.
+     */
+    updateConfig(newConfig: ClientCoreConfig): void {
+        this.config = newConfig;
+    }
+
+    /**
+     * Makes a generic HTTP request to the server
+     * @param {string} path - The API endpoint path
+     * @param {string} method - HTTP method
+     * @param {any} body - Request body (for POST requests)
+     * @param {Record<string, string>} headers - Additional headers
+     * @returns {Promise<any>} The response data
+     * @private
+     */
+    private async makeRequest(
+        path: string,
+        method: string,
+        // biome-ignore lint/suspicious/noExplicitAny: Flexible request body type
+        body?: any,
+        headers: Record<string, string> = {},
+        // biome-ignore lint/suspicious/noExplicitAny: Flexible response type
+    ): Promise<any> {
+        const url = new URL(path, this.config.serverUrl);
+
+        debugLog(this.config, `Making ${method} request to:`, url.toString());
+
+        const requestOptions: RequestInit = {
+            method,
+            headers: {
+                "Content-Type": "application/json",
+                ...headers,
+            },
+        };
+
+        if (body && (method === "POST" || method === "PUT")) {
+            requestOptions.body =
+                typeof body === "string" ? body : JSON.stringify(body);
+        }
+
+        try {
+            const response = await fetch(url.toString(), requestOptions);
+
+            debugLog(this.config, `Response status: ${response.status}`);
+
+            // Parse response as JSON
+            const responseData = await response.json();
+
+            // For non-2xx responses, create error response using schema pattern
+            if (!response.ok) {
+                return {
+                    success: false,
+                    timestamp: Date.now(),
+                    error:
+                        responseData.error ||
+                        `HTTP ${response.status}: ${response.statusText}`,
+                };
+            }
+
+            return responseData;
+        } catch (error) {
+            debugError(this.config, "REST request failed:", error);
+            return {
+                success: false,
+                timestamp: Date.now(),
+                error: error instanceof Error ? error.message : "Unknown error",
+            };
+        }
+    }
+
+    /**
+     * Validates a user session token from an authentication provider
+     * @param {Object} data - Session validation data
+     * @param {string} data.token - Authentication token to validate
+     * @param {string} data.provider - Name of the authentication provider
+     * @returns {Promise<any>} Response indicating whether the session is valid
+     */
+    async validateSession(data: {
+        token: string;
+        provider: string;
+    }): Promise<any> {
+        const endpoint = Communication.REST.Endpoint.AUTH_SESSION_VALIDATE;
+        const requestBody = endpoint.createRequest(data);
+
+        return this.makeRequest(endpoint.path, endpoint.method, requestBody);
+    }
+
+    /**
+     * Logs in a user anonymously
+     * @returns {Promise<any>} Returns a session token for the anonymous user
+     */
+    async loginAnonymous(): Promise<any> {
+        const endpoint = Communication.REST.Endpoint.AUTH_ANONYMOUS_LOGIN;
+        const requestBody = endpoint.createRequest();
+
+        return this.makeRequest(endpoint.path, endpoint.method, requestBody);
+    }
+
+    /**
+     * Initiates OAuth authorization flow for a specified provider
+     * @param {string} provider - The OAuth provider to use (e.g., 'azure')
+     * @returns {Promise<any>} Response with redirect URL for OAuth authorization
+     */
+    async authorizeOAuth(provider: string): Promise<any> {
+        const endpoint = Communication.REST.Endpoint.AUTH_OAUTH_AUTHORIZE;
+        const queryParams = endpoint.createRequest(provider);
+        const fullPath = `${endpoint.path}${queryParams}`;
+
+        return this.makeRequest(fullPath, endpoint.method);
+    }
+
+    /**
+     * Handles OAuth callback from the authorization provider
+     * @param {Object} params - OAuth callback parameters
+     * @param {string} params.provider - The OAuth provider that sent the callback
+     * @param {string} params.code - Authorization code from the OAuth provider
+     * @param {string} [params.state] - State parameter for CSRF protection
+     * @returns {Promise<any>} Response with authentication token and session information
+     */
+    async handleOAuthCallback(params: {
+        provider: string;
+        code: string;
+        state?: string;
+    }): Promise<any> {
+        const endpoint = Communication.REST.Endpoint.AUTH_OAUTH_CALLBACK;
+        const queryParams = endpoint.createRequest(params);
+        const fullPath = `${endpoint.path}${queryParams}`;
+
+        return this.makeRequest(fullPath, endpoint.method);
+    }
+
+    /**
+     * Logs out the current session and invalidates the token
+     * @param {string} sessionId - Session ID to invalidate
+     * @returns {Promise<any>} Response indicating logout status
+     */
+    async logout(sessionId: string): Promise<any> {
+        const endpoint = Communication.REST.Endpoint.AUTH_LOGOUT;
+        const requestBody = endpoint.createRequest(sessionId);
+
+        return this.makeRequest(endpoint.path, endpoint.method, requestBody);
+    }
+
+    /**
+     * Initiates the process to link an additional authentication provider to an existing account
+     * @param {Object} data - Provider linking data
+     * @param {string} data.provider - The authentication provider to link (e.g., 'azure')
+     * @param {string} data.sessionId - Current session ID to associate the new provider with
+     * @returns {Promise<any>} Response with redirect URL to complete provider linking
+     */
+    async linkProvider(data: {
+        provider: string;
+        sessionId: string;
+    }): Promise<any> {
+        const endpoint = Communication.REST.Endpoint.AUTH_LINK_PROVIDER;
+        const requestBody = endpoint.createRequest(data);
+
+        return this.makeRequest(endpoint.path, endpoint.method, requestBody);
+    }
+
+    /**
+     * Unlinks an authentication provider from the current account
+     * @param {Object} data - Provider unlinking data
+     * @param {string} data.provider - The authentication provider to unlink
+     * @param {string} data.providerUid - The provider-specific user ID to unlink
+     * @param {string} data.sessionId - Current session ID for authentication
+     * @returns {Promise<any>} Response indicating unlink status
+     */
+    async unlinkProvider(data: {
+        provider: string;
+        providerUid: string;
+        sessionId: string;
+    }): Promise<any> {
+        const endpoint = Communication.REST.Endpoint.AUTH_UNLINK_PROVIDER;
+        const requestBody = endpoint.createRequest(data);
+
+        return this.makeRequest(endpoint.path, endpoint.method, requestBody);
+    }
+
+    /**
+     * Lists all authentication providers linked to the current account
+     * @param {string} sessionId - Current session ID for authentication
+     * @returns {Promise<any>} Response with list of linked providers
+     */
+    async listProviders(sessionId: string): Promise<any> {
+        const endpoint = Communication.REST.Endpoint.AUTH_LIST_PROVIDERS;
+        const queryParams = endpoint.createRequest(sessionId);
+        const fullPath = `${endpoint.path}${queryParams}`;
+
+        return this.makeRequest(fullPath, endpoint.method);
+    }
+}
+
+/**
  * Main class that coordinates all components and manages communication with Vircadia servers.
  * Handles connection management, authentication, and provides utility methods.
  */
 export class ClientCore {
     private coreConnectionManager: CoreConnectionManager;
+    private coreRestManager: CoreRestManager;
 
     /**
      * Creates a new ClientCore instance
@@ -526,6 +869,7 @@ export class ClientCore {
      */
     constructor(private config: ClientCoreConfig) {
         this.coreConnectionManager = new CoreConnectionManager(config);
+        this.coreRestManager = new CoreRestManager(config);
     }
 
     /**
@@ -535,6 +879,7 @@ export class ClientCore {
     setServerUrl(url: string): void {
         this.config.serverUrl = url;
         this.coreConnectionManager.updateConfig(this.config);
+        this.coreRestManager.updateConfig(this.config);
     }
 
     /**
@@ -544,6 +889,7 @@ export class ClientCore {
     setAuthToken(token: string): void {
         this.config.authToken = token;
         this.coreConnectionManager.updateConfig(this.config);
+        this.coreRestManager.updateConfig(this.config);
     }
 
     /**
@@ -553,6 +899,7 @@ export class ClientCore {
     setAuthProvider(provider: string): void {
         this.config.authProvider = provider;
         this.coreConnectionManager.updateConfig(this.config);
+        this.coreRestManager.updateConfig(this.config);
     }
 
     /**
@@ -562,6 +909,7 @@ export class ClientCore {
     setDebug(isDebug: boolean): void {
         this.config.debug = isDebug;
         this.coreConnectionManager.updateConfig(this.config);
+        this.coreRestManager.updateConfig(this.config);
     }
 
     /**
@@ -571,24 +919,40 @@ export class ClientCore {
     setSuppress(isSuppressed: boolean): void {
         this.config.suppress = isSuppressed;
         this.coreConnectionManager.updateConfig(this.config);
+        this.coreRestManager.updateConfig(this.config);
     }
 
     /**
-     * Provides access to utility methods for connection management
-     * @returns {Object} Object containing connection utilities
+     * Provides access to utility methods for connection management and REST API calls
+     * @returns {Object} Object containing connection and REST utilities
      */
     get Utilities() {
         const cm = this.coreConnectionManager;
+        const rm = this.coreRestManager;
 
         return {
             Connection: {
-                // Direct method bindings for 1:1 mappings
-                connect: cm.connect.bind(cm),
+                // Enhanced connect method that includes REST session validation
+                connect: (options?: { timeoutMs?: number }) =>
+                    cm.connect({ ...options, restManager: rm }),
                 disconnect: cm.disconnect.bind(cm),
                 addEventListener: cm.addEventListener.bind(cm),
                 removeEventListener: cm.removeEventListener.bind(cm),
                 query: cm.query.bind(cm),
                 getConnectionInfo: cm.getConnectionInfo.bind(cm),
+                // Manual session validation
+                validateSession: () => cm.validateSession(rm),
+            },
+            REST: {
+                // Authentication endpoints
+                validateSession: rm.validateSession.bind(rm),
+                loginAnonymous: rm.loginAnonymous.bind(rm),
+                authorizeOAuth: rm.authorizeOAuth.bind(rm),
+                handleOAuthCallback: rm.handleOAuthCallback.bind(rm),
+                logout: rm.logout.bind(rm),
+                linkProvider: rm.linkProvider.bind(rm),
+                unlinkProvider: rm.unlinkProvider.bind(rm),
+                listProviders: rm.listProviders.bind(rm),
             },
         };
     }
@@ -600,5 +964,6 @@ export class ClientCore {
         if (this.coreConnectionManager) {
             this.coreConnectionManager.disconnect();
         }
+        // Note: REST manager doesn't need explicit cleanup as it's stateless
     }
 }
