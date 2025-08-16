@@ -303,6 +303,12 @@ class CoreConnectionManager {
                 this.updateConnectionStatus("connecting");
 
                 const url = new URL(this.config.serverUrl);
+                // Ensure correct WebSocket protocol even if HTTP(S) base is provided
+                if (url.protocol === "http:") {
+                    url.protocol = "ws:";
+                } else if (url.protocol === "https:") {
+                    url.protocol = "wss:";
+                }
                 url.searchParams.set("token", this.config.authToken);
                 url.searchParams.set("provider", this.config.authProvider);
 
@@ -310,6 +316,21 @@ class CoreConnectionManager {
                     this.config,
                     "Connecting to WebSocket server:",
                     url.toString(),
+                );
+
+                // Additional debug logging
+                console.log(
+                    "[CoreConnectionManager] WebSocket connection details:",
+                    {
+                        originalUrl: this.config.serverUrl,
+                        finalUrl: url.toString(),
+                        protocol: url.protocol,
+                        host: url.host,
+                        pathname: url.pathname,
+                        hasToken: !!this.config.authToken,
+                        tokenLength: this.config.authToken?.length,
+                        provider: this.config.authProvider,
+                    },
                 );
 
                 this.ws = new WebSocket(url);
