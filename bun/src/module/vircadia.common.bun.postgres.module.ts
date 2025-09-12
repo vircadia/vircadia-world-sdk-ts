@@ -7,6 +7,7 @@ export class BunPostgresClientModule {
     private superSql: SQL | null = null;
     private proxySql: SQL | null = null;
     private legacySuperSql: import("postgres").Sql | null = null;
+    private legacyProxySql: import("postgres").Sql | null = null;
 
     private debug: boolean;
     private suppress: boolean;
@@ -173,6 +174,51 @@ export class BunPostgresClientModule {
         }
     }
 
+    public async getLegacyProxyClient(data: {
+        postgres: {
+            host: string;
+            port: number;
+            database: string;
+            username: string;
+            password: string;
+        };
+    }): Promise<import("postgres").Sql> {
+        try {
+            if (!this.legacyProxySql) {
+                BunLogModule({
+                    message:
+                        "Initializing legacy postgres.js proxy user connection...",
+                    type: "debug",
+                    suppress: this.suppress,
+                    debug: this.debug,
+                });
+
+                const { default: postgres } = await import("postgres");
+                this.legacyProxySql = postgres({
+                    host: data.postgres.host,
+                    port: data.postgres.port,
+                    database: data.postgres.database,
+                    username: data.postgres.username,
+                    password: data.postgres.password,
+                });
+
+                await this.legacyProxySql`SELECT 1`;
+
+                BunLogModule({
+                    message:
+                        "Legacy postgres.js proxy user connection established successfully.",
+                    type: "debug",
+                    suppress: this.suppress,
+                    debug: this.debug,
+                });
+            }
+            return this.legacyProxySql;
+        } catch (error) {
+            this.logIssue(error, data.postgres.host, data.postgres.port);
+            throw error;
+        }
+    }
+
     public async disconnect(): Promise<void> {
         if (this.superSql) {
             try {
@@ -239,6 +285,19 @@ export class BunPostgresClientModule {
                 this.legacySuperSql = null;
                 BunLogModule({
                     message: "Legacy postgres.js super user connection closed.",
+                    type: "debug",
+                    suppress: this.suppress,
+                    debug: this.debug,
+                });
+            }
+        }
+        if (this.legacyProxySql) {
+            try {
+                await this.legacyProxySql.end();
+            } finally {
+                this.legacyProxySql = null;
+                BunLogModule({
+                    message: "Legacy postgres.js proxy user connection closed.",
                     type: "debug",
                     suppress: this.suppress,
                     debug: this.debug,
