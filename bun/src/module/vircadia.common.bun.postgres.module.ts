@@ -246,4 +246,149 @@ export class BunPostgresClientModule {
             }
         }
     }
+
+    public async getDatabasePoolStats(): Promise<{
+        super?: {
+            implementation: string;
+            metrics?: {
+                max?: number;
+                min?: number;
+                size?: number;
+                idle?: number;
+                busy?: number;
+                pending?: number;
+            };
+        };
+        proxy?: {
+            implementation: string;
+            metrics?: {
+                max?: number;
+                min?: number;
+                size?: number;
+                idle?: number;
+                busy?: number;
+                pending?: number;
+            };
+        };
+        legacy?: {
+            implementation: string;
+            metrics?: {
+                max?: number;
+                min?: number;
+                size?: number;
+                idle?: number;
+                busy?: number;
+                pending?: number;
+            };
+        };
+    }> {
+        type SqlTagFunction = {
+            (
+                strings: TemplateStringsArray,
+                ...values: unknown[]
+            ): Promise<unknown>;
+        };
+
+        const collectStats = async (
+            client: unknown,
+            implementation: string,
+        ) => {
+            try {
+                const sql = client as SqlTagFunction;
+                const maxRows =
+                    (await sql`SELECT setting::int AS max FROM pg_settings WHERE name = 'max_connections'`) as Array<{
+                        max: number;
+                    }>;
+                const sizeRows =
+                    (await sql`SELECT count(*)::int AS size FROM pg_stat_activity WHERE datname = current_database()`) as Array<{
+                        size: number;
+                    }>;
+                const busyRows =
+                    (await sql`SELECT count(*)::int AS busy FROM pg_stat_activity WHERE datname = current_database() AND state = 'active'`) as Array<{
+                        busy: number;
+                    }>;
+                const idleRows =
+                    (await sql`SELECT count(*)::int AS idle FROM pg_stat_activity WHERE datname = current_database() AND state = 'idle'`) as Array<{
+                        idle: number;
+                    }>;
+                const pendingRows =
+                    (await sql`SELECT count(*)::int AS pending FROM pg_stat_activity WHERE datname = current_database() AND wait_event IS NOT NULL`) as Array<{
+                        pending: number;
+                    }>;
+
+                return {
+                    implementation,
+                    metrics: {
+                        max: maxRows?.[0]?.max,
+                        size: sizeRows?.[0]?.size,
+                        busy: busyRows?.[0]?.busy,
+                        idle: idleRows?.[0]?.idle,
+                        pending: pendingRows?.[0]?.pending,
+                    },
+                } as const;
+            } catch (error) {
+                BunLogModule({
+                    message: "Failed to collect database pool stats",
+                    type: "debug",
+                    suppress: this.suppress,
+                    debug: this.debug,
+                    error,
+                });
+                return {
+                    implementation,
+                } as const;
+            }
+        };
+
+        const result: {
+            super?: {
+                implementation: string;
+                metrics?: {
+                    max?: number;
+                    min?: number;
+                    size?: number;
+                    idle?: number;
+                    busy?: number;
+                    pending?: number;
+                };
+            };
+            proxy?: {
+                implementation: string;
+                metrics?: {
+                    max?: number;
+                    min?: number;
+                    size?: number;
+                    idle?: number;
+                    busy?: number;
+                    pending?: number;
+                };
+            };
+            legacy?: {
+                implementation: string;
+                metrics?: {
+                    max?: number;
+                    min?: number;
+                    size?: number;
+                    idle?: number;
+                    busy?: number;
+                    pending?: number;
+                };
+            };
+        } = {};
+
+        if (this.superSql) {
+            result.super = await collectStats(this.superSql, "bun-sql");
+        }
+        if (this.proxySql) {
+            result.proxy = await collectStats(this.proxySql, "bun-sql");
+        }
+        if (this.legacySuperSql) {
+            result.legacy = await collectStats(
+                this.legacySuperSql as unknown as import("postgres").Sql,
+                "postgres.js",
+            );
+        }
+
+        return result;
+    }
 }

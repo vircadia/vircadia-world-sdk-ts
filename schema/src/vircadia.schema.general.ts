@@ -119,7 +119,7 @@ export namespace Auth {
         auth__refresh_token?: string;
         auth__provider_email?: string;
         auth__is_primary: boolean;
-        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+        // biome-ignore lint/suspicious/noExplicitAny: allows provider metadata of arbitrary shape
         auth__metadata?: Record<string, any>;
         general__created_at?: string;
         general__created_by?: string;
@@ -514,12 +514,12 @@ export namespace Communication {
             public requestId: string;
             public errorMessage: string | null;
             public query: string;
-            // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+            // biome-ignore lint/suspicious/noExplicitAny: parameters can be any JSON-serializable values
             public parameters?: any[];
 
             constructor(data: {
                 query: string;
-                // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+                // biome-ignore lint/suspicious/noExplicitAny: parameters can be any JSON-serializable values
                 parameters?: any[];
                 requestId: string;
                 errorMessage: string | null;
@@ -1285,6 +1285,20 @@ export namespace Service {
     }
 
     export namespace API {
+        export interface I_PoolStatsMetrics {
+            max?: number;
+            min?: number;
+            size?: number;
+            idle?: number;
+            busy?: number;
+            pending?: number;
+        }
+
+        export interface I_PoolStats {
+            implementation: string;
+            metrics?: I_PoolStatsMetrics;
+        }
+
         export interface I_QueryMetrics {
             queriesPerSecond: {
                 current: number;
@@ -1335,6 +1349,11 @@ export namespace Service {
                 database: {
                     connected: boolean;
                     connections: I_SystemMetrics;
+                    pool?: {
+                        super?: I_PoolStats;
+                        proxy?: I_PoolStats;
+                        legacy?: I_PoolStats;
+                    };
                 };
                 memory: {
                     heapUsed: I_SystemMetrics;
@@ -1353,6 +1372,11 @@ export namespace Service {
                 database: {
                     connected: boolean;
                     connections: I_SystemMetrics;
+                    pool?: {
+                        super?: I_PoolStats;
+                        proxy?: I_PoolStats;
+                        legacy?: I_PoolStats;
+                    };
                 };
                 memory: {
                     heapUsed: I_SystemMetrics;
