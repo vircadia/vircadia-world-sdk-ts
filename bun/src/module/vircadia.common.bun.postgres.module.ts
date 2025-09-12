@@ -1,7 +1,6 @@
 import { SQL } from "bun";
 import { BunLogModule } from "./vircadia.common.bun.log.module";
 import { serverConfiguration } from "../config/vircadia.server.config";
-// Using Bun's native SQL client with built-in connection pooling
 
 export class BunPostgresClientModule {
     private static instance: BunPostgresClientModule | null = null;

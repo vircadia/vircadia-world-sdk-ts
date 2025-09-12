@@ -109,7 +109,7 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_PGWEB_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
         .number()
         .default(5437),
-    
+
     // Caddy reverse proxy
     VRCA_SERVER_SERVICE_CADDY_CONTAINER_NAME: z
         .string()
@@ -129,6 +129,9 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_CADDY_DOMAIN_APP: z
         .string()
         .default("app-next.vircadia.com"),
+    VRCA_SERVER_SERVICE_CADDY_EMAIL: z.string().default("hello@vircadia.com"),
+    VRCA_SERVER_SERVICE_CADDY_TLS_API: z.string().optional(),
+    VRCA_SERVER_SERVICE_CADDY_TLS_APP: z.string().optional(),
 });
 
 // Parse server environment variables
