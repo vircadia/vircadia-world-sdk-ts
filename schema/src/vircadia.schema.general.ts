@@ -588,6 +588,7 @@ export namespace Communication {
         }
 
         export type Message =
+            | GeneralErrorResponseMessage
             | QueryRequestMessage
             | QueryResponseMessage
             | TickNotificationMessage

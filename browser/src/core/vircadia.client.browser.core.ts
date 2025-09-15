@@ -630,6 +630,37 @@ class CoreConnectionManager {
                 );
                 clearTimeout(request.timeout);
                 this.pendingRequests.delete(message.requestId);
+                // If the server indicates an error, reject with details
+                if (
+                    message.type ===
+                    Communication.WebSocket.MessageType.GENERAL_ERROR_RESPONSE
+                ) {
+                    const err =
+                        (
+                            message as Communication.WebSocket.GeneralErrorResponseMessage
+                        ).errorMessage || "General error";
+                    const error = new Error(
+                        `Server error (requestId=${message.requestId}): ${err}`,
+                    );
+                    request.reject(error);
+                    return;
+                }
+
+                if (
+                    message.type ===
+                    Communication.WebSocket.MessageType.QUERY_RESPONSE
+                ) {
+                    const queryMsg =
+                        message as Communication.WebSocket.QueryResponseMessage;
+                    if (queryMsg.errorMessage) {
+                        const error = new Error(
+                            `Query failed (requestId=${message.requestId}): ${queryMsg.errorMessage}`,
+                        );
+                        request.reject(error);
+                        return;
+                    }
+                }
+
                 request.resolve(message);
             }
         } catch (error) {
