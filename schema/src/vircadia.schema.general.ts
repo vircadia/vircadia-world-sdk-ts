@@ -149,6 +149,7 @@ export namespace Auth {
 
             server__tick__rate_ms: number;
             server__tick__max_tick_count_buffer: number;
+            server__tick__enabled?: boolean;
 
             client__render_delay_ms: number;
             client__max_prediction_time_ms: number;
