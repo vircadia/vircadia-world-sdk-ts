@@ -207,6 +207,9 @@ export namespace Communication {
             SYNC_GROUP_UPDATES_RESPONSE = "SYNC_GROUP_UPDATES_RESPONSE",
             TICK_NOTIFICATION_RESPONSE = "TICK_NOTIFICATION_RESPONSE",
             SESSION_INFO_RESPONSE = "SESSION_INFO_RESPONSE",
+            REFLECT_PUBLISH_REQUEST = "REFLECT_PUBLISH_REQUEST",
+            REFLECT_MESSAGE_DELIVERY = "REFLECT_MESSAGE_DELIVERY",
+            REFLECT_ACK_RESPONSE = "REFLECT_ACK_RESPONSE",
         }
 
         // Message type documentation
@@ -484,6 +487,177 @@ export namespace Communication {
                     ],
                 },
             },
+            [MessageType.REFLECT_PUBLISH_REQUEST]: {
+                description:
+                    "Client->server request to publish a realtime message to a sync group and channel (authorized server-side).",
+                parameters: [
+                    {
+                        name: "syncGroup",
+                        type: "string",
+                        required: true,
+                        description:
+                            "Target sync group (RLS/ACL enforced server-side)",
+                    },
+                    {
+                        name: "channel",
+                        type: "string",
+                        required: true,
+                        description:
+                            "Logical channel name within the sync group",
+                    },
+                    {
+                        name: "payload",
+                        type: "unknown",
+                        required: true,
+                        description:
+                            "Arbitrary JSON payload; keep compact for performance",
+                    },
+                    {
+                        name: "requestId",
+                        type: "string",
+                        required: true,
+                        description: "Unique id for the publish request",
+                    },
+                ],
+                messageFormat: {
+                    type: "object",
+                    description: "Publish request",
+                    fields: [
+                        {
+                            name: "timestamp",
+                            type: "number",
+                            description: "Unix epoch (ms)",
+                        },
+                        {
+                            name: "requestId",
+                            type: "string",
+                            description: "Correlation id",
+                        },
+                        {
+                            name: "errorMessage",
+                            type: "string | null",
+                            description: "Validation error, if any",
+                        },
+                        {
+                            name: "type",
+                            type: "string",
+                            description: "REFLECT_PUBLISH_REQUEST",
+                        },
+                        {
+                            name: "syncGroup",
+                            type: "string",
+                            description: "Sync group name",
+                        },
+                        {
+                            name: "channel",
+                            type: "string",
+                            description: "Channel name",
+                        },
+                        {
+                            name: "payload",
+                            type: "unknown",
+                            description: "Message payload",
+                        },
+                    ],
+                },
+            },
+            [MessageType.REFLECT_MESSAGE_DELIVERY]: {
+                description:
+                    "Server->client delivery of a realtime message for a sync group and channel.",
+                messageFormat: {
+                    type: "object",
+                    description: "Delivery message",
+                    fields: [
+                        {
+                            name: "timestamp",
+                            type: "number",
+                            description: "Unix epoch (ms)",
+                        },
+                        {
+                            name: "requestId",
+                            type: "string",
+                            description:
+                                "Optional correlation id; usually empty",
+                        },
+                        {
+                            name: "errorMessage",
+                            type: "string | null",
+                            description: "Null for deliveries",
+                        },
+                        {
+                            name: "type",
+                            type: "string",
+                            description: "REFLECT_MESSAGE_DELIVERY",
+                        },
+                        {
+                            name: "syncGroup",
+                            type: "string",
+                            description: "Sync group name",
+                        },
+                        {
+                            name: "channel",
+                            type: "string",
+                            description: "Channel name",
+                        },
+                        {
+                            name: "fromSessionId",
+                            type: "string",
+                            description: "Sender session id (optional)",
+                        },
+                        {
+                            name: "payload",
+                            type: "unknown",
+                            description: "Message payload",
+                        },
+                    ],
+                },
+            },
+            [MessageType.REFLECT_ACK_RESPONSE]: {
+                description:
+                    "Server->client acknowledgement of a publish request including delivery count.",
+                messageFormat: {
+                    type: "object",
+                    description: "Ack response",
+                    fields: [
+                        {
+                            name: "timestamp",
+                            type: "number",
+                            description: "Unix epoch (ms)",
+                        },
+                        {
+                            name: "requestId",
+                            type: "string",
+                            description: "Correlation id from publish",
+                        },
+                        {
+                            name: "errorMessage",
+                            type: "string | null",
+                            description: "Error if publish rejected",
+                        },
+                        {
+                            name: "type",
+                            type: "string",
+                            description: "REFLECT_ACK_RESPONSE",
+                        },
+                        {
+                            name: "syncGroup",
+                            type: "string",
+                            description: "Target sync group",
+                        },
+                        {
+                            name: "channel",
+                            type: "string",
+                            description: "Target channel",
+                        },
+                        {
+                            name: "delivered",
+                            type: "number",
+                            description:
+                                "Number of local recipients delivered to",
+                        },
+                    ],
+                },
+            },
         };
 
         interface BaseMessage {
@@ -588,12 +762,99 @@ export namespace Communication {
             }
         }
 
+        // Reflector: client->server publish request
+        export class ReflectPublishRequestMessage implements BaseMessage {
+            public readonly type = MessageType.REFLECT_PUBLISH_REQUEST;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public syncGroup: string;
+            public channel: string;
+            // biome-ignore lint/suspicious/noExplicitAny: payload can be any JSON-serializable
+            public payload: any;
+
+            constructor(data: {
+                syncGroup: string;
+                channel: string;
+                // biome-ignore lint/suspicious/noExplicitAny: payload can be any JSON-serializable
+                payload: any;
+                requestId: string;
+                errorMessage?: string | null;
+            }) {
+                this.timestamp = Date.now();
+                this.requestId = data.requestId;
+                this.errorMessage = data.errorMessage ?? null;
+                this.syncGroup = data.syncGroup;
+                this.channel = data.channel;
+                this.payload = data.payload;
+            }
+        }
+
+        // Reflector: server->client delivery
+        export class ReflectDeliveryMessage implements BaseMessage {
+            public readonly type = MessageType.REFLECT_MESSAGE_DELIVERY;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public syncGroup: string;
+            public channel: string;
+            public fromSessionId?: string;
+            // biome-ignore lint/suspicious/noExplicitAny: payload can be any JSON-serializable
+            public payload: any;
+
+            constructor(data: {
+                syncGroup: string;
+                channel: string;
+                // biome-ignore lint/suspicious/noExplicitAny: payload can be any JSON-serializable
+                payload: any;
+                fromSessionId?: string;
+                requestId?: string;
+            }) {
+                this.timestamp = Date.now();
+                this.requestId = data.requestId ?? "";
+                this.errorMessage = null;
+                this.syncGroup = data.syncGroup;
+                this.channel = data.channel;
+                this.fromSessionId = data.fromSessionId;
+                this.payload = data.payload;
+            }
+        }
+
+        // Reflector: server->client ack
+        export class ReflectAckResponseMessage implements BaseMessage {
+            public readonly type = MessageType.REFLECT_ACK_RESPONSE;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public syncGroup: string;
+            public channel: string;
+            public delivered: number;
+
+            constructor(data: {
+                syncGroup: string;
+                channel: string;
+                delivered: number;
+                requestId: string;
+                errorMessage?: string | null;
+            }) {
+                this.timestamp = Date.now();
+                this.requestId = data.requestId;
+                this.errorMessage = data.errorMessage ?? null;
+                this.syncGroup = data.syncGroup;
+                this.channel = data.channel;
+                this.delivered = data.delivered;
+            }
+        }
+
         export type Message =
             | GeneralErrorResponseMessage
             | QueryRequestMessage
             | QueryResponseMessage
             | TickNotificationMessage
-            | SessionInfoMessage;
+            | SessionInfoMessage
+            | ReflectPublishRequestMessage
+            | ReflectDeliveryMessage
+            | ReflectAckResponseMessage;
 
         export function isMessageType<T extends Message>(
             message: Message,
