@@ -38,6 +38,10 @@ export type ClientCoreConnectionInfo = {
     agentId: string | null;
     /** Identifier of the session assigned by the server */
     sessionId: string | null;
+    /** Identifier for this browser tab (stable for the life of the tab) */
+    instanceId: string | null;
+    /** Combined session-and-instance identifier (sessionId-instanceId) */
+    fullSessionId: string | null;
     /** Session validation information from REST API checks */
     sessionValidation?: {
         /** Current session status */
@@ -139,6 +143,8 @@ class CoreConnectionManager {
     } | null = null;
     // Track if session was previously valid to distinguish expired vs invalid
     private wasSessionValid = false;
+    // Stable per-tab instance identifier
+    private instanceId: string;
     // Reflect subscriptions: key => listeners
     private reflectListeners = new Map<
         string,
@@ -149,7 +155,31 @@ class CoreConnectionManager {
      * Creates a new CoreConnectionManager instance
      * @param {ClientCoreConfig} config - Configuration for the connection
      */
-    constructor(private config: ClientCoreConfig) {}
+    constructor(private config: ClientCoreConfig) {
+        this.instanceId = this.getOrCreateInstanceId();
+    }
+
+    /**
+     * Returns a stable per-tab instance ID, creating and storing one in sessionStorage if needed
+     */
+    private getOrCreateInstanceId(): string {
+        try {
+            const key = "vircadia-instance-id";
+            const existing = sessionStorage.getItem(key);
+            if (existing && existing.length > 0) return existing;
+            const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+            let value = "";
+            for (let i = 0; i < 6; i++) {
+                value += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            sessionStorage.setItem(key, value);
+            return value;
+        } catch {
+            // Fallback if sessionStorage is unavailable
+            const fallback = crypto.randomUUID().slice(0, 6).toLowerCase();
+            return fallback;
+        }
+    }
 
     /**
      * Validates the current session via REST API
@@ -548,6 +578,11 @@ class CoreConnectionManager {
             pendingRequests,
             agentId: this.agentId,
             sessionId: this.sessionId,
+            instanceId: this.instanceId,
+            fullSessionId:
+                this.sessionId && this.instanceId
+                    ? `${this.sessionId}-${this.instanceId}`
+                    : null,
             sessionValidation: this.sessionValidation || undefined,
         };
     }
