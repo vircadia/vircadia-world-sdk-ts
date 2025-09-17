@@ -1588,6 +1588,29 @@ export namespace Service {
             successRate: number;
         }
 
+        export interface I_ReflectMetrics {
+            messagesPerSecond: {
+                current: number;
+                average: number;
+                peak: number;
+            };
+            messageDeliveryTime: {
+                averageMs: number;
+                p99Ms: number;
+                p999Ms: number;
+            };
+            messageSize: {
+                averageKB: number;
+                p99KB: number;
+                p999KB: number;
+            };
+            totalPublished: number;
+            totalDelivered: number;
+            totalAcknowledged: number;
+            failedDeliveries: number;
+            successRate: number;
+        }
+
         export interface I_SystemMetrics {
             current: number;
             average: number;
@@ -1629,6 +1652,7 @@ export namespace Service {
                     system: I_SystemMetrics;
                 };
                 queries?: I_QueryMetrics;
+                reflect?: I_ReflectMetrics;
             }): {
                 uptime: number;
                 connections: I_ConnectionMetrics;
@@ -1652,6 +1676,7 @@ export namespace Service {
                     system: I_SystemMetrics;
                 };
                 queries?: I_QueryMetrics;
+                reflect?: I_ReflectMetrics;
                 success: true;
                 timestamp: number;
             } => ({
@@ -1661,6 +1686,7 @@ export namespace Service {
                 memory: data.memory,
                 cpu: data.cpu,
                 queries: data.queries,
+                reflect: data.reflect,
                 success: true,
                 timestamp: Date.now(),
             }),
