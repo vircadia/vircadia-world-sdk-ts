@@ -139,6 +139,11 @@ class CoreConnectionManager {
     } | null = null;
     // Track if session was previously valid to distinguish expired vs invalid
     private wasSessionValid = false;
+    // Reflect subscriptions: key => listeners
+    private reflectListeners = new Map<
+        string,
+        Set<(msg: Communication.WebSocket.ReflectDeliveryMessage) => void>
+    >();
 
     /**
      * Creates a new CoreConnectionManager instance
@@ -621,6 +626,21 @@ class CoreConnectionManager {
                 `Parsed message request ID: ${message.requestId}`,
             );
 
+            // Deliver reflector messages to subscribers immediately (no request/response semantics)
+            if (
+                message.type ===
+                Communication.WebSocket.MessageType.REFLECT_MESSAGE_DELIVERY
+            ) {
+                const m =
+                    message as Communication.WebSocket.ReflectDeliveryMessage;
+                const key = `${m.syncGroup}:${m.channel}`;
+                const listeners = this.reflectListeners.get(key);
+                if (listeners) {
+                    for (const listener of listeners) listener(m);
+                }
+                return;
+            }
+
             const request = this.pendingRequests.get(message.requestId);
 
             if (request) {
@@ -666,6 +686,59 @@ class CoreConnectionManager {
         } catch (error) {
             debugError(this.config, "Error handling WebSocket message:", error);
         }
+    }
+
+    // Publish a reflect message and await ack
+    async publishReflect(data: {
+        syncGroup: string;
+        channel: string;
+        payload: unknown;
+        timeoutMs?: number;
+    }): Promise<Communication.WebSocket.ReflectAckResponseMessage> {
+        if (!this.isClientConnected()) {
+            throw new Error("Not connected to server");
+        }
+        const requestId = crypto.randomUUID();
+        const message =
+            new Communication.WebSocket.ReflectPublishRequestMessage({
+                syncGroup: data.syncGroup,
+                channel: data.channel,
+                payload: data.payload,
+                requestId,
+            });
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                this.pendingRequests.delete(requestId);
+                reject(new Error("Reflect publish timeout"));
+            }, data.timeoutMs ?? 5000);
+            this.pendingRequests.set(requestId, {
+                resolve: (value) =>
+                    resolve(
+                        value as Communication.WebSocket.ReflectAckResponseMessage,
+                    ),
+                reject,
+                timeout,
+            });
+            this.ws?.send(JSON.stringify(message));
+        });
+    }
+
+    // Subscribe to reflect deliveries
+    subscribeReflect(
+        syncGroup: string,
+        channel: string,
+        listener: (msg: Communication.WebSocket.ReflectDeliveryMessage) => void,
+    ): () => void {
+        const key = `${syncGroup}:${channel}`;
+        if (!this.reflectListeners.has(key)) {
+            this.reflectListeners.set(key, new Set());
+        }
+        const set = this.reflectListeners.get(key);
+        if (set) set.add(listener);
+        else this.reflectListeners.set(key, new Set([listener]));
+        return () => {
+            this.reflectListeners.get(key)?.delete(listener);
+        };
     }
 
     /**
@@ -994,6 +1067,9 @@ export class ClientCore {
                 getConnectionInfo: cm.getConnectionInfo.bind(cm),
                 // Manual session validation
                 validateSession: () => cm.validateSession(rm),
+                // Reflect API
+                publishReflect: cm.publishReflect.bind(cm),
+                subscribeReflect: cm.subscribeReflect.bind(cm),
             },
             REST: {
                 // Authentication endpoints
