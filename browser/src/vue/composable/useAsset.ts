@@ -1,5 +1,8 @@
 import { openDB, deleteDB, type DBSchema, type IDBPDatabase } from "idb";
-import type { Entity } from "../../../../schema/src/vircadia.schema.general";
+import {
+    Communication,
+    type Entity,
+} from "../../../../schema/src/vircadia.schema.general";
 import { type Ref, ref, inject, readonly, computed } from "vue";
 import { type useVircadia, useVircadiaInstance } from "../provider/useVircadia";
 
@@ -155,7 +158,6 @@ export function useAsset(options: {
     });
 
     // Debug log helper function - only logs when debug is enabled
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     const debugLog = (message: string, ...args: any[]) => {
         if (debug) {
             console.log(message, ...args);
@@ -163,7 +165,6 @@ export function useAsset(options: {
     };
 
     // Debug error helper - only logs errors when debug is enabled
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     const debugError = (message: string, ...args: any[]) => {
         if (debug) {
             console.error(message, ...args);
@@ -171,7 +172,6 @@ export function useAsset(options: {
     };
 
     // Debug warn helper - only logs warnings when debug is enabled
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     const debugWarn = (message: string, ...args: any[]) => {
         if (debug) {
             console.warn(message, ...args);
@@ -470,176 +470,24 @@ export function useAsset(options: {
                 );
             }
 
-            debugLog(
-                `[executeLoad] Fetching " + assetFileName + " from database`,
+            debugLog("[executeLoad] Fetching via REST asset endpoint");
+            // REST layer now includes sessionId from shared config automatically
+            const response = await vircadia.client.Utilities.REST.assetGetByKey(
+                {
+                    key: assetFileName,
+                },
             );
-
-            // Fetch from database
-            debugLog("[executeLoad] Executing database query");
-            const queryResult =
-                await vircadia.client.Utilities.Connection.query<
-                    (Pick<Entity.Asset.I_Asset, "asset__mime_type"> & {
-                        asset__data__bytea:
-                            | ArrayBufferLike
-                            | {
-                                  type: string;
-                                  data: number[];
-                              };
-                    })[]
-                >({
-                    query: `
-            SELECT asset__data__bytea, asset__mime_type
-            FROM entity.entity_assets
-            WHERE general__asset_file_name = $1
-          `,
-                    parameters: [assetFileName],
-                    timeoutMs: 100000, // Consider making this configurable
-                });
-            debugLog("[executeLoad] Query returned:", {
-                hasResult: !!queryResult.result,
-                resultLength: queryResult.result?.length || 0,
-            });
-
-            if (!queryResult.result || queryResult.result.length === 0) {
-                debugError(
-                    `[executeLoad] Asset ${assetFileName} not found in query result`,
-                );
-                throw new Error(`Asset ${assetFileName} not found`);
+            if (!response.ok) {
+                throw new Error(`Asset fetch failed: HTTP ${response.status}`);
             }
+            const mimeType =
+                response.headers.get("Content-Type") ||
+                "application/octet-stream";
+            const arrayBuffer = await response.arrayBuffer();
+            debugLog("[executeLoad] Received bytes:", arrayBuffer.byteLength);
 
-            if (!queryResult.result[0].asset__data__bytea) {
-                debugError(
-                    `[executeLoad] Asset ${assetFileName} has no data in query result`,
-                );
-                throw new Error(`Asset ${assetFileName} has no data`);
-            }
-
-            // Process bytea data
-            debugLog("[executeLoad] Processing asset data");
-            const rawData = queryResult.result[0].asset__data__bytea;
-            debugLog(
-                "[executeLoad] Raw data type:",
-                typeof rawData,
-                Array.isArray(rawData) ? "isArray" : "notArray",
-                rawData instanceof ArrayBuffer
-                    ? "isArrayBuffer"
-                    : "notArrayBuffer",
-                typeof rawData === "object" && "data" in rawData
-                    ? "hasDataProperty"
-                    : "noDataProperty",
-            );
-
-            if (!queryResult.result[0].asset__mime_type) {
-                debugError(
-                    `[executeLoad] Asset ${assetFileName} has no mime type in query result`,
-                );
-                throw new Error(`Asset ${assetFileName} has no mime type`);
-            }
-
-            const mimeType = queryResult.result[0].asset__mime_type;
             debugLog("[executeLoad] Asset mime type:", mimeType);
 
-            // Handle bytea data in different formats
-            debugLog("[executeLoad] Converting raw data to Uint8Array");
-            let byteArray: Uint8Array; // Use Uint8Array directly
-            try {
-                if (
-                    rawData &&
-                    typeof rawData === "object" &&
-                    "data" in rawData &&
-                    // biome-ignore lint/suspicious/noExplicitAny: Trusting driver structure
-                    Array.isArray((rawData as any).data)
-                ) {
-                    debugLog("[executeLoad] Processing rawData.data array");
-                    const rawDataObj = rawData as {
-                        data: number[];
-                        type: string;
-                    };
-                    debugLog("[executeLoad] Data array info:", {
-                        type: typeof rawDataObj.data,
-                        isArray: Array.isArray(rawDataObj.data),
-                        length: rawDataObj.data.length,
-                        first10Items: rawDataObj.data.slice(0, 10),
-                        bufferType: rawDataObj.type,
-                    });
-
-                    try {
-                        // biome-ignore lint/suspicious/noExplicitAny: Trusting driver structure
-                        byteArray = new Uint8Array((rawData as any).data);
-                        debugLog(
-                            "[executeLoad] Successfully created Uint8Array from rawData.data",
-                        );
-                    } catch (innerErr) {
-                        debugError(
-                            "[executeLoad] Error creating Uint8Array from rawData.data:",
-                            innerErr,
-                        );
-                        // Fallback: try alternative approach if standard way fails
-                        try {
-                            debugLog(
-                                "[executeLoad] Trying alternative array conversion method",
-                            );
-                            // Convert data to typed number array to ensure compatibility
-                            // biome-ignore lint/suspicious/noExplicitAny: Trusting driver structure
-                            const rawItems = (rawData as any).data;
-                            const numberArray = new Array(rawItems.length);
-
-                            // Process items to ensure they are numbers
-                            for (let i = 0; i < rawItems.length; i++) {
-                                numberArray[i] = Number(rawItems[i]);
-                            }
-
-                            // Create Uint8Array from verified number array
-                            byteArray = new Uint8Array(numberArray);
-                            debugLog(
-                                "[executeLoad] Alternative conversion successful",
-                            );
-                        } catch (fallbackErr) {
-                            debugError(
-                                "[executeLoad] Fallback conversion also failed:",
-                                fallbackErr,
-                            );
-                            throw fallbackErr;
-                        }
-                    }
-                } else if (rawData instanceof ArrayBuffer) {
-                    debugLog("[executeLoad] Processing ArrayBuffer data");
-                    // Handle direct ArrayBuffer case if the driver returns it
-                    byteArray = new Uint8Array(rawData);
-                } else if (Array.isArray(rawData)) {
-                    debugLog("[executeLoad] Processing array data");
-                    // Handle simple array case (less likely but possible)
-                    byteArray = new Uint8Array(rawData);
-                } else {
-                    debugError(
-                        "[executeLoad] Unexpected data format:",
-                        rawData,
-                    );
-                    throw new Error(
-                        `Unexpected data format for asset ${assetFileName}`,
-                    );
-                }
-
-                debugLog(
-                    "[executeLoad] Successfully created Uint8Array with length:",
-                    byteArray.length,
-                );
-            } catch (conversionErr) {
-                debugError(
-                    "[executeLoad] Error converting data format:",
-                    conversionErr,
-                );
-                throw new Error(
-                    `Failed to convert data for asset ${assetFileName}: ${conversionErr instanceof Error ? conversionErr.message : String(conversionErr)}`,
-                );
-            }
-
-            debugLog("[executeLoad] Creating array buffer copy");
-            // Using .slice() creates a copy of the data in a new Uint8Array,
-            // and its buffer is guaranteed to be an ArrayBuffer.
-            const arrayBuffer = byteArray.slice().buffer as ArrayBuffer;
-            debugLog("[executeLoad] Creating blob");
-            // Use raw ArrayBuffer for blob to satisfy BlobPart typing
             const blob = new Blob([arrayBuffer], { type: mimeType });
             let url: string;
             if (mimeType.startsWith("model/")) {
@@ -687,7 +535,7 @@ export function useAsset(options: {
             };
 
             console.log(
-                `Successfully loaded asset: ${assetFileName}, type: ${mimeType}, size: ${byteArray.length} bytes${hash ? `, hash: ${hash}` : ""}`,
+                `Successfully loaded asset: ${assetFileName}, type: ${mimeType}, size: ${arrayBuffer.byteLength} bytes${hash ? `, hash: ${hash}` : ""}`,
             );
         } catch (err) {
             console.error(`Error loading asset ${assetFileName}:`, err);

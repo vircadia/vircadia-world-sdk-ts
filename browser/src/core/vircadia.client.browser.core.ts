@@ -69,6 +69,8 @@ interface ClientCoreConfig {
     authToken: string;
     /** Authentication provider name */
     authProvider: string;
+    /** Current session id if available (populated after WS handshake) */
+    sessionId?: string;
 
     // Debug settings
     /** Enable debug logging */
@@ -623,6 +625,8 @@ class CoreConnectionManager {
         this.sessionValidation = null;
         // Reset session validity tracking
         this.wasSessionValid = false;
+        // Clear session id from shared config on disconnect
+        this.config.sessionId = undefined;
         debugLog(this.config, "WebSocket disconnected");
     }
 
@@ -652,6 +656,7 @@ class CoreConnectionManager {
                     message as Communication.WebSocket.SessionInfoMessage;
                 this.agentId = sessionMsg.agentId;
                 this.sessionId = sessionMsg.sessionId;
+                this.config.sessionId = sessionMsg.sessionId;
                 this.emitEvent("statusChange");
                 return;
             }
@@ -847,7 +852,9 @@ class CoreRestManager {
     ): Promise<any> {
         const url = new URL(path, this.config.serverUrl);
 
-        debugLog(this.config, `Making ${method} request to:`, url.toString());
+        debugLog(this.config, `Making ${method} request to:`, url.toString(), {
+            headers,
+        });
 
         const requestOptions: RequestInit = {
             method,
@@ -872,6 +879,13 @@ class CoreRestManager {
 
             // For non-2xx responses, create error response using schema pattern
             if (!response.ok) {
+                debugLog(this.config, `Request failed:`, {
+                    url: url.toString(),
+                    method,
+                    status: response.status,
+                    statusText: response.statusText,
+                    response: responseData,
+                });
                 return {
                     success: false,
                     timestamp: Date.now(),
@@ -881,6 +895,11 @@ class CoreRestManager {
                 };
             }
 
+            debugLog(this.config, `Request succeeded:`, {
+                url: url.toString(),
+                method,
+                response: responseData,
+            });
             return responseData;
         } catch (error) {
             debugError(this.config, "REST request failed:", error);
@@ -890,6 +909,43 @@ class CoreRestManager {
                 error: error instanceof Error ? error.message : "Unknown error",
             };
         }
+    }
+
+    /**
+     * Fetches an asset by key using the authenticated asset endpoint.
+     * Returns the raw Response to allow callers to stream/parse binary.
+     */
+    async assetGetByKey(params: {
+        key: string;
+        token?: string;
+        provider?: string;
+        sessionId?: string;
+    }): Promise<Response> {
+        const endpoint = Communication.REST.Endpoint.ASSET_GET_BY_KEY;
+        // Default to current client auth if not explicitly provided
+        const finalParams = {
+            key: params.key,
+            sessionId: params.sessionId ?? this.config.sessionId,
+            token: params.token ?? this.config.authToken,
+            provider: params.provider ?? this.config.authProvider,
+        };
+        const query = endpoint.createRequest(finalParams);
+        const url = new URL(`${endpoint.path}${query}`, this.config.serverUrl);
+        debugLog(this.config, "Fetching asset:", url.toString(), {
+            hasToken: !!finalParams.token,
+            hasProvider: !!finalParams.provider,
+            hasSessionId: !!finalParams.sessionId,
+            tokenLength: finalParams.token?.length,
+            provider: finalParams.provider,
+        });
+        const resp = await fetch(url.toString(), { method: endpoint.method });
+        if (!resp.ok) {
+            debugError(
+                this.config,
+                `Asset fetch failed: ${resp.status} ${resp.statusText} → ${url.toString()}`,
+            );
+        }
+        return resp;
     }
 
     /**
@@ -1116,6 +1172,7 @@ export class ClientCore {
                 linkProvider: rm.linkProvider.bind(rm),
                 unlinkProvider: rm.unlinkProvider.bind(rm),
                 listProviders: rm.listProviders.bind(rm),
+                assetGetByKey: rm.assetGetByKey.bind(rm),
             },
         };
     }

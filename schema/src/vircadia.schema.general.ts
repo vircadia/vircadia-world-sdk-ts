@@ -874,6 +874,7 @@ export namespace Communication {
             AUTH_LINK_PROVIDER = "AUTH_LINK_PROVIDER",
             AUTH_UNLINK_PROVIDER = "AUTH_UNLINK_PROVIDER",
             AUTH_LIST_PROVIDERS = "AUTH_LIST_PROVIDERS",
+            ASSET_GET_BY_KEY = "ASSET_GET_BY_KEY",
         }
 
         export const Endpoint: {
@@ -1533,6 +1534,77 @@ export namespace Communication {
                                 "Error message (only present when success is false)",
                         },
                     ],
+                },
+            },
+
+            // Asset download by key (filename)
+            ASSET_GET_BY_KEY: {
+                path: `${REST_BASE_PATH}/asset/get`,
+                method: "GET",
+                createRequest: (params: {
+                    key: string;
+                    token?: string;
+                    provider?: string;
+                    sessionId?: string;
+                }): string => {
+                    const sp = new URLSearchParams({
+                        key: params.key,
+                        ...(params.sessionId
+                            ? { sessionId: params.sessionId }
+                            : {}),
+                        ...(params.token && params.provider
+                            ? {
+                                  token: params.token,
+                                  provider: params.provider,
+                              }
+                            : {}),
+                    });
+                    return `?${sp.toString()}`;
+                },
+                createSuccess: (/* streamed response */): {
+                    success: true;
+                    timestamp: number;
+                } => ({
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (
+                    error: string,
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+                description:
+                    "Authenticated endpoint to retrieve an asset by its key (filename). Enforces ACL based on the asset's sync group.",
+                parameters: [
+                    {
+                        name: "key",
+                        type: "string",
+                        required: true,
+                        description: "Asset key (filename) to retrieve",
+                    },
+                    {
+                        name: "token",
+                        type: "string",
+                        required: true,
+                        description: "JWT token for authentication",
+                    },
+                    {
+                        name: "provider",
+                        type: "string",
+                        required: true,
+                        description: "Provider name for JWT validation",
+                    },
+                ],
+                returns: {
+                    type: "binary/octet-stream",
+                    description:
+                        "Binary content of the asset. On error, a JSON error response is returned.",
                 },
             },
         } as const;
