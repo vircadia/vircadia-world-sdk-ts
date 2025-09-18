@@ -915,19 +915,14 @@ class CoreRestManager {
      * Fetches an asset by key using the authenticated asset endpoint.
      * Returns the raw Response to allow callers to stream/parse binary.
      */
-    async assetGetByKey(params: {
-        key: string;
-        token?: string;
-        provider?: string;
-        sessionId?: string;
-    }): Promise<Response> {
+    async assetGetByKey(params: { key: string }): Promise<Response> {
         const endpoint = Communication.REST.Endpoint.ASSET_GET_BY_KEY;
         // Default to current client auth if not explicitly provided
         const finalParams = {
             key: params.key,
-            sessionId: params.sessionId ?? this.config.sessionId,
-            token: params.token ?? this.config.authToken,
-            provider: params.provider ?? this.config.authProvider,
+            sessionId: this.config.sessionId,
+            token: this.config.authToken,
+            provider: this.config.authProvider,
         };
         const query = endpoint.createRequest(finalParams);
         const url = new URL(`${endpoint.path}${query}`, this.config.serverUrl);
@@ -938,14 +933,25 @@ class CoreRestManager {
             tokenLength: finalParams.token?.length,
             provider: finalParams.provider,
         });
-        const resp = await fetch(url.toString(), { method: endpoint.method });
-        if (!resp.ok) {
+        try {
+            const resp = await fetch(url.toString(), {
+                method: endpoint.method,
+            });
+            if (!resp.ok) {
+                debugError(
+                    this.config,
+                    `Asset fetch failed: ${resp.status} ${resp.statusText} → ${url.toString()}`,
+                );
+            }
+            return resp;
+        } catch (err) {
             debugError(
                 this.config,
-                `Asset fetch failed: ${resp.status} ${resp.statusText} → ${url.toString()}`,
+                `Asset fetch threw before response: ${url.toString()}`,
+                err,
             );
+            throw err;
         }
-        return resp;
     }
 
     /**

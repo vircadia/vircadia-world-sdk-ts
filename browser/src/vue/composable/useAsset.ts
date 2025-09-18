@@ -1,8 +1,5 @@
 import { openDB, deleteDB, type DBSchema, type IDBPDatabase } from "idb";
-import {
-    Communication,
-    type Entity,
-} from "../../../../schema/src/vircadia.schema.general";
+// Removed unused imports from schema to satisfy linter
 import { type Ref, ref, inject, readonly, computed } from "vue";
 import { type useVircadia, useVircadiaInstance } from "../provider/useVircadia";
 
@@ -210,7 +207,8 @@ export function useAsset(options: {
                 WHERE general__asset_file_name = $1
                 `,
                     parameters: [assetFileName],
-                    timeoutMs: 5000,
+                    // Allow more time under load to avoid spurious timeouts
+                    timeoutMs: 15000,
                 });
 
             if (!queryResult.result || queryResult.result.length === 0) {
@@ -385,7 +383,18 @@ export function useAsset(options: {
                 debugLog(
                     `[executeLoad] Getting remote hash for ${assetFileName}`,
                 );
-                const remoteHash = await getAssetHash(assetFileName);
+                // Increase tolerance: fetching hash can take longer if DB is under load
+                const remoteHash = await (async () => {
+                    try {
+                        return await getAssetHash(assetFileName);
+                    } catch (e) {
+                        debugWarn(
+                            `[executeLoad] Failed to fetch remote hash for ${assetFileName}, proceeding without cache validation`,
+                            e,
+                        );
+                        return null;
+                    }
+                })();
                 debugLog("[executeLoad] Remote hash result:", remoteHash);
 
                 if (remoteHash) {
@@ -477,8 +486,24 @@ export function useAsset(options: {
                     key: assetFileName,
                 },
             );
+            debugLog(
+                "[executeLoad] REST.assetGetByKey returned",
+                response.status,
+                response.statusText,
+            );
             if (!response.ok) {
-                throw new Error(`Asset fetch failed: HTTP ${response.status}`);
+                // Try to parse server JSON error for better diagnostics
+                let serverError: string | undefined;
+                try {
+                    const ct = response.headers.get("Content-Type") || "";
+                    if (ct.includes("application/json")) {
+                        const j = await response.clone().json();
+                        serverError = j?.error || JSON.stringify(j);
+                    }
+                } catch {}
+                throw new Error(
+                    `Asset fetch failed: HTTP ${response.status}${serverError ? ` - ${serverError}` : ""}`,
+                );
             }
             const mimeType =
                 response.headers.get("Content-Type") ||

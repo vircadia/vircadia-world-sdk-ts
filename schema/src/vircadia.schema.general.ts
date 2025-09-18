@@ -1620,6 +1620,16 @@ export namespace Service {
     }
 
     export namespace API {
+        export interface I_AssetCacheStats {
+            dir: string;
+            maxBytes: number;
+            totalBytes: number;
+            fileCount: number;
+            inFlight: number;
+            lastMaintenanceAt?: number | null;
+            lastMaintenanceDurationMs?: number | null;
+            filesWarmedLastRun?: number | null;
+        }
         export interface I_PoolStatsMetrics {
             max?: number;
             min?: number;
@@ -1725,6 +1735,9 @@ export namespace Service {
                 };
                 queries?: I_QueryMetrics;
                 reflect?: I_ReflectMetrics;
+                assets?: {
+                    cache: I_AssetCacheStats;
+                };
             }): {
                 uptime: number;
                 connections: I_ConnectionMetrics;
@@ -1749,6 +1762,9 @@ export namespace Service {
                 };
                 queries?: I_QueryMetrics;
                 reflect?: I_ReflectMetrics;
+                assets?: {
+                    cache: I_AssetCacheStats;
+                };
                 success: true;
                 timestamp: number;
             } => ({
@@ -1759,6 +1775,7 @@ export namespace Service {
                 cpu: data.cpu,
                 queries: data.queries,
                 reflect: data.reflect,
+                assets: data.assets,
                 success: true,
                 timestamp: Date.now(),
             }),
