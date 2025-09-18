@@ -132,6 +132,11 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_CADDY_EMAIL: z.string().default("hello@vircadia.com"),
     VRCA_SERVER_SERVICE_CADDY_TLS_API: z.string().optional(),
     VRCA_SERVER_SERVICE_CADDY_TLS_APP: z.string().optional(),
+
+    // Asset cache maintenance
+    VRCA_SERVER_ASSET_CACHE_MAINTENANCE_INTERVAL_MS: z.coerce
+        .number()
+        .default(1000),
 });
 
 // Parse server environment variables
