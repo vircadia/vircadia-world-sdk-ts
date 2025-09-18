@@ -51,6 +51,11 @@ export type ClientCoreConnectionInfo = {
         /** Error message from session validation, if any */
         error?: string;
     };
+    /** Last WebSocket close info, if available */
+    lastClose?: {
+        code: number;
+        reason: string;
+    };
 };
 
 /**
@@ -152,6 +157,8 @@ class CoreConnectionManager {
         string,
         Set<(msg: Communication.WebSocket.ReflectDeliveryMessage) => void>
     >();
+    private lastCloseCode: number | null = null;
+    private lastCloseReason: string | null = null;
 
     /**
      * Creates a new CoreConnectionManager instance
@@ -586,6 +593,10 @@ class CoreConnectionManager {
                     ? `${this.sessionId}-${this.instanceId}`
                     : null,
             sessionValidation: this.sessionValidation || undefined,
+            lastClose:
+                this.lastCloseCode !== null
+                    ? { code: this.lastCloseCode, reason: this.lastCloseReason || "" }
+                    : undefined,
         };
     }
 
@@ -791,6 +802,8 @@ class CoreConnectionManager {
             this.config,
             `WebSocket connection closed: ${event.reason || "No reason provided"}, code: ${event.code}`,
         );
+        this.lastCloseCode = event.code;
+        this.lastCloseReason = event.reason || "";
         this.updateConnectionStatus("disconnected");
     }
 
@@ -807,6 +820,8 @@ class CoreConnectionManager {
             errorMessage = event.message;
         } else if (event instanceof CloseEvent) {
             errorMessage = event.reason || `Code: ${event.code}`;
+            this.lastCloseCode = event.code;
+            this.lastCloseReason = event.reason || "";
         }
 
         this.updateConnectionStatus("disconnected");
