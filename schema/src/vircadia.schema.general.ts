@@ -1693,6 +1693,36 @@ export namespace Service {
             successRate: number;
         }
 
+        export interface I_EndpointMetrics {
+            requestsPerSecond: {
+                current: number;
+                average: number;
+                peak: number;
+            };
+            requestCompletionTime: {
+                averageMs: number;
+                p99Ms: number;
+                p999Ms: number;
+            };
+            requestSize: {
+                averageKB: number;
+                p99KB: number;
+                p999KB: number;
+            };
+            responseSize: {
+                averageKB: number;
+                p99KB: number;
+                p999KB: number;
+            };
+            totalRequests: number;
+            failedRequests: number;
+            successRate: number;
+        }
+
+        export interface I_EndpointStats {
+            [endpoint: string]: I_EndpointMetrics;
+        }
+
         export interface I_SystemMetrics {
             current: number;
             average: number;
@@ -1735,6 +1765,7 @@ export namespace Service {
                 };
                 queries?: I_QueryMetrics;
                 reflect?: I_ReflectMetrics;
+                endpoints?: I_EndpointStats;
                 assets?: {
                     cache: I_AssetCacheStats;
                 };
@@ -1762,6 +1793,7 @@ export namespace Service {
                 };
                 queries?: I_QueryMetrics;
                 reflect?: I_ReflectMetrics;
+                endpoints?: I_EndpointStats;
                 assets?: {
                     cache: I_AssetCacheStats;
                 };
@@ -1775,6 +1807,7 @@ export namespace Service {
                 cpu: data.cpu,
                 queries: data.queries,
                 reflect: data.reflect,
+                endpoints: data.endpoints,
                 assets: data.assets,
                 success: true,
                 timestamp: Date.now(),
