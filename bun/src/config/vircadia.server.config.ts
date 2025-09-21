@@ -24,32 +24,64 @@ const serverEnvSchema = z.object({
         ])
         .default(false),
 
-    // API manager
-    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_CONTAINER_NAME: z
+    // API WS manager
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_CONTAINER_NAME: z
         .string()
-        .default("vircadia_world_api_manager"),
-    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_HOST_CONTAINER_BIND_EXTERNAL: z
+        .default("vircadia_world_api_ws_manager"),
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_CONTAINER_BIND_EXTERNAL: z
         .string()
         .default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
         .number()
         .default(3020),
-    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
         .string()
         .default("127.0.0.1"),
-    VRCA_SERVER_SERVICE_WORLD_API_MANAGER_PORT_PUBLIC_AVAILABLE_AT: z.coerce
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_PORT_PUBLIC_AVAILABLE_AT: z.coerce
         .number()
         .default(3020),
+
+    // API REST auth manager
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_CONTAINER_NAME: z
+        .string()
+        .default("vircadia_world_api_rest_auth_manager"),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_CONTAINER_BIND_EXTERNAL: z
+        .string()
+        .default("0.0.0.0"),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
+        .number()
+        .default(3022),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
+        .string()
+        .default("127.0.0.1"),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_PUBLIC_AVAILABLE_AT: z.coerce
+        .number()
+        .default(3022),
+
+    // API REST asset manager
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_CONTAINER_NAME: z
+        .string()
+        .default("vircadia_world_api_rest_asset_manager"),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_CONTAINER_BIND_EXTERNAL: z
+        .string()
+        .default("0.0.0.0"),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
+        .number()
+        .default(3023),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
+        .string()
+        .default("127.0.0.1"),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_PUBLIC_AVAILABLE_AT: z.coerce
+        .number()
+        .default(3023),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAINTENANCE_INTERVAL_MS: z.coerce
+        .number()
+        .default(1000),
 
     // State manager
     VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_CONTAINER_NAME: z
         .string()
         .default("vircadia_world_state_manager"),
-    VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_HOST_CONTAINER_BIND_EXTERNAL: z
-        .string()
-        .default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_PORT_CONTAINER_BIND_EXTERNAL:
-        z.coerce.number().default(3021),
 
     // Web Babylon JS Client service
     VRCA_SERVER_SERVICE_CLIENT_WEB_BABYLON_JS_CONTAINER_NAME: z
@@ -132,11 +164,6 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_CADDY_EMAIL: z.string().default("hello@vircadia.com"),
     VRCA_SERVER_SERVICE_CADDY_TLS_API: z.string().optional(),
     VRCA_SERVER_SERVICE_CADDY_TLS_APP: z.string().optional(),
-
-    // Asset cache maintenance
-    VRCA_SERVER_ASSET_CACHE_MAINTENANCE_INTERVAL_MS: z.coerce
-        .number()
-        .default(1000),
 });
 
 // Parse server environment variables

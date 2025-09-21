@@ -178,7 +178,8 @@ export namespace Auth {
 
 export namespace Communication {
     export const WS_UPGRADE_PATH = "/world/ws";
-    export const REST_BASE_PATH = "/world/rest";
+    export const REST_BASE_AUTH_PATH = "/world/rest/auth";
+    export const REST_BASE_ASSET_PATH = "/world/rest/asset";
 
     // Interface for parameter documentation - moved to be shared across namespaces
     export interface I_Parameter {
@@ -893,7 +894,7 @@ export namespace Communication {
             };
         } = {
             AUTH_SESSION_VALIDATE: {
-                path: `${REST_BASE_PATH}/session/validate`,
+                path: `${REST_BASE_AUTH_PATH}/session/validate`,
                 method: "POST",
                 createRequest: (data: {
                     token: string;
@@ -968,7 +969,7 @@ export namespace Communication {
                 },
             },
             AUTH_ANONYMOUS_LOGIN: {
-                path: `${REST_BASE_PATH}/auth/anonymous`,
+                path: `${REST_BASE_AUTH_PATH}/anonymous`,
                 method: "POST",
                 createRequest: (): string => JSON.stringify({}),
                 createSuccess: (data: {
@@ -1033,7 +1034,7 @@ export namespace Communication {
                 },
             },
             AUTH_OAUTH_AUTHORIZE: {
-                path: `${REST_BASE_PATH}/auth/oauth/authorize`,
+                path: `${REST_BASE_AUTH_PATH}/oauth/authorize`,
                 method: "GET",
                 createRequest: (provider: string): string =>
                     `?provider=${encodeURIComponent(provider)}`,
@@ -1103,7 +1104,7 @@ export namespace Communication {
                 },
             },
             AUTH_OAUTH_CALLBACK: {
-                path: `${REST_BASE_PATH}/auth/oauth/callback`,
+                path: `${REST_BASE_AUTH_PATH}/oauth/callback`,
                 method: "GET",
                 createRequest: (params: {
                     provider: string;
@@ -1250,7 +1251,7 @@ export namespace Communication {
                 },
             },
             AUTH_LOGOUT: {
-                path: `${REST_BASE_PATH}/auth/logout`,
+                path: `${REST_BASE_AUTH_PATH}/logout`,
                 method: "POST",
                 createRequest: (sessionId: string): string =>
                     JSON.stringify({ sessionId }),
@@ -1308,7 +1309,7 @@ export namespace Communication {
                 },
             },
             AUTH_LINK_PROVIDER: {
-                path: `${REST_BASE_PATH}/auth/link-provider`,
+                path: `${REST_BASE_AUTH_PATH}/link-provider`,
                 method: "POST",
                 createRequest: (data: {
                     provider: string;
@@ -1391,7 +1392,7 @@ export namespace Communication {
                 },
             },
             AUTH_UNLINK_PROVIDER: {
-                path: `${REST_BASE_PATH}/auth/unlink-provider`,
+                 path: `${REST_BASE_AUTH_PATH}/unlink-provider`,
                 method: "POST",
                 createRequest: (data: {
                     provider: string;
@@ -1469,7 +1470,7 @@ export namespace Communication {
                 },
             },
             AUTH_LIST_PROVIDERS: {
-                path: `${REST_BASE_PATH}/auth/providers`,
+                path: `${REST_BASE_AUTH_PATH}/providers`,
                 method: "GET",
                 createRequest: (sessionId: string): string =>
                     `?sessionId=${encodeURIComponent(sessionId)}`,
@@ -1539,7 +1540,7 @@ export namespace Communication {
 
             // Asset download by key (filename)
             ASSET_GET_BY_KEY: {
-                path: `${REST_BASE_PATH}/asset/get`,
+                path: `${REST_BASE_ASSET_PATH}/get`,
                 method: "GET",
                 createRequest: (params: {
                     key: string;
@@ -1614,216 +1615,356 @@ export namespace Communication {
 export namespace Service {
     export enum E_Service {
         WORLD_API_MANAGER = "vircadia_world_api_manager",
+        WORLD_API_WS_MANAGER = "vircadia_world_api_ws_manager",
+        WORLD_API_AUTH_MANAGER = "vircadia_world_api_auth_manager",
+        WORLD_API_ASSET_MANAGER = "vircadia_world_api_asset_manager",
         WORLD_STATE_MANAGER = "vircadia_world_state_manager",
         POSTGRES = "vircadia_world_postgres",
         PGWEB = "vircadia_world_pgweb",
     }
 
     export namespace API {
-        export interface I_AssetCacheStats {
-            dir: string;
-            maxBytes: number;
-            totalBytes: number;
-            fileCount: number;
-            inFlight: number;
-            lastMaintenanceAt?: number | null;
-            lastMaintenanceDurationMs?: number | null;
-            filesWarmedLastRun?: number | null;
-        }
-        export interface I_PoolStatsMetrics {
-            max?: number;
-            min?: number;
-            size?: number;
-            idle?: number;
-            busy?: number;
-            pending?: number;
-        }
+        // ======================= Shared (Common) Types and Endpoints =======================
+        export namespace Common {
+            export interface I_PoolStatsMetrics {
+                max?: number;
+                min?: number;
+                size?: number;
+                idle?: number;
+                busy?: number;
+                pending?: number;
+            }
 
-        export interface I_PoolStats {
-            implementation: string;
-            metrics?: I_PoolStatsMetrics;
-        }
+            export interface I_PoolStats {
+                implementation: string;
+                metrics?: I_PoolStatsMetrics;
+            }
 
-        export interface I_QueryMetrics {
-            queriesPerSecond: {
+            export interface I_QueryMetrics {
+                queriesPerSecond: {
+                    current: number;
+                    average: number;
+                    peak: number;
+                };
+                queryCompletionTime: {
+                    averageMs: number;
+                    p99Ms: number;
+                    p999Ms: number;
+                };
+                requestSize: {
+                    averageKB: number;
+                    p99KB: number;
+                    p999KB: number;
+                };
+                responseSize: {
+                    averageKB: number;
+                    p99KB: number;
+                    p999KB: number;
+                };
+                totalQueries: number;
+                failedQueries: number;
+                successRate: number;
+            }
+
+            export interface I_ReflectMetrics {
+                messagesPerSecond: {
+                    current: number;
+                    average: number;
+                    peak: number;
+                };
+                messageDeliveryTime: {
+                    averageMs: number;
+                    p99Ms: number;
+                    p999Ms: number;
+                };
+                messageSize: {
+                    averageKB: number;
+                    p99KB: number;
+                    p999KB: number;
+                };
+                totalPublished: number;
+                totalDelivered: number;
+                totalAcknowledged: number;
+                failedDeliveries: number;
+                successRate: number;
+            }
+
+            export interface I_EndpointMetrics {
+                requestsPerSecond: {
+                    current: number;
+                    average: number;
+                    peak: number;
+                };
+                requestCompletionTime: {
+                    averageMs: number;
+                    p99Ms: number;
+                    p999Ms: number;
+                };
+                requestSize: {
+                    averageKB: number;
+                    p99KB: number;
+                    p999KB: number;
+                };
+                responseSize: {
+                    averageKB: number;
+                    p99KB: number;
+                    p999KB: number;
+                };
+                totalRequests: number;
+                failedRequests: number;
+                successRate: number;
+            }
+
+            export interface I_EndpointStats {
+                [endpoint: string]: I_EndpointMetrics;
+            }
+
+            export interface I_SystemMetrics {
                 current: number;
                 average: number;
-                peak: number;
-            };
-            queryCompletionTime: {
-                averageMs: number;
-                p99Ms: number;
-                p999Ms: number;
-            };
-            requestSize: {
-                averageKB: number;
-                p99KB: number;
-                p999KB: number;
-            };
-            responseSize: {
-                averageKB: number;
-                p99KB: number;
-                p999KB: number;
-            };
-            totalQueries: number;
-            failedQueries: number;
-            successRate: number;
+                p99: number;
+                p999: number;
+            }
+
+            export interface I_ConnectionMetrics {
+                active: I_SystemMetrics;
+                total: number;
+                failed: number;
+                successRate: number;
+            }
         }
 
-        export interface I_ReflectMetrics {
-            messagesPerSecond: {
-                current: number;
-                average: number;
-                peak: number;
-            };
-            messageDeliveryTime: {
-                averageMs: number;
-                p99Ms: number;
-                p999Ms: number;
-            };
-            messageSize: {
-                averageKB: number;
-                p99KB: number;
-                p999KB: number;
-            };
-            totalPublished: number;
-            totalDelivered: number;
-            totalAcknowledged: number;
-            failedDeliveries: number;
-            successRate: number;
-        }
-
-        export interface I_EndpointMetrics {
-            requestsPerSecond: {
-                current: number;
-                average: number;
-                peak: number;
-            };
-            requestCompletionTime: {
-                averageMs: number;
-                p99Ms: number;
-                p999Ms: number;
-            };
-            requestSize: {
-                averageKB: number;
-                p99KB: number;
-                p999KB: number;
-            };
-            responseSize: {
-                averageKB: number;
-                p99KB: number;
-                p999KB: number;
-            };
-            totalRequests: number;
-            failedRequests: number;
-            successRate: number;
-        }
-
-        export interface I_EndpointStats {
-            [endpoint: string]: I_EndpointMetrics;
-        }
-
-        export interface I_SystemMetrics {
-            current: number;
-            average: number;
-            p99: number;
-            p999: number;
-        }
-
-        export interface I_ConnectionMetrics {
-            active: I_SystemMetrics;
-            total: number;
-            failed: number;
-            successRate: number;
-        }
-
-        export const Stats_Endpoint = {
-            path: "/stats",
-            method: "GET",
-            createRequest: (): string => "",
-            createSuccess: (data: {
-                uptime: number;
-                connections: I_ConnectionMetrics;
-                database: {
-                    connected: boolean;
-                    connections: I_SystemMetrics;
-                    pool?: {
-                        super?: I_PoolStats;
-                        proxy?: I_PoolStats;
-                        legacy?: I_PoolStats;
+        // ======================= REST Auth =======================
+        export namespace Auth {
+            export const Stats_Endpoint = {
+                path: "/stats",
+                method: "GET",
+                createRequest: (): string => "",
+                createSuccess: (data: {
+                    uptime: number;
+                    connections: Common.I_ConnectionMetrics;
+                    database: {
+                        connected: boolean;
+                        connections: Common.I_SystemMetrics;
                     };
-                };
-                memory: {
-                    heapUsed: I_SystemMetrics;
-                    heapTotal: I_SystemMetrics;
-                    external: I_SystemMetrics;
-                    rss: I_SystemMetrics;
-                };
-                cpu: {
-                    user: I_SystemMetrics;
-                    system: I_SystemMetrics;
-                };
-                queries?: I_QueryMetrics;
-                reflect?: I_ReflectMetrics;
-                endpoints?: I_EndpointStats;
-                assets?: {
-                    cache: I_AssetCacheStats;
-                };
-            }): {
-                uptime: number;
-                connections: I_ConnectionMetrics;
-                database: {
-                    connected: boolean;
-                    connections: I_SystemMetrics;
-                    pool?: {
-                        super?: I_PoolStats;
-                        proxy?: I_PoolStats;
-                        legacy?: I_PoolStats;
+                    memory: {
+                        heapUsed: Common.I_SystemMetrics;
+                        heapTotal: Common.I_SystemMetrics;
+                        external: Common.I_SystemMetrics;
+                        rss: Common.I_SystemMetrics;
                     };
-                };
-                memory: {
-                    heapUsed: I_SystemMetrics;
-                    heapTotal: I_SystemMetrics;
-                    external: I_SystemMetrics;
-                    rss: I_SystemMetrics;
-                };
-                cpu: {
-                    user: I_SystemMetrics;
-                    system: I_SystemMetrics;
-                };
-                queries?: I_QueryMetrics;
-                reflect?: I_ReflectMetrics;
-                endpoints?: I_EndpointStats;
-                assets?: {
-                    cache: I_AssetCacheStats;
-                };
-                success: true;
-                timestamp: number;
-            } => ({
-                uptime: data.uptime,
-                connections: data.connections,
-                database: data.database,
-                memory: data.memory,
-                cpu: data.cpu,
-                queries: data.queries,
-                reflect: data.reflect,
-                endpoints: data.endpoints,
-                assets: data.assets,
-                success: true,
-                timestamp: Date.now(),
-            }),
-            createError: (
-                error: string,
-            ): {
-                success: false;
-                timestamp: number;
-                error: string;
-            } => ({
-                success: false,
-                timestamp: Date.now(),
-                error,
-            }),
-        } as const;
+                    cpu: {
+                        user: Common.I_SystemMetrics;
+                        system: Common.I_SystemMetrics;
+                    };
+                }): {
+                    uptime: number;
+                    connections: Common.I_ConnectionMetrics;
+                    database: {
+                        connected: boolean;
+                        connections: Common.I_SystemMetrics;
+                    };
+                    memory: {
+                        heapUsed: Common.I_SystemMetrics;
+                        heapTotal: Common.I_SystemMetrics;
+                        external: Common.I_SystemMetrics;
+                        rss: Common.I_SystemMetrics;
+                    };
+                    cpu: {
+                        user: Common.I_SystemMetrics;
+                        system: Common.I_SystemMetrics;
+                    };
+                    success: true;
+                    timestamp: number;
+                } => ({
+                    uptime: data.uptime,
+                    connections: data.connections,
+                    database: data.database,
+                    memory: data.memory,
+                    cpu: data.cpu,
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (
+                    error: string,
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+            } as const;
+        }
+
+        // ======================= REST Asset =======================
+        export namespace Asset {
+            export interface I_AssetCacheStats {
+                dir: string;
+                maxBytes: number;
+                totalBytes: number;
+                fileCount: number;
+                inFlight: number;
+                lastMaintenanceAt?: number | null;
+                lastMaintenanceDurationMs?: number | null;
+                filesWarmedLastRun?: number | null;
+            }
+
+            export const Stats_Endpoint = {
+                path: "/stats",
+                method: "GET",
+                createRequest: (): string => "",
+                createSuccess: (data: {
+                    uptime: number;
+                    connections: Common.I_ConnectionMetrics;
+                    database: {
+                        connected: boolean;
+                        connections: Common.I_SystemMetrics;
+                    };
+                    memory: {
+                        heapUsed: Common.I_SystemMetrics;
+                        heapTotal: Common.I_SystemMetrics;
+                        external: Common.I_SystemMetrics;
+                        rss: Common.I_SystemMetrics;
+                    };
+                    cpu: {
+                        user: Common.I_SystemMetrics;
+                        system: Common.I_SystemMetrics;
+                    };
+                    assets: {
+                        cache: I_AssetCacheStats;
+                    };
+                }): {
+                    uptime: number;
+                    connections: Common.I_ConnectionMetrics;
+                    database: {
+                        connected: boolean;
+                        connections: Common.I_SystemMetrics;
+                    };
+                    memory: {
+                        heapUsed: Common.I_SystemMetrics;
+                        heapTotal: Common.I_SystemMetrics;
+                        external: Common.I_SystemMetrics;
+                        rss: Common.I_SystemMetrics;
+                    };
+                    cpu: {
+                        user: Common.I_SystemMetrics;
+                        system: Common.I_SystemMetrics;
+                    };
+                    assets: {
+                        cache: I_AssetCacheStats;
+                    };
+                    success: true;
+                    timestamp: number;
+                } => ({
+                    uptime: data.uptime,
+                    connections: data.connections,
+                    database: data.database,
+                    memory: data.memory,
+                    cpu: data.cpu,
+                    assets: data.assets,
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (
+                    error: string,
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+            } as const;
+        }
+
+        // ======================= WebSocket API =======================
+        export namespace WS {
+            export const Stats_Endpoint = {
+                path: "/stats",
+                method: "GET",
+                createRequest: (): string => "",
+                createSuccess: (data: {
+                    uptime: number;
+                    connections: Common.I_ConnectionMetrics;
+                    database: {
+                        connected: boolean;
+                        connections: Common.I_SystemMetrics;
+                        pool?: {
+                            super?: Common.I_PoolStats;
+                            proxy?: Common.I_PoolStats;
+                            legacy?: Common.I_PoolStats;
+                        };
+                    };
+                    memory: {
+                        heapUsed: Common.I_SystemMetrics;
+                        heapTotal: Common.I_SystemMetrics;
+                        external: Common.I_SystemMetrics;
+                        rss: Common.I_SystemMetrics;
+                    };
+                    cpu: {
+                        user: Common.I_SystemMetrics;
+                        system: Common.I_SystemMetrics;
+                    };
+                    queries: Common.I_QueryMetrics;
+                    reflect: Common.I_ReflectMetrics;
+                    endpoints: Common.I_EndpointStats;
+                }): {
+                    uptime: number;
+                    connections: Common.I_ConnectionMetrics;
+                    database: {
+                        connected: boolean;
+                        connections: Common.I_SystemMetrics;
+                        pool?: {
+                            super?: Common.I_PoolStats;
+                            proxy?: Common.I_PoolStats;
+                            legacy?: Common.I_PoolStats;
+                        };
+                    };
+                    memory: {
+                        heapUsed: Common.I_SystemMetrics;
+                        heapTotal: Common.I_SystemMetrics;
+                        external: Common.I_SystemMetrics;
+                        rss: Common.I_SystemMetrics;
+                    };
+                    cpu: {
+                        user: Common.I_SystemMetrics;
+                        system: Common.I_SystemMetrics;
+                    };
+                    queries: Common.I_QueryMetrics;
+                    reflect: Common.I_ReflectMetrics;
+                    endpoints: Common.I_EndpointStats;
+                    success: true;
+                    timestamp: number;
+                } => ({
+                    uptime: data.uptime,
+                    connections: data.connections,
+                    database: data.database,
+                    memory: data.memory,
+                    cpu: data.cpu,
+                    queries: data.queries,
+                    reflect: data.reflect,
+                    endpoints: data.endpoints,
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (
+                    error: string,
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+            } as const;
+        }
     }
 
     export namespace Postgres {}
