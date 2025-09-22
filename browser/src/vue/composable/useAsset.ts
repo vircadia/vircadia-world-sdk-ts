@@ -481,7 +481,7 @@ export function useAsset(options: {
 
             debugLog("[executeLoad] Fetching via REST asset endpoint");
             // REST layer now includes sessionId from shared config automatically
-            const response = await vircadia.client.Utilities.REST.assetGetByKey(
+            const response = await vircadia.client.Utilities.RESTAsset.assetGetByKey(
                 {
                     key: assetFileName,
                 },

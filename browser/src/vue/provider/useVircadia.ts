@@ -8,8 +8,8 @@ import {
 
 import {
     ClientCore,
-    type ClientCoreConnectionInfo,
-} from "../../core/vircadia.client.browser.core";
+    type WsConnectionCoreInfo,
+} from "../../core/vircadia.client.browser.core.old";
 
 /**
  * Creates a Vircadia client instance with Vue reactivity.
@@ -22,7 +22,7 @@ export function useVircadia(data: {
     config: ConstructorParameters<typeof ClientCore>[0];
 }): {
     client: ClientCore;
-    connectionInfo: Ref<ClientCoreConnectionInfo>;
+    connectionInfo: Ref<WsConnectionCoreInfo>;
     dispose: () => void;
 } {
     const { config } = data;
@@ -31,7 +31,7 @@ export function useVircadia(data: {
     const client = new ClientCore(config);
 
     // Create reactive connection info
-    const connectionInfo = ref<ClientCoreConnectionInfo>(
+    const connectionInfo = ref<WsConnectionCoreInfo>(
         client.Utilities.Connection.getConnectionInfo(),
     );
 
