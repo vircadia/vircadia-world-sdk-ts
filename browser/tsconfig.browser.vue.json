@@ -10,7 +10,6 @@
     },
     "include": ["src/**/*", "../schema/src/**/*"],
     "files": [
-        "src/index.browser.vue.ts",
-        "../schema/src/vircadia.schema.general.ts"
+        "src/index.browser.vue.ts"
     ]
 }

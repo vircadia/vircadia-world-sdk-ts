@@ -507,6 +507,19 @@ export class RestAssetCore {
         this.config = newConfig;
     }
 
+    buildAssetGetByKeyUrl(params: { key: string }): string {
+        const endpoint = Communication.REST.Endpoint.ASSET_GET_BY_KEY;
+        const finalParams = {
+            key: params.key,
+            sessionId: this.config.sessionId,
+            token: this.config.authToken,
+            provider: this.config.authProvider,
+        };
+        const query = endpoint.createRequest(finalParams);
+        const url = new URL(`${endpoint.path}${query}`, this.config.apiRestAssetUri);
+        return url.toString();
+    }
+
     async assetGetByKey(params: { key: string }): Promise<Response> {
         const endpoint = Communication.REST.Endpoint.ASSET_GET_BY_KEY;
         const finalParams = {
@@ -659,5 +672,219 @@ export class RestAuthCore {
         const queryParams = endpoint.createRequest(sessionId);
         const url = new URL(`${endpoint.path}${queryParams}`, this.config.apiRestAuthUri);
         return this.makeRequest(url.toString(), endpoint.method);
+    }
+}
+
+// ======================= Unified Browser Client =======================
+
+export interface VircadiaBrowserClientConfig {
+    apiWsUri: string;
+    apiRestAuthUri: string;
+    apiRestAssetUri: string;
+    authToken: string;
+    authProvider: string;
+    sessionId?: string;
+    debug?: boolean;
+    suppress?: boolean;
+}
+
+export class VircadiaBrowserClient {
+    private sharedConfig: VircadiaBrowserClientConfig;
+    private wsCore: WsConnectionCore;
+    private restAuthCore: RestAuthCore;
+    private restAssetCore: RestAssetCore;
+    public readonly connection: {
+        connect: (options?: { timeoutMs?: number }) => Promise<WsConnectionCoreInfo>;
+        disconnect: () => void;
+        addEventListener: (event: string, listener: ClientCoreConnectionEventListener) => void;
+        removeEventListener: (event: string, listener: ClientCoreConnectionEventListener) => void;
+        query: <T = unknown>(data: { query: string; parameters?: unknown[]; timeoutMs?: number }) => Promise<Communication.WebSocket.QueryResponseMessage<T>>;
+        publishReflect: (data: { syncGroup: string; channel: string; payload: unknown; timeoutMs?: number }) => Promise<Communication.WebSocket.ReflectAckResponseMessage>;
+        subscribeReflect: (
+            syncGroup: string,
+            channel: string,
+            listener: (msg: Communication.WebSocket.ReflectDeliveryMessage) => void,
+        ) => () => void;
+        getConnectionInfo: () => WsConnectionCoreInfo;
+    };
+    public readonly restAuth: {
+        validateSession: (data: { token: string; provider: string }) => Promise<any>;
+        loginAnonymous: () => Promise<any>;
+        authorizeOAuth: (provider: string) => Promise<any>;
+        handleOAuthCallback: (params: { provider: string; code: string; state?: string }) => Promise<any>;
+        logout: () => Promise<any>;
+        linkProvider: (data: { provider: string; sessionId: string }) => Promise<any>;
+        unlinkProvider: (data: { provider: string; providerUid: string; sessionId: string }) => Promise<any>;
+        listProviders: (sessionId: string) => Promise<any>;
+    };
+    public readonly restAsset: {
+        assetGetByKey: (params: { key: string }) => Promise<Response>;
+    };
+
+    constructor(config: VircadiaBrowserClientConfig) {
+        this.sharedConfig = config;
+        // Pass the SAME object reference so sessionId updates propagate across cores
+        this.wsCore = new WsConnectionCore(this.sharedConfig);
+        this.restAuthCore = new RestAuthCore(this.sharedConfig);
+        this.restAssetCore = new RestAssetCore(this.sharedConfig);
+
+        // Namespaced helpers that use shared variables directly
+        this.connection = {
+            connect: (options) =>
+                this.wsCore.connect({
+                    timeoutMs: options?.timeoutMs,
+                    validateSession: (data) => this.restAuthCore.validateSession(data),
+                }),
+            disconnect: () => this.disconnect(),
+            addEventListener: (event, listener) => this.wsCore.addEventListener(event, listener),
+            removeEventListener: (event, listener) => this.wsCore.removeEventListener(event, listener),
+            query: (data) => this.wsCore.query(data),
+            publishReflect: (data) => this.wsCore.publishReflect(data),
+            subscribeReflect: (syncGroup, channel, listener) => this.wsCore.subscribeReflect(syncGroup, channel, listener),
+            getConnectionInfo: () => this.wsCore.getConnectionInfo(),
+        };
+
+        this.restAuth = {
+            validateSession: (data) => this.restAuthCore.validateSession(data),
+            loginAnonymous: () => this.loginAnonymous(),
+            authorizeOAuth: (provider) => this.restAuthCore.authorizeOAuth(provider),
+            handleOAuthCallback: (params) => this.handleOAuthCallback(params),
+            logout: () => this.logout(),
+            linkProvider: (data) => this.restAuthCore.linkProvider(data),
+            unlinkProvider: (data) => this.restAuthCore.unlinkProvider(data),
+            listProviders: (sessionId) => this.restAuthCore.listProviders(sessionId),
+        };
+
+        this.restAsset = {
+            assetGetByKey: (params) => this.restAssetCore.assetGetByKey(params),
+        };
+    }
+
+    // ---------------- Configuration setters ----------------
+    setApiWsUri(url: string): void {
+        this.sharedConfig.apiWsUri = url;
+    }
+
+    setApiRestAuthUri(url: string): void {
+        this.sharedConfig.apiRestAuthUri = url;
+    }
+
+    setApiRestAssetUri(url: string): void {
+        this.sharedConfig.apiRestAssetUri = url;
+    }
+
+    setAuthToken(token: string): void {
+        this.sharedConfig.authToken = token;
+    }
+
+    setAuthProvider(provider: string): void {
+        this.sharedConfig.authProvider = provider;
+    }
+
+    setDebug(isDebug: boolean): void {
+        this.sharedConfig.debug = isDebug;
+    }
+
+    setSuppress(isSuppressed: boolean): void {
+        this.sharedConfig.suppress = isSuppressed;
+    }
+
+    // ---------------- High-level flows ----------------
+    async connect(options?: { timeoutMs?: number }): Promise<WsConnectionCoreInfo> {
+        return this.wsCore.connect({
+            timeoutMs: options?.timeoutMs,
+            validateSession: (data) => this.restAuthCore.validateSession(data),
+        });
+    }
+
+    disconnect(): void {
+        this.wsCore.disconnect();
+        // Clear sessionId in shared config to avoid stale state for REST
+        this.sharedConfig.sessionId = undefined;
+    }
+
+    // Auth convenience methods that also update shared token/provider/sessionId
+    async loginAnonymous(): Promise<any> {
+        const resp = await this.restAuthCore.loginAnonymous();
+        if (resp && resp.success && resp.data) {
+            if (typeof resp.data.token === "string") this.sharedConfig.authToken = resp.data.token;
+            // Anonymous provider constant from schema (fallback to "anon")
+            this.sharedConfig.authProvider = this.sharedConfig.authProvider || "anon";
+            if (typeof resp.data.sessionId === "string") this.sharedConfig.sessionId = resp.data.sessionId;
+        }
+        return resp;
+    }
+
+    async authorizeOAuth(provider: string): Promise<any> {
+        // This just triggers a redirect URL; no state to update yet
+        return this.restAuthCore.authorizeOAuth(provider);
+    }
+
+    async handleOAuthCallback(params: { provider: string; code: string; state?: string }): Promise<any> {
+        const resp = await this.restAuthCore.handleOAuthCallback(params);
+        if (resp && resp.success) {
+            if (typeof resp.token === "string") this.sharedConfig.authToken = resp.token;
+            if (typeof resp.provider === "string") this.sharedConfig.authProvider = resp.provider;
+            if (typeof resp.sessionId === "string") this.sharedConfig.sessionId = resp.sessionId;
+        }
+        return resp;
+    }
+
+    async logout(): Promise<any> {
+        const sessionId = this.sharedConfig.sessionId;
+        const resp = await this.restAuthCore.logout(sessionId || "");
+        if (resp && resp.success) {
+            this.sharedConfig.sessionId = undefined;
+            this.wsCore.disconnect();
+        }
+        return resp;
+    }
+
+    // Note: Legacy Utilities getter removed in favor of top-level namespaces.
+
+    // ---------------- Asset URL helpers (for Babylon.js) ----------------
+
+    buildAssetRequestUrl(key: string): string {
+        return this.restAssetCore.buildAssetGetByKeyUrl({ key });
+    }
+
+    async fetchAssetAsBabylonUrl(key: string): Promise<{ url: string; mimeType: string; revoke: () => void; source: "data-url" | "object-url" }> {
+        const response = await this.restAssetCore.assetGetByKey({ key });
+        if (!response.ok) {
+            let serverError: string | undefined;
+            try {
+                const ct = response.headers.get("Content-Type") || "";
+                if (ct.includes("application/json")) {
+                    const j = await response.clone().json();
+                    serverError = (j as any)?.error || JSON.stringify(j);
+                }
+            } catch {}
+            throw new Error(`Asset fetch failed: HTTP ${response.status}${serverError ? ` - ${serverError}` : ""}`);
+        }
+
+        const mimeType = response.headers.get("Content-Type") || "application/octet-stream";
+        const arrayBuffer = await response.arrayBuffer();
+        const blob = new Blob([arrayBuffer], { type: mimeType });
+
+        const blobToDataUrl = (b: Blob): Promise<string> =>
+            new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = () => reject(new Error("Failed to convert blob to data URL"));
+                reader.readAsDataURL(b);
+            });
+
+        if (mimeType.startsWith("model/")) {
+            const url = await blobToDataUrl(blob);
+            return { url, mimeType, revoke: () => {}, source: "data-url" };
+        }
+
+        const objectUrl = URL.createObjectURL(blob);
+        const revoke = () => {
+            try {
+                URL.revokeObjectURL(objectUrl);
+            } catch {}
+        };
+        return { url: objectUrl, mimeType, revoke, source: "object-url" };
     }
 }
