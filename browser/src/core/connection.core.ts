@@ -226,19 +226,28 @@ export class WsConnectionCore {
                             token: this.config.authToken,
                             provider: this.config.authProvider,
                         });
+                        const rawError = !resp.success ? (resp.error || "") : "";
+                        const errorText = rawError.toLowerCase();
+                        const isExpired = !resp.success && (errorText.includes("expired") || errorText.includes("not before"));
                         const status: WsConnectionCoreAuthStatus = resp.success
                             ? "valid"
+                            : isExpired
+                            ? "expired"
                             : this.wasSessionValid
                             ? "expired"
                             : "invalid";
+                        const errorForState = resp.success ? undefined : resp.error;
                         this.sessionValidation = {
                             status,
                             lastChecked: Date.now(),
-                            error: resp.success ? undefined : resp.error,
+                            error: errorForState,
                         };
                     } catch (e) {
+                        const msg = e instanceof Error ? e.message : String(e);
+                        const lower = msg.toLowerCase();
+                        const isExpired = lower.includes("expired") || lower.includes("not before");
                         this.sessionValidation = {
-                            status: this.wasSessionValid ? "expired" : "invalid",
+                            status: isExpired ? "expired" : this.wasSessionValid ? "expired" : "invalid",
                             lastChecked: Date.now(),
                             error: e instanceof Error ? e.message : "Unknown validation error",
                         };

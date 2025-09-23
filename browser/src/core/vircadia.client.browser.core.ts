@@ -789,6 +789,14 @@ export class VircadiaBrowserClient {
         this.sharedConfig.suppress = isSuppressed;
     }
 
+    setSessionId(sessionId: string | undefined): void {
+        this.sharedConfig.sessionId = sessionId;
+    }
+
+    getSessionId(): string | undefined {
+        return this.sharedConfig.sessionId;
+    }
+
     // ---------------- High-level flows ----------------
     async connect(options?: { timeoutMs?: number }): Promise<WsConnectionCoreInfo> {
         return this.wsCore.connect({
@@ -832,12 +840,18 @@ export class VircadiaBrowserClient {
 
     async logout(): Promise<any> {
         const sessionId = this.sharedConfig.sessionId;
-        const resp = await this.restAuthCore.logout(sessionId || "");
-        if (resp && resp.success) {
-            this.sharedConfig.sessionId = undefined;
-            this.wsCore.disconnect();
+        let resp: any;
+        try {
+            resp = await this.restAuthCore.logout(sessionId || "");
+        } catch (e) {
+            resp = { success: false, error: e instanceof Error ? e.message : String(e) };
         }
-        return resp;
+        // Always clear local session regardless of server response to ensure client-side logout
+        this.sharedConfig.sessionId = undefined;
+        this.sharedConfig.authToken = "";
+        this.sharedConfig.authProvider = "anon";
+        this.wsCore.disconnect();
+        return resp && typeof resp === "object" ? resp : { success: true };
     }
 
     // Note: Legacy Utilities getter removed in favor of top-level namespaces.
