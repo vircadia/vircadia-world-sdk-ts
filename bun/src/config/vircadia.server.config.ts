@@ -187,10 +187,10 @@ const serverEnvSchema = z.object({
         .default(443),
     VRCA_SERVER_SERVICE_CADDY_DOMAIN_API: z
         .string()
-        .default("world.vircadia.com"),
+        .default("next-world.vircadia.com"),
     VRCA_SERVER_SERVICE_CADDY_DOMAIN_APP: z
         .string()
-        .default("app-next.vircadia.com"),
+        .default("next-app.vircadia.com"),
     VRCA_SERVER_SERVICE_CADDY_EMAIL: z.string().default("hello@vircadia.com"),
     VRCA_SERVER_SERVICE_CADDY_TLS_API: z.string().optional(),
     VRCA_SERVER_SERVICE_CADDY_TLS_APP: z.string().optional(),
