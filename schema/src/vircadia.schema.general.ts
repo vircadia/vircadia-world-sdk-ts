@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export namespace Config {
     export type E_OperationType = "INSERT" | "UPDATE" | "DELETE";
 
@@ -177,7 +179,7 @@ export namespace Auth {
 }
 
 export namespace Communication {
-    export const WS_UPGRADE_PATH = "/world/ws";
+    export const REST_BASE_WS_PATH = "/world/rest/ws";
     export const REST_BASE_AUTH_PATH = "/world/rest/auth";
     export const REST_BASE_ASSET_PATH = "/world/rest/asset";
 
@@ -863,6 +865,86 @@ export namespace Communication {
         ): message is T {
             return message.type === type;
         }
+
+        // ======================= Zod Schemas =======================
+        // Shared base (most messages conform to this envelope)
+        const Z_MessageBase = z.object({
+            timestamp: z.number(),
+            requestId: z.string(),
+            errorMessage: z.string().nullable(),
+            type: z.nativeEnum(MessageType),
+        });
+
+        const Z_GeneralErrorResponse = Z_MessageBase.extend({
+            type: z.literal(MessageType.GENERAL_ERROR_RESPONSE),
+        });
+
+        const Z_QueryRequest = Z_MessageBase.extend({
+            type: z.literal(MessageType.QUERY_REQUEST),
+            query: z.string(),
+            parameters: z.array(z.unknown()).optional(),
+        });
+
+        const Z_QueryResponse = Z_MessageBase.extend({
+            type: z.literal(MessageType.QUERY_RESPONSE),
+            result: z.unknown(),
+        });
+
+        const Z_TickNotification = Z_MessageBase.extend({
+            type: z.literal(MessageType.TICK_NOTIFICATION_RESPONSE),
+            // keep loose here to avoid circular deps; validated server-side
+            tick: z.any(),
+        });
+
+        const Z_SessionInfo = Z_MessageBase.extend({
+            type: z.literal(MessageType.SESSION_INFO_RESPONSE),
+            agentId: z.string(),
+            sessionId: z.string(),
+        });
+
+        const Z_ReflectPublishRequest = Z_MessageBase.extend({
+            type: z.literal(MessageType.REFLECT_PUBLISH_REQUEST),
+            syncGroup: z.string(),
+            channel: z.string(),
+            payload: z.unknown(),
+        });
+
+        const Z_ReflectDelivery = Z_MessageBase.extend({
+            type: z.literal(MessageType.REFLECT_MESSAGE_DELIVERY),
+            syncGroup: z.string(),
+            channel: z.string(),
+            fromSessionId: z.string().optional(),
+            payload: z.unknown(),
+        });
+
+        const Z_ReflectAckResponse = Z_MessageBase.extend({
+            type: z.literal(MessageType.REFLECT_ACK_RESPONSE),
+            syncGroup: z.string(),
+            channel: z.string(),
+            delivered: z.number(),
+        });
+
+        export const Z = {
+            MessageBase: Z_MessageBase,
+            GeneralErrorResponse: Z_GeneralErrorResponse,
+            QueryRequest: Z_QueryRequest,
+            QueryResponse: Z_QueryResponse,
+            TickNotification: Z_TickNotification,
+            SessionInfo: Z_SessionInfo,
+            ReflectPublishRequest: Z_ReflectPublishRequest,
+            ReflectDelivery: Z_ReflectDelivery,
+            ReflectAckResponse: Z_ReflectAckResponse,
+            AnyMessage: z.discriminatedUnion("type", [
+                Z_GeneralErrorResponse,
+                Z_QueryRequest,
+                Z_QueryResponse,
+                Z_TickNotification,
+                Z_SessionInfo,
+                Z_ReflectPublishRequest,
+                Z_ReflectDelivery,
+                Z_ReflectAckResponse,
+            ]),
+        } as const;
     }
 
     export namespace REST {
@@ -876,6 +958,11 @@ export namespace Communication {
             AUTH_UNLINK_PROVIDER = "AUTH_UNLINK_PROVIDER",
             AUTH_LIST_PROVIDERS = "AUTH_LIST_PROVIDERS",
             ASSET_GET_BY_KEY = "ASSET_GET_BY_KEY",
+            WS_UPGRADE_VALIDATE = "WS_UPGRADE_VALIDATE",
+            WS_UPGRADE_REQUEST = "WS_UPGRADE_REQUEST",
+            AUTH_STATS = "AUTH_STATS",
+            ASSET_STATS = "ASSET_STATS",
+            WS_STATS = "WS_STATS",
         }
 
         export const Endpoint: {
@@ -1608,7 +1695,260 @@ export namespace Communication {
                         "Binary content of the asset. On error, a JSON error response is returned.",
                 },
             },
+            // Validate whether a WS upgrade would succeed and why it might fail
+            WS_UPGRADE_VALIDATE: {
+                path: `${REST_BASE_WS_PATH}/validate`,
+                method: "GET",
+                createRequest: (params: {
+                    token?: string;
+                    provider?: string;
+                }): string => {
+                    const sp = new URLSearchParams();
+                    if (params.token) sp.set("token", params.token);
+                    if (params.provider) sp.set("provider", params.provider);
+                    return `?${sp.toString()}`;
+                },
+                createSuccess: (data: {
+                    ok: boolean;
+                    reason:
+                        | "OK"
+                        | "MISSING_TOKEN"
+                        | "MISSING_PROVIDER"
+                        | "JWT_INVALID"
+                        | "SESSION_INVALID"
+                        | "SESSION_ALREADY_CONNECTED"
+                        | "DB_UNAVAILABLE";
+                    details?: {
+                        agentId?: string;
+                        sessionId?: string;
+                        errorReason?: string;
+                    };
+                }): {
+                    ok: boolean;
+                    reason: string;
+                    details?: {
+                        agentId?: string;
+                        sessionId?: string;
+                        errorReason?: string;
+                    };
+                    success: true;
+                    timestamp: number;
+                } => ({
+                    ok: data.ok,
+                    reason: data.reason,
+                    details: data.details,
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (
+                    error: string,
+                ): {
+                    success: false;
+                    timestamp: number;
+                    error: string;
+                } => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+                description: "Validates whether a WebSocket upgrade would succeed and returns the reason if it might fail",
+                parameters: [
+                    {
+                        name: "token",
+                        type: "string",
+                        required: false,
+                        description: "JWT token for authentication",
+                    },
+                    {
+                        name: "provider",
+                        type: "string",
+                        required: false,
+                        description: "Provider name for JWT validation",
+                    },
+                ],
+                returns: {
+                    type: "object",
+                    description: "Validation result with status and reason",
+                    fields: [
+                        {
+                            name: "ok",
+                            type: "boolean",
+                            description: "Whether the WebSocket upgrade would succeed",
+                        },
+                        {
+                            name: "reason",
+                            type: "string",
+                            description: "Reason code explaining the validation result",
+                        },
+                        {
+                            name: "details",
+                            type: "object",
+                            description: "Optional details about the validation result",
+                        },
+                        {
+                            name: "success",
+                            type: "boolean",
+                            description: "Indicates if the request was successful",
+                        },
+                        {
+                            name: "timestamp",
+                            type: "number",
+                            description: "Unix timestamp when the response was generated",
+                        },
+                    ],
+                },
+            },
+            WS_UPGRADE_REQUEST: {
+                path: `${REST_BASE_WS_PATH}/request`,
+                method: "POST",
+                createRequest: (data: {
+                    token: string;
+                    provider: string;
+                }): string => JSON.stringify(data),
+                createSuccess: (data: {
+                    success: true;
+                    timestamp: number;
+                }): any => ({ ...data, success: true, timestamp: Date.now() }),
+                createError: (error: string): any => ({ success: false, timestamp: Date.now(), error }),
+                description: "Requests a WebSocket upgrade",
+                parameters: [
+                    {
+                        name: "token",
+                        type: "string",
+                        required: true,
+                        description: "JWT token for authentication",
+                    },
+                    {
+                        name: "provider",
+                        type: "string",
+                        required: true,
+                        description: "Provider name for JWT validation",
+                    },
+                ],
+                returns: { type: "object", description: "WebSocket upgrade request response" },
+            },
+            AUTH_STATS: {
+                path: `${REST_BASE_AUTH_PATH}/stats`,
+                method: "GET",
+                createRequest: (): string => "",
+                createSuccess: (data: {
+                    uptime: number;
+                    connections: Service.API.Common.I_ConnectionMetrics;
+                    database: { connected: boolean; connections: Service.API.Common.I_SystemMetrics };
+                    memory: {
+                        heapUsed: Service.API.Common.I_SystemMetrics;
+                        heapTotal: Service.API.Common.I_SystemMetrics;
+                        external: Service.API.Common.I_SystemMetrics;
+                        rss: Service.API.Common.I_SystemMetrics;
+                    };
+                    cpu: { user: Service.API.Common.I_SystemMetrics; system: Service.API.Common.I_SystemMetrics };
+                }): any => ({ ...data, success: true, timestamp: Date.now() }),
+                createError: (error: string): any => ({ success: false, timestamp: Date.now(), error }),
+                description: "Auth service statistics",
+                parameters: [],
+                returns: { type: "object", description: "Auth stats response" },
+            },
+            ASSET_STATS: {
+                path: `${REST_BASE_ASSET_PATH}/stats`,
+                method: "GET",
+                createRequest: (): string => "",
+                createSuccess: (data: {
+                    uptime: number;
+                    connections: Service.API.Common.I_ConnectionMetrics;
+                    database: { connected: boolean; connections: Service.API.Common.I_SystemMetrics };
+                    memory: {
+                        heapUsed: Service.API.Common.I_SystemMetrics;
+                        heapTotal: Service.API.Common.I_SystemMetrics;
+                        external: Service.API.Common.I_SystemMetrics;
+                        rss: Service.API.Common.I_SystemMetrics;
+                    };
+                    cpu: { user: Service.API.Common.I_SystemMetrics; system: Service.API.Common.I_SystemMetrics };
+                    assets: { cache: Service.API.Asset.I_AssetCacheStats };
+                }): any => ({ ...data, success: true, timestamp: Date.now() }),
+                createError: (error: string): any => ({ success: false, timestamp: Date.now(), error }),
+                description: "Asset service statistics",
+                parameters: [],
+                returns: { type: "object", description: "Asset stats response" },
+            },
+            WS_STATS: {
+                path: `${REST_BASE_WS_PATH}/stats`,
+                method: "GET",
+                createRequest: (): string => "",
+                createSuccess: (data: {
+                    uptime: number;
+                    connections: Service.API.Common.I_ConnectionMetrics;
+                    database: {
+                        connected: boolean;
+                        connections: Service.API.Common.I_SystemMetrics;
+                        pool?: { super?: Service.API.Common.I_PoolStats; proxy?: Service.API.Common.I_PoolStats; legacy?: Service.API.Common.I_PoolStats };
+                    };
+                    memory: {
+                        heapUsed: Service.API.Common.I_SystemMetrics;
+                        heapTotal: Service.API.Common.I_SystemMetrics;
+                        external: Service.API.Common.I_SystemMetrics;
+                        rss: Service.API.Common.I_SystemMetrics;
+                    };
+                    cpu: { user: Service.API.Common.I_SystemMetrics; system: Service.API.Common.I_SystemMetrics };
+                    queries: Service.API.Common.I_QueryMetrics;
+                    reflect: Service.API.Common.I_ReflectMetrics;
+                    endpoints: Service.API.Common.I_EndpointStats;
+                }): any => ({ ...data, success: true, timestamp: Date.now() }),
+                createError: (error: string): any => ({ success: false, timestamp: Date.now(), error }),
+                description: "WS service statistics",
+                parameters: [],
+                returns: { type: "object", description: "WS stats response" },
+            },
         } as const;
+
+        // ======================= Zod Schemas =======================
+        export namespace Z {
+            export const SuccessEnvelope = z.object({ success: z.literal(true), timestamp: z.number() }).passthrough();
+            export const ErrorEnvelope = z.object({ success: z.literal(false), timestamp: z.number(), error: z.string() }).passthrough();
+
+            export const AuthSessionValidateRequest = z.object({ token: z.string().min(1), provider: z.string().min(1) });
+            export const OAuthAuthorizeQuery = z.object({ provider: z.string().min(1) });
+            export const OAuthCallbackQuery = z.object({ provider: z.string().min(1), code: z.string().min(1), state: z.string().optional() });
+            export const LogoutRequest = z.object({ sessionId: z.string().min(1) });
+            export const LinkProviderRequest = z.object({ provider: z.string().min(1), sessionId: z.string().min(1) });
+            export const UnlinkProviderRequest = z.object({ provider: z.string().min(1), providerUid: z.string().min(1), sessionId: z.string().min(1) });
+            export const ListProvidersQuery = z.object({ sessionId: z.string().min(1) });
+
+            // Asset GET accepts either sessionId OR token+provider
+            export const AssetGetByKeyQuery = z.union([
+                z.object({ key: z.string().min(1), sessionId: z.string().min(1), token: z.string().optional(), provider: z.string().optional() }),
+                z.object({ key: z.string().min(1), sessionId: z.string().optional(), token: z.string().min(1), provider: z.string().min(1) }),
+            ]);
+
+            export const WsUpgradeValidateQuery = z.object({ token: z.string().optional(), provider: z.string().optional() });
+
+            // ======================= Response Schemas =======================
+            export const AuthSessionValidateSuccess = SuccessEnvelope;
+            export const AuthAnonymousLoginSuccess = SuccessEnvelope.extend({
+                data: z.object({ token: z.string(), agentId: z.string(), sessionId: z.string() }),
+            });
+            export const OAuthAuthorizeSuccess = SuccessEnvelope.extend({ redirectUrl: z.string().url() });
+            export const OAuthCallbackSuccess = SuccessEnvelope.extend({
+                token: z.string(),
+                agentId: z.string(),
+                sessionId: z.string(),
+                provider: z.string(),
+                email: z.string().optional(),
+                displayName: z.string().optional(),
+                username: z.string().optional(),
+            });
+            export const LogoutSuccess = SuccessEnvelope;
+            export const LinkProviderSuccess = SuccessEnvelope.extend({ redirectUrl: z.string().url() });
+            export const UnlinkProviderSuccess = SuccessEnvelope;
+            export const ListProvidersSuccess = SuccessEnvelope.extend({ providers: z.array(z.any()) });
+            export const WsUpgradeValidateSuccess = SuccessEnvelope.extend({
+                ok: z.boolean(),
+                reason: z.string(),
+                details: z
+                    .object({ agentId: z.string().optional(), sessionId: z.string().optional(), errorReason: z.string().optional() })
+                    .optional(),
+            });
+            export const WsUpgradeValidateResponse = z.union([WsUpgradeValidateSuccess, ErrorEnvelope]);
+        }
     }
 }
 

@@ -50,6 +50,26 @@ const serverEnvSchema = z.object({
                 ),
         ])
         .default(false),
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_DEBUG: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_SUPPRESS: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
 
     // API REST auth manager
     VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_CONTAINER_NAME: z
@@ -68,6 +88,26 @@ const serverEnvSchema = z.object({
         .number()
         .default(80),
     VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_DEBUG: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SUPPRESS: z
         .union([
             z.boolean(),
             z
@@ -111,11 +151,51 @@ const serverEnvSchema = z.object({
         .number()
         .default(4096 * 1024 * 1024),
     VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_DIR: z.string().default("/cache"),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_DEBUG: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_SUPPRESS: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
 
     // State manager
     VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_CONTAINER_NAME: z
         .string()
         .default("vircadia_world_state_manager"),
+    VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_DEBUG: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
+    VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_SUPPRESS: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
 
     // Web Babylon JS Client service
     VRCA_SERVER_SERVICE_CLIENT_WEB_BABYLON_JS_CONTAINER_NAME: z
@@ -157,12 +237,6 @@ const serverEnvSchema = z.object({
         .default("CHANGE_ME!"),
     VRCA_SERVER_SERVICE_POSTGRES_EXTENSIONS: z
         .string()
-        .transform((val) =>
-            val
-                .split(",")
-                .map((ext) => ext.trim())
-                .filter((ext) => ext.length > 0),
-        )
         .default("uuid-ossp,hstore,pgcrypto"),
 
     // PGWEB

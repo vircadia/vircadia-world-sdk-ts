@@ -1,4 +1,5 @@
-import { Communication } from "../../../schema/src/vircadia.schema.general";
+import { Communication, Service } from "../../../schema/src/vircadia.schema.general";
+import { z } from "zod";
 
 export type WsConnectionCoreState =
     | "connected"
@@ -153,15 +154,13 @@ export class WsConnectionCore {
 
     async connect(options?: {
         timeoutMs?: number;
-        validateSession?: (data: { token: string; provider: string }) => Promise<
-            | { success: true }
-            | { success: false; error?: string }
-        >;
     }): Promise<WsConnectionCoreInfo> {
         if (this.isClientConnected()) {
+            debugLog(this.config, "Already connected to WebSocket server, returning connection info");
             return this.getConnectionInfo();
         }
         if (this.connectionPromise && this.isConnecting()) {
+            debugLog(this.config, "Already connecting to WebSocket server, returning connection promise");
             return this.connectionPromise;
         }
 
@@ -219,48 +218,6 @@ export class WsConnectionCore {
 
                 return this.getConnectionInfo();
             } catch (error) {
-                if (options?.validateSession) {
-                    debugLog(this.config, "WS failed, validating session via REST");
-                    try {
-                        const resp = await options.validateSession({
-                            token: this.config.authToken,
-                            provider: this.config.authProvider,
-                        });
-                        const status: WsConnectionCoreAuthStatus = resp.success
-                            ? "valid"
-                            : this.wasSessionValid
-                            ? "expired"
-                            : "invalid";
-                        this.sessionValidation = {
-                            status,
-                            lastChecked: Date.now(),
-                            error: resp.success ? undefined : resp.error,
-                        };
-                    } catch (e) {
-                        this.sessionValidation = {
-                            status: this.wasSessionValid ? "expired" : "invalid",
-                            lastChecked: Date.now(),
-                            error: e instanceof Error ? e.message : "Unknown validation error",
-                        };
-                    }
-                }
-
-                if (error instanceof Error) {
-                    if (this.sessionValidation) {
-                        const status = this.sessionValidation.status;
-                        if (status === "invalid" || status === "expired") {
-                            const authError = status === "expired" ? "Session expired" : "Invalid session";
-                            throw new Error(
-                                `Authentication failed (${authError}): ${this.sessionValidation.error || error.message}`,
-                            );
-                        } else if (status === "valid") {
-                            throw new Error(
-                                `Connection failed (session valid): ${error.message}. This may be due to network issues or server downtime.`,
-                            );
-                        }
-                    }
-                }
-
                 throw error;
             } finally {
                 this.connectionPromise = null;
@@ -407,7 +364,13 @@ export class WsConnectionCore {
         try {
             debugLog(this.config, "Received message:", `${event.data.toString().slice(0, 200)}...`);
 
-            const message = JSON.parse(event.data) as Communication.WebSocket.Message;
+            const maybe = JSON.parse(event.data) as unknown;
+            const parsed = Communication.WebSocket.Z.AnyMessage.safeParse(maybe);
+            if (!parsed.success) {
+                debugError(this.config, "Invalid WS message envelope", parsed.error);
+                return;
+            }
+            const message = parsed.data as Communication.WebSocket.Message;
 
             if (message.type === Communication.WebSocket.MessageType.SESSION_INFO_RESPONSE) {
                 const sessionMsg = message as Communication.WebSocket.SessionInfoMessage;
@@ -455,6 +418,21 @@ export class WsConnectionCore {
                     }
                 }
 
+                // Validate specific response envelopes where applicable
+                if (message.type === Communication.WebSocket.MessageType.QUERY_RESPONSE) {
+                    const valid = Communication.WebSocket.Z.QueryResponse.safeParse(message);
+                    if (!valid.success) {
+                        request.reject(new Error("Invalid QUERY_RESPONSE format"));
+                        return;
+                    }
+                }
+                if (message.type === Communication.WebSocket.MessageType.REFLECT_ACK_RESPONSE) {
+                    const valid = Communication.WebSocket.Z.ReflectAckResponse.safeParse(message);
+                    if (!valid.success) {
+                        request.reject(new Error("Invalid REFLECT_ACK_RESPONSE format"));
+                        return;
+                    }
+                }
                 request.resolve(message);
             }
         } catch (error) {
@@ -515,6 +493,10 @@ export class RestAssetCore {
             token: this.config.authToken,
             provider: this.config.authProvider,
         };
+        const valid = Communication.REST.Z.AssetGetByKeyQuery.safeParse(finalParams);
+        if (!valid.success) {
+            throw new Error("Invalid asset request parameters");
+        }
         const query = endpoint.createRequest(finalParams);
         const url = new URL(`${endpoint.path}${query}`, this.config.apiRestAssetUri);
         return url.toString();
@@ -566,14 +548,14 @@ export class RestAuthCore {
         this.config = newConfig;
     }
 
-    private async makeRequest(
+    private async makeRequest<T = any>(
         url: string,
         method: string,
         // biome-ignore lint/suspicious/noExplicitAny: Flexible body
         body?: any,
         headers: Record<string, string> = {},
-        // biome-ignore lint/suspicious/noExplicitAny: Flexible response
-    ): Promise<any> {
+        responseSchema?: z.ZodType<T>,
+    ): Promise<T | { success: false; timestamp: number; error: string }> {
         debugLog(this.config, `Making ${method} request to:`, url.toString(), { headers });
 
         const requestOptions: RequestInit = {
@@ -606,8 +588,21 @@ export class RestAuthCore {
                     error: responseData.error || `HTTP ${response.status}: ${response.statusText}`,
                 };
             }
+            if (responseSchema) {
+                const parsed = responseSchema.safeParse(responseData);
+                if (!parsed.success) {
+                    debugError(this.config, "Response schema validation failed", parsed.error);
+                    return {
+                        success: false,
+                        timestamp: Date.now(),
+                        error: "Invalid response format",
+                    };
+                }
+                debugLog(this.config, `Request succeeded:`, { url: url.toString(), method, response: parsed.data });
+                return parsed.data;
+            }
             debugLog(this.config, `Request succeeded:`, { url: url.toString(), method, response: responseData });
-            return responseData;
+            return responseData as T;
         } catch (error) {
             debugError(this.config, "REST request failed:", error);
             return {
@@ -620,58 +615,67 @@ export class RestAuthCore {
 
     async validateSession(data: { token: string; provider: string }): Promise<any> {
         const endpoint = Communication.REST.Endpoint.AUTH_SESSION_VALIDATE;
-        const requestBody = endpoint.createRequest(data);
+        const parsed = Communication.REST.Z.AuthSessionValidateRequest.safeParse(data);
+        if (!parsed.success) {
+            return { success: false, timestamp: Date.now(), error: "Invalid request" };
+        }
+        const requestBody = endpoint.createRequest(parsed.data);
         const url = new URL(endpoint.path, this.config.apiRestAuthUri);
-        return this.makeRequest(url.toString(), endpoint.method, requestBody);
+        return this.makeRequest(url.toString(), endpoint.method, requestBody, {}, Communication.REST.Z.AuthSessionValidateSuccess);
     }
 
     async loginAnonymous(): Promise<any> {
         const endpoint = Communication.REST.Endpoint.AUTH_ANONYMOUS_LOGIN;
         const requestBody = endpoint.createRequest();
         const url = new URL(endpoint.path, this.config.apiRestAuthUri);
-        return this.makeRequest(url.toString(), endpoint.method, requestBody);
+        return this.makeRequest(url.toString(), endpoint.method, requestBody, {}, Communication.REST.Z.AuthAnonymousLoginSuccess);
     }
 
     async authorizeOAuth(provider: string): Promise<any> {
         const endpoint = Communication.REST.Endpoint.AUTH_OAUTH_AUTHORIZE;
-        const queryParams = endpoint.createRequest(provider);
+        const qp = Communication.REST.Z.OAuthAuthorizeQuery.parse({ provider });
+        const queryParams = endpoint.createRequest(qp.provider);
         const url = new URL(`${endpoint.path}${queryParams}`, this.config.apiRestAuthUri);
-        return this.makeRequest(url.toString(), endpoint.method);
+        return this.makeRequest(url.toString(), endpoint.method, undefined, {}, Communication.REST.Z.OAuthAuthorizeSuccess);
     }
 
     async handleOAuthCallback(params: { provider: string; code: string; state?: string }): Promise<any> {
         const endpoint = Communication.REST.Endpoint.AUTH_OAUTH_CALLBACK;
-        const queryParams = endpoint.createRequest(params);
+        const qp = Communication.REST.Z.OAuthCallbackQuery.parse(params);
+        const queryParams = endpoint.createRequest(qp);
         const url = new URL(`${endpoint.path}${queryParams}`, this.config.apiRestAuthUri);
-        return this.makeRequest(url.toString(), endpoint.method);
+        return this.makeRequest(url.toString(), endpoint.method, undefined, {}, Communication.REST.Z.OAuthCallbackSuccess);
     }
 
     async logout(sessionId: string): Promise<any> {
         const endpoint = Communication.REST.Endpoint.AUTH_LOGOUT;
-        const requestBody = endpoint.createRequest(sessionId);
+        const requestBody = endpoint.createRequest(Communication.REST.Z.LogoutRequest.parse({ sessionId }).sessionId);
         const url = new URL(endpoint.path, this.config.apiRestAuthUri);
-        return this.makeRequest(url.toString(), endpoint.method, requestBody);
+        return this.makeRequest(url.toString(), endpoint.method, requestBody, {}, Communication.REST.Z.LogoutSuccess);
     }
 
     async linkProvider(data: { provider: string; sessionId: string }): Promise<any> {
         const endpoint = Communication.REST.Endpoint.AUTH_LINK_PROVIDER;
-        const requestBody = endpoint.createRequest(data);
+        const v = Communication.REST.Z.LinkProviderRequest.parse(data);
+        const requestBody = endpoint.createRequest(v);
         const url = new URL(endpoint.path, this.config.apiRestAuthUri);
-        return this.makeRequest(url.toString(), endpoint.method, requestBody);
+        return this.makeRequest(url.toString(), endpoint.method, requestBody, {}, Communication.REST.Z.LinkProviderSuccess);
     }
 
     async unlinkProvider(data: { provider: string; providerUid: string; sessionId: string }): Promise<any> {
         const endpoint = Communication.REST.Endpoint.AUTH_UNLINK_PROVIDER;
-        const requestBody = endpoint.createRequest(data);
+        const v = Communication.REST.Z.UnlinkProviderRequest.parse(data);
+        const requestBody = endpoint.createRequest(v);
         const url = new URL(endpoint.path, this.config.apiRestAuthUri);
-        return this.makeRequest(url.toString(), endpoint.method, requestBody);
+        return this.makeRequest(url.toString(), endpoint.method, requestBody, {}, Communication.REST.Z.UnlinkProviderSuccess);
     }
 
     async listProviders(sessionId: string): Promise<any> {
         const endpoint = Communication.REST.Endpoint.AUTH_LIST_PROVIDERS;
-        const queryParams = endpoint.createRequest(sessionId);
+        const qp = Communication.REST.Z.ListProvidersQuery.parse({ sessionId });
+        const queryParams = endpoint.createRequest(qp.sessionId);
         const url = new URL(`${endpoint.path}${queryParams}`, this.config.apiRestAuthUri);
-        return this.makeRequest(url.toString(), endpoint.method);
+        return this.makeRequest(url.toString(), endpoint.method, undefined, {}, Communication.REST.Z.ListProvidersSuccess);
     }
 }
 
@@ -681,6 +685,8 @@ export interface VircadiaBrowserClientConfig {
     apiWsUri: string;
     apiRestAuthUri: string;
     apiRestAssetUri: string;
+    // REST base for WS manager (HTTP) used for diagnostics
+    apiRestWsUri?: string;
     authToken: string;
     authProvider: string;
     sessionId?: string;
@@ -693,6 +699,9 @@ export class VircadiaBrowserClient {
     private wsCore: WsConnectionCore;
     private restAuthCore: RestAuthCore;
     private restAssetCore: RestAssetCore;
+    private restWs: {
+        validateUpgrade: (params: { token?: string; provider?: string }) => Promise<any>;
+    };
     public readonly connection: {
         connect: (options?: { timeoutMs?: number }) => Promise<WsConnectionCoreInfo>;
         disconnect: () => void;
@@ -730,11 +739,7 @@ export class VircadiaBrowserClient {
 
         // Namespaced helpers that use shared variables directly
         this.connection = {
-            connect: (options) =>
-                this.wsCore.connect({
-                    timeoutMs: options?.timeoutMs,
-                    validateSession: (data) => this.restAuthCore.validateSession(data),
-                }),
+            connect: (options) => this.connect(options),
             disconnect: () => this.disconnect(),
             addEventListener: (event, listener) => this.wsCore.addEventListener(event, listener),
             removeEventListener: (event, listener) => this.wsCore.removeEventListener(event, listener),
@@ -757,6 +762,29 @@ export class VircadiaBrowserClient {
 
         this.restAsset = {
             assetGetByKey: (params) => this.restAssetCore.assetGetByKey(params),
+        };
+
+        // Minimal WS REST helper for diagnostics only
+        this.restWs = {
+            validateUpgrade: async (params) => {
+                try {
+                    const ep = Communication.REST.Endpoint.WS_UPGRADE_VALIDATE;
+                    const base = this.sharedConfig.apiRestWsUri || this.sharedConfig.apiWsUri;
+                    const baseUrl = new URL(base);
+                    // ensure HTTP(S) scheme for REST
+                    if (baseUrl.protocol === "ws:") baseUrl.protocol = "http:";
+                    if (baseUrl.protocol === "wss:") baseUrl.protocol = "https:";
+                    const qp = Communication.REST.Z.WsUpgradeValidateQuery.parse({ token: params.token, provider: params.provider });
+                    const url = new URL(`${ep.path}${ep.createRequest(qp)}`, baseUrl);
+                    const resp = await fetch(url.toString(), { method: ep.method });
+                    const json = await resp.json().catch(() => ({ success: false, error: `HTTP ${resp.status}` }));
+                    const parsed = Communication.REST.Z.WsUpgradeValidateResponse.safeParse(json);
+                    if (!parsed.success) return { success: false, error: "Invalid response" };
+                    return parsed.data;
+                } catch (e) {
+                    return { success: false, error: e instanceof Error ? e.message : String(e) };
+                }
+            },
         };
     }
 
@@ -798,11 +826,53 @@ export class VircadiaBrowserClient {
     }
 
     // ---------------- High-level flows ----------------
-    async connect(options?: { timeoutMs?: number }): Promise<WsConnectionCoreInfo> {
-        return this.wsCore.connect({
-            timeoutMs: options?.timeoutMs,
-            validateSession: (data) => this.restAuthCore.validateSession(data),
-        });
+    async connect(options?: { 
+        timeoutMs?: number }): Promise<WsConnectionCoreInfo> {
+        try {
+            return await this.wsCore.connect({ timeoutMs: options?.timeoutMs });
+        } catch (err) {
+            // On connect failure, run diagnostics in order: session validation then upgrade check
+            let sessionIsValid: boolean | undefined;
+            let sessionError: string | undefined;
+            try {
+                const sessionResp = await this.restAuthCore.validateSession({
+                    token: this.sharedConfig.authToken,
+                    provider: this.sharedConfig.authProvider,
+                });
+                sessionIsValid = !!sessionResp?.success;
+                if (!sessionIsValid) sessionError = sessionResp?.error;
+            } catch (e) {
+                sessionIsValid = false;
+                sessionError = e instanceof Error ? e.message : String(e);
+            }
+
+            let upgradeDiagnostics: { success?: boolean; ok?: boolean; reason?: string; details?: Record<string, unknown>; error?: string } | undefined;
+            try {
+                upgradeDiagnostics = await this.restWs.validateUpgrade({
+                    token: this.sharedConfig.authToken,
+                    provider: this.sharedConfig.authProvider,
+                });
+            } catch (e) {
+                upgradeDiagnostics = { success: false, error: e instanceof Error ? e.message : String(e) };
+            }
+
+            if (sessionIsValid === false) {
+                const reason = sessionError ? `: ${sessionError}` : "";
+                throw new Error(`Authentication failed${reason}`);
+            }
+
+            if (sessionIsValid === true) {
+                if (upgradeDiagnostics && upgradeDiagnostics.success) {
+                    const reason = upgradeDiagnostics.reason || (upgradeDiagnostics.ok ? "OK" : "UNKNOWN");
+                    const details = upgradeDiagnostics.details ? ` ${JSON.stringify(upgradeDiagnostics.details)}` : "";
+                    throw new Error(`Connection failed (session valid). Upgrade diagnostic: ${reason}${details}`);
+                }
+            }
+
+            const baseMsg = err instanceof Error ? err.message : String(err);
+            const upgradeMsg = upgradeDiagnostics?.error ? ` Upgrade check error: ${upgradeDiagnostics.error}` : "";
+            throw new Error(`Connection failed: ${baseMsg}.${upgradeMsg}`);
+        }
     }
 
     disconnect(): void {
