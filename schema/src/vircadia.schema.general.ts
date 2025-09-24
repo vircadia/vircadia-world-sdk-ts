@@ -1803,8 +1803,8 @@ export namespace Service {
         export namespace Asset {
             export interface I_AssetCacheStats {
                 dir: string;
-                maxBytes: number;
-                totalBytes: number;
+                maxMegabytes: number;
+                totalMegabytes: number;
                 fileCount: number;
                 inFlight: number;
                 lastMaintenanceAt?: number | null;

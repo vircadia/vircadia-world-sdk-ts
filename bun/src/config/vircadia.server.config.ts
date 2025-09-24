@@ -107,6 +107,10 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAINTENANCE_INTERVAL_MS: z.coerce
         .number()
         .default(1000),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAX_BYTES: z.coerce
+        .number()
+        .default(4096 * 1024 * 1024),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_DIR: z.string().default("/cache"),
 
     // State manager
     VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_CONTAINER_NAME: z
