@@ -54,9 +54,26 @@ export namespace Entity {
             group__sync?: string;
 
             // Asset fields
-            asset__data__bytea?: Buffer;
+            asset__data__bytea?: ArrayBuffer | Buffer;
             asset__mime_type?: string;
             asset__data__bytea_updated_at?: string;
+        }
+    }
+}
+
+export namespace Service {
+    export namespace API {
+        export namespace Asset {
+            export interface I_AssetCacheStats {
+                dir: string;
+                maxMegabytes: number;
+                totalMegabytes: number;
+                fileCount: number;
+                inFlight: number;
+                lastMaintenanceAt: number | null;
+                lastMaintenanceDurationMs: number | null;
+                filesWarmedLastRun: number | null;
+            }
         }
     }
 }
@@ -182,25 +199,7 @@ export namespace Communication {
     export const REST_BASE_WS_PATH = "/world/rest/ws";
     export const REST_BASE_AUTH_PATH = "/world/rest/auth";
     export const REST_BASE_ASSET_PATH = "/world/rest/asset";
-
-    // Interface for parameter documentation - moved to be shared across namespaces
-    export interface I_Parameter {
-        name: string;
-        type: string;
-        required: boolean;
-        description: string;
-    }
-
-    // Interface for return value documentation - moved to be shared across namespaces
-    export interface I_Return {
-        type: string;
-        description: string;
-        fields?: {
-            name: string;
-            type: string;
-            description: string;
-        }[];
-    }
+    export const REST_BASE_STATE_PATH = "/world/rest/state";
 
     export namespace WebSocket {
         export enum MessageType {
@@ -214,454 +213,6 @@ export namespace Communication {
             REFLECT_MESSAGE_DELIVERY = "REFLECT_MESSAGE_DELIVERY",
             REFLECT_ACK_RESPONSE = "REFLECT_ACK_RESPONSE",
         }
-
-        // Message type documentation
-        export interface I_MessageTypeDoc {
-            description: string;
-            parameters?: Communication.I_Parameter[];
-            messageFormat?: {
-                type: string;
-                description: string;
-                fields?: {
-                    name: string;
-                    type: string;
-                    description: string;
-                }[];
-            };
-        }
-
-        // Define documentation for each message type
-        export const MessageTypeDocs: Record<MessageType, I_MessageTypeDoc> = {
-            [MessageType.GENERAL_ERROR_RESPONSE]: {
-                description:
-                    "Response sent when a general error occurs during processing",
-                messageFormat: {
-                    type: "object",
-                    description:
-                        "Error response with details about the failure",
-                    fields: [
-                        {
-                            name: "timestamp",
-                            type: "number",
-                            description:
-                                "Unix timestamp when the error occurred",
-                        },
-                        {
-                            name: "requestId",
-                            type: "string",
-                            description:
-                                "ID of the request that generated the error",
-                        },
-                        {
-                            name: "errorMessage",
-                            type: "string",
-                            description:
-                                "Detailed error message describing what went wrong",
-                        },
-                        {
-                            name: "type",
-                            type: "string",
-                            description:
-                                "Message type identifier (GENERAL_ERROR_RESPONSE)",
-                        },
-                    ],
-                },
-            },
-            [MessageType.QUERY_REQUEST]: {
-                description: "Request to execute a query on the server",
-                parameters: [
-                    {
-                        name: "query",
-                        type: "string",
-                        required: true,
-                        description: "The query string to execute",
-                    },
-                    {
-                        name: "parameters",
-                        type: "array",
-                        required: false,
-                        description: "Array of parameters to pass to the query",
-                    },
-                    {
-                        name: "requestId",
-                        type: "string",
-                        required: true,
-                        description: "Unique identifier for this request",
-                    },
-                ],
-                messageFormat: {
-                    type: "object",
-                    description: "Query request object",
-                    fields: [
-                        {
-                            name: "timestamp",
-                            type: "number",
-                            description:
-                                "Unix timestamp when the request was created",
-                        },
-                        {
-                            name: "requestId",
-                            type: "string",
-                            description: "Unique identifier for this request",
-                        },
-                        {
-                            name: "errorMessage",
-                            type: "string | null",
-                            description:
-                                "Error message if there was an issue with the request format",
-                        },
-                        {
-                            name: "type",
-                            type: "string",
-                            description:
-                                "Message type identifier (QUERY_REQUEST)",
-                        },
-                        {
-                            name: "query",
-                            type: "string",
-                            description: "The query string to execute",
-                        },
-                        {
-                            name: "parameters",
-                            type: "array",
-                            description:
-                                "Array of parameters to pass to the query",
-                        },
-                    ],
-                },
-            },
-            [MessageType.QUERY_RESPONSE]: {
-                description:
-                    "Response to a query request with results or error information",
-                messageFormat: {
-                    type: "object",
-                    description:
-                        "Query response containing results or error details",
-                    fields: [
-                        {
-                            name: "timestamp",
-                            type: "number",
-                            description:
-                                "Unix timestamp when the response was generated",
-                        },
-                        {
-                            name: "requestId",
-                            type: "string",
-                            description:
-                                "ID of the request this response is for",
-                        },
-                        {
-                            name: "errorMessage",
-                            type: "string | null",
-                            description:
-                                "Error message if the query failed, null if successful",
-                        },
-                        {
-                            name: "type",
-                            type: "string",
-                            description:
-                                "Message type identifier (QUERY_RESPONSE)",
-                        },
-                        {
-                            name: "result",
-                            type: "T | []",
-                            description:
-                                "Query results, empty array if no results or error",
-                        },
-                    ],
-                },
-            },
-            [MessageType.SYNC_GROUP_UPDATES_RESPONSE]: {
-                description: "Response containing updates for a sync group",
-                messageFormat: {
-                    type: "object",
-                    description:
-                        "Updates for entities in a specific sync group",
-                    fields: [
-                        {
-                            name: "timestamp",
-                            type: "number",
-                            description:
-                                "Unix timestamp when the updates were generated",
-                        },
-                        {
-                            name: "requestId",
-                            type: "string",
-                            description:
-                                "ID of the request that triggered these updates",
-                        },
-                        {
-                            name: "errorMessage",
-                            type: "string | null",
-                            description:
-                                "Error message if there was a problem, null if successful",
-                        },
-                        {
-                            name: "type",
-                            type: "string",
-                            description:
-                                "Message type identifier (SYNC_GROUP_UPDATES_RESPONSE)",
-                        },
-                    ],
-                },
-            },
-            [MessageType.TICK_NOTIFICATION_RESPONSE]: {
-                description: "Notification sent when a server tick occurs",
-                messageFormat: {
-                    type: "object",
-                    description: "Information about the completed tick",
-                    fields: [
-                        {
-                            name: "timestamp",
-                            type: "number",
-                            description:
-                                "Unix timestamp when the tick notification was sent",
-                        },
-                        {
-                            name: "requestId",
-                            type: "string",
-                            description: "ID for this notification",
-                        },
-                        {
-                            name: "errorMessage",
-                            type: "string | null",
-                            description:
-                                "Error message if there was an issue, null if successful",
-                        },
-                        {
-                            name: "type",
-                            type: "string",
-                            description:
-                                "Message type identifier (TICK_NOTIFICATION_RESPONSE)",
-                        },
-                        {
-                            name: "tick",
-                            type: "Tick.I_Tick",
-                            description:
-                                "Detailed information about the tick that completed",
-                        },
-                    ],
-                },
-            },
-            [MessageType.SESSION_INFO_RESPONSE]: {
-                description:
-                    "Session info sent to client on connection establishment",
-                messageFormat: {
-                    type: "object",
-                    description:
-                        "Information about the session assigned by the server",
-                    fields: [
-                        {
-                            name: "timestamp",
-                            type: "number",
-                            description:
-                                "Unix timestamp when the session info was sent",
-                        },
-                        {
-                            name: "requestId",
-                            type: "string",
-                            description:
-                                "Empty string for session info messages",
-                        },
-                        {
-                            name: "errorMessage",
-                            type: "string | null",
-                            description:
-                                "Error message, null for session info messages",
-                        },
-                        {
-                            name: "type",
-                            type: "string",
-                            description:
-                                "Message type identifier (SESSION_INFO_RESPONSE)",
-                        },
-                        {
-                            name: "agentId",
-                            type: "string",
-                            description:
-                                "The agent identifier assigned by the server",
-                        },
-                        {
-                            name: "sessionId",
-                            type: "string",
-                            description:
-                                "The session identifier assigned by the server",
-                        },
-                    ],
-                },
-            },
-            [MessageType.REFLECT_PUBLISH_REQUEST]: {
-                description:
-                    "Client->server request to publish a realtime message to a sync group and channel (authorized server-side).",
-                parameters: [
-                    {
-                        name: "syncGroup",
-                        type: "string",
-                        required: true,
-                        description:
-                            "Target sync group (RLS/ACL enforced server-side)",
-                    },
-                    {
-                        name: "channel",
-                        type: "string",
-                        required: true,
-                        description:
-                            "Logical channel name within the sync group",
-                    },
-                    {
-                        name: "payload",
-                        type: "unknown",
-                        required: true,
-                        description:
-                            "Arbitrary JSON payload; keep compact for performance",
-                    },
-                    {
-                        name: "requestId",
-                        type: "string",
-                        required: true,
-                        description: "Unique id for the publish request",
-                    },
-                ],
-                messageFormat: {
-                    type: "object",
-                    description: "Publish request",
-                    fields: [
-                        {
-                            name: "timestamp",
-                            type: "number",
-                            description: "Unix epoch (ms)",
-                        },
-                        {
-                            name: "requestId",
-                            type: "string",
-                            description: "Correlation id",
-                        },
-                        {
-                            name: "errorMessage",
-                            type: "string | null",
-                            description: "Validation error, if any",
-                        },
-                        {
-                            name: "type",
-                            type: "string",
-                            description: "REFLECT_PUBLISH_REQUEST",
-                        },
-                        {
-                            name: "syncGroup",
-                            type: "string",
-                            description: "Sync group name",
-                        },
-                        {
-                            name: "channel",
-                            type: "string",
-                            description: "Channel name",
-                        },
-                        {
-                            name: "payload",
-                            type: "unknown",
-                            description: "Message payload",
-                        },
-                    ],
-                },
-            },
-            [MessageType.REFLECT_MESSAGE_DELIVERY]: {
-                description:
-                    "Server->client delivery of a realtime message for a sync group and channel.",
-                messageFormat: {
-                    type: "object",
-                    description: "Delivery message",
-                    fields: [
-                        {
-                            name: "timestamp",
-                            type: "number",
-                            description: "Unix epoch (ms)",
-                        },
-                        {
-                            name: "requestId",
-                            type: "string",
-                            description:
-                                "Optional correlation id; usually empty",
-                        },
-                        {
-                            name: "errorMessage",
-                            type: "string | null",
-                            description: "Null for deliveries",
-                        },
-                        {
-                            name: "type",
-                            type: "string",
-                            description: "REFLECT_MESSAGE_DELIVERY",
-                        },
-                        {
-                            name: "syncGroup",
-                            type: "string",
-                            description: "Sync group name",
-                        },
-                        {
-                            name: "channel",
-                            type: "string",
-                            description: "Channel name",
-                        },
-                        {
-                            name: "fromSessionId",
-                            type: "string",
-                            description: "Sender session id (optional)",
-                        },
-                        {
-                            name: "payload",
-                            type: "unknown",
-                            description: "Message payload",
-                        },
-                    ],
-                },
-            },
-            [MessageType.REFLECT_ACK_RESPONSE]: {
-                description:
-                    "Server->client acknowledgement of a publish request including delivery count.",
-                messageFormat: {
-                    type: "object",
-                    description: "Ack response",
-                    fields: [
-                        {
-                            name: "timestamp",
-                            type: "number",
-                            description: "Unix epoch (ms)",
-                        },
-                        {
-                            name: "requestId",
-                            type: "string",
-                            description: "Correlation id from publish",
-                        },
-                        {
-                            name: "errorMessage",
-                            type: "string | null",
-                            description: "Error if publish rejected",
-                        },
-                        {
-                            name: "type",
-                            type: "string",
-                            description: "REFLECT_ACK_RESPONSE",
-                        },
-                        {
-                            name: "syncGroup",
-                            type: "string",
-                            description: "Target sync group",
-                        },
-                        {
-                            name: "channel",
-                            type: "string",
-                            description: "Target channel",
-                        },
-                        {
-                            name: "delivered",
-                            type: "number",
-                            description:
-                                "Number of local recipients delivered to",
-                        },
-                    ],
-                },
-            },
-        };
 
         interface BaseMessage {
             timestamp: number;
@@ -962,6 +513,7 @@ export namespace Communication {
             WS_UPGRADE_REQUEST = "WS_UPGRADE_REQUEST",
             AUTH_STATS = "AUTH_STATS",
             ASSET_STATS = "ASSET_STATS",
+            STATE_STATS = "STATE_STATS",
             WS_STATS = "WS_STATS",
         }
 
@@ -976,8 +528,21 @@ export namespace Communication {
                 // biome-ignore lint/suspicious/noExplicitAny: This interface needs to be flexible for different endpoint implementations
                 createError: (...args: any[]) => any;
                 description: string;
-                parameters: I_Parameter[];
-                returns: I_Return; // Added returns field
+                parameters: {
+                    name: string;
+                    type: string;
+                    required: boolean;
+                    description: string;
+                }[];
+                returns: {
+                    type: string;
+                    description: string;
+                    fields?: {
+                        name: string;
+                        type: string;
+                        description: string;
+                    }[];
+                };
             };
         } = {
             AUTH_SESSION_VALIDATE: {
@@ -1833,15 +1398,15 @@ export namespace Communication {
                 createRequest: (): string => "",
                 createSuccess: (data: {
                     uptime: number;
-                    connections: Service.API.Common.I_ConnectionMetrics;
-                    database: { connected: boolean; connections: Service.API.Common.I_SystemMetrics };
+                    connections: { active: { current: number; average: number; p99: number; p999: number }; total: number; failed: number; successRate: number };
+                    database: { connected: boolean; connections: { current: number; average: number; p99: number; p999: number } };
                     memory: {
-                        heapUsed: Service.API.Common.I_SystemMetrics;
-                        heapTotal: Service.API.Common.I_SystemMetrics;
-                        external: Service.API.Common.I_SystemMetrics;
-                        rss: Service.API.Common.I_SystemMetrics;
+                        heapUsed: { current: number; average: number; p99: number; p999: number };
+                        heapTotal: { current: number; average: number; p99: number; p999: number };
+                        external: { current: number; average: number; p99: number; p999: number };
+                        rss: { current: number; average: number; p99: number; p999: number };
                     };
-                    cpu: { user: Service.API.Common.I_SystemMetrics; system: Service.API.Common.I_SystemMetrics };
+                    cpu: { user: { current: number; average: number; p99: number; p999: number }; system: { current: number; average: number; p99: number; p999: number } };
                 }): any => ({ ...data, success: true, timestamp: Date.now() }),
                 createError: (error: string): any => ({ success: false, timestamp: Date.now(), error }),
                 description: "Auth service statistics",
@@ -1854,21 +1419,54 @@ export namespace Communication {
                 createRequest: (): string => "",
                 createSuccess: (data: {
                     uptime: number;
-                    connections: Service.API.Common.I_ConnectionMetrics;
-                    database: { connected: boolean; connections: Service.API.Common.I_SystemMetrics };
+                    connections: { active: { current: number; average: number; p99: number; p999: number }; total: number; failed: number; successRate: number };
+                    database: { connected: boolean; connections: { current: number; average: number; p99: number; p999: number } };
                     memory: {
-                        heapUsed: Service.API.Common.I_SystemMetrics;
-                        heapTotal: Service.API.Common.I_SystemMetrics;
-                        external: Service.API.Common.I_SystemMetrics;
-                        rss: Service.API.Common.I_SystemMetrics;
+                        heapUsed: { current: number; average: number; p99: number; p999: number };
+                        heapTotal: { current: number; average: number; p99: number; p999: number };
+                        external: { current: number; average: number; p99: number; p999: number };
+                        rss: { current: number; average: number; p99: number; p999: number };
                     };
-                    cpu: { user: Service.API.Common.I_SystemMetrics; system: Service.API.Common.I_SystemMetrics };
-                    assets: { cache: Service.API.Asset.I_AssetCacheStats };
+                    cpu: { user: { current: number; average: number; p99: number; p999: number }; system: { current: number; average: number; p99: number; p999: number } };
+                    assets: { cache: { dir: string; maxMegabytes: number; totalMegabytes: number; fileCount: number; inFlight: number; lastMaintenanceAt?: number | null; lastMaintenanceDurationMs?: number | null; filesWarmedLastRun?: number | null } };
                 }): any => ({ ...data, success: true, timestamp: Date.now() }),
                 createError: (error: string): any => ({ success: false, timestamp: Date.now(), error }),
                 description: "Asset service statistics",
                 parameters: [],
                 returns: { type: "object", description: "Asset stats response" },
+            },
+            STATE_STATS: {
+                path: `${REST_BASE_STATE_PATH}/stats`,
+                method: "GET",
+                createRequest: (): string => "",
+                createSuccess: (data: {
+                    uptime: number;
+                    database: { connected: boolean };
+                    ticks: {
+                        processing: string[];
+                        pending: Record<string, boolean>;
+                    };
+                    entityExpiry: {
+                        enabled: boolean;
+                        intervalActive: boolean;
+                        configuration: {
+                            checkIntervalMs: number;
+                        } | null;
+                    };
+                    metadataExpiry: {
+                        enabled: boolean;
+                        intervalActive: boolean;
+                        configuration: {
+                            checkIntervalMs: number;
+                        } | null;
+                    };
+                    memory: { heapUsed: number };
+                    cpu: { system: number; user: number };
+                }): any => ({ ...data, success: true, timestamp: Date.now() }),
+                createError: (error: string): any => ({ success: false, timestamp: Date.now(), error }),
+                description: "State service statistics",
+                parameters: [],
+                returns: { type: "object", description: "State stats response" },
             },
             WS_STATS: {
                 path: `${REST_BASE_WS_PATH}/stats`,
@@ -1876,22 +1474,39 @@ export namespace Communication {
                 createRequest: (): string => "",
                 createSuccess: (data: {
                     uptime: number;
-                    connections: Service.API.Common.I_ConnectionMetrics;
+                    connections: { active: { current: number; average: number; p99: number; p999: number }; total: number; failed: number; successRate: number };
                     database: {
                         connected: boolean;
-                        connections: Service.API.Common.I_SystemMetrics;
-                        pool?: { super?: Service.API.Common.I_PoolStats; proxy?: Service.API.Common.I_PoolStats; legacy?: Service.API.Common.I_PoolStats };
+                        connections: { current: number; average: number; p99: number; p999: number };
+                        pool?: { super?: { implementation: string; metrics?: { max?: number; min?: number; size?: number; idle?: number; busy?: number; pending?: number } }; proxy?: { implementation: string; metrics?: { max?: number; min?: number; size?: number; idle?: number; busy?: number; pending?: number } }; legacy?: { implementation: string; metrics?: { max?: number; min?: number; size?: number; idle?: number; busy?: number; pending?: number } } };
                     };
                     memory: {
-                        heapUsed: Service.API.Common.I_SystemMetrics;
-                        heapTotal: Service.API.Common.I_SystemMetrics;
-                        external: Service.API.Common.I_SystemMetrics;
-                        rss: Service.API.Common.I_SystemMetrics;
+                        heapUsed: { current: number; average: number; p99: number; p999: number };
+                        heapTotal: { current: number; average: number; p99: number; p999: number };
+                        external: { current: number; average: number; p99: number; p999: number };
+                        rss: { current: number; average: number; p99: number; p999: number };
                     };
-                    cpu: { user: Service.API.Common.I_SystemMetrics; system: Service.API.Common.I_SystemMetrics };
-                    queries: Service.API.Common.I_QueryMetrics;
-                    reflect: Service.API.Common.I_ReflectMetrics;
-                    endpoints: Service.API.Common.I_EndpointStats;
+                    cpu: { user: { current: number; average: number; p99: number; p999: number }; system: { current: number; average: number; p99: number; p999: number } };
+                    queries: {
+                        queriesPerSecond: { current: number; average: number; peak: number };
+                        queryCompletionTime: { averageMs: number; p99Ms: number; p999Ms: number };
+                        requestSize: { averageKB: number; p99KB: number; p999KB: number };
+                        responseSize: { averageKB: number; p99KB: number; p999KB: number };
+                        totalQueries: number;
+                        failedQueries: number;
+                        successRate: number;
+                    };
+                    reflect: {
+                        messagesPerSecond: { current: number; average: number; peak: number };
+                        messageDeliveryTime: { averageMs: number; p99Ms: number; p999Ms: number };
+                        messageSize: { averageKB: number; p99KB: number; p999KB: number };
+                        totalPublished: number;
+                        totalDelivered: number;
+                        totalAcknowledged: number;
+                        failedDeliveries: number;
+                        successRate: number;
+                    };
+                    endpoints: { [endpoint: string]: { requestsPerSecond: { current: number; average: number; peak: number }; requestCompletionTime: { averageMs: number; p99Ms: number; p999Ms: number }; requestSize: { averageKB: number; p99KB: number; p999KB: number }; responseSize: { averageKB: number; p99KB: number; p999KB: number }; totalRequests: number; failedRequests: number; successRate: number } };
                 }): any => ({ ...data, success: true, timestamp: Date.now() }),
                 createError: (error: string): any => ({ success: false, timestamp: Date.now(), error }),
                 description: "WS service statistics",
@@ -1921,6 +1536,158 @@ export namespace Communication {
 
             export const WsUpgradeValidateQuery = z.object({ token: z.string().optional(), provider: z.string().optional() });
 
+            // Additional request schemas for other endpoints
+            export const WsUpgradeRequest = z.object({ token: z.string().min(1), provider: z.string().min(1) });
+
+            // ======================= Main Interface Zod Schemas =======================
+            export const ConfigEntityConfig = z.object({
+                entity_config__script_compilation_timeout_ms: z.number().int().positive(),
+                entity_config__expiry_check_interval_ms: z.number().int().positive(),
+                entity_config__metadata_expiry_check_interval_ms: z.number().int().positive(),
+            });
+
+            export const Entity = z.object({
+                general__entity_name: z.string().min(1),
+                general__semantic_version: z.string().min(1),
+                general__created_at: z.string().optional(),
+                general__created_by: z.string().optional(),
+                general__updated_at: z.string().optional(),
+                general__updated_by: z.string().optional(),
+                general__expiry__delete_since_updated_at_ms: z.number().int().nonnegative().optional(),
+                general__expiry__delete_since_created_at_ms: z.number().int().nonnegative().optional(),
+                group__load_priority: z.number().int(),
+                meta__data: z.unknown().optional(),
+                general__initialized_at: z.string().optional(),
+                general__initialized_by: z.string().optional(),
+                group__sync: z.string().min(1),
+            });
+
+            export const EntityMetadata = z.object({
+                general__entity_name: z.string().min(1),
+                metadata__key: z.string().min(1),
+                metadata__value: z.unknown(),
+                group__sync: z.string().min(1),
+                general__created_at: z.string().optional(),
+                general__created_by: z.string().optional(),
+                general__updated_at: z.string().optional(),
+                general__updated_by: z.string().optional(),
+                general__expiry__delete_since_updated_at_ms: z.number().int().nonnegative().optional(),
+                general__expiry__delete_since_created_at_ms: z.number().int().nonnegative().optional(),
+            });
+
+            export const EntityAsset = z.object({
+                general__asset_file_name: z.string().min(1),
+                general__created_at: z.string().optional(),
+                general__created_by: z.string().optional(),
+                general__updated_at: z.string().optional(),
+                general__updated_by: z.string().optional(),
+                group__sync: z.string().optional(),
+                asset__data__bytea: typeof Buffer !== 'undefined' ? z.instanceof(Buffer).optional() : z.any().optional(),
+                asset__mime_type: z.string().optional(),
+                asset__data__bytea_updated_at: z.string().optional(),
+            });
+
+            export const Tick = z.object({
+                general__tick_id: z.string().min(1),
+                tick__number: z.number().int().nonnegative(),
+                group__sync: z.string().min(1),
+                tick__start_time: z.date(),
+                tick__end_time: z.date(),
+                tick__duration_ms: z.number().int().nonnegative(),
+                tick__entity_states_processed: z.number().int().nonnegative(),
+                tick__is_delayed: z.boolean(),
+                tick__headroom_ms: z.number().nullable(),
+                tick__time_since_last_tick_ms: z.number().nullable(),
+                tick__db__start_time: z.date().nullable(),
+                tick__db__end_time: z.date().nullable(),
+                tick__db__duration_ms: z.number().nullable(),
+                tick__db__is_delayed: z.boolean().nullable(),
+                tick__service__start_time: z.date().nullable(),
+                tick__service__end_time: z.date().nullable(),
+                tick__service__duration_ms: z.number().nullable(),
+                tick__service__is_delayed: z.boolean().nullable(),
+            });
+
+            export const AuthProfile = z.object({
+                general__agent_profile_id: z.string().min(1),
+                profile__username: z.string().min(1),
+                auth__email: z.string().email(),
+                auth__is_admin: z.boolean(),
+                auth__is_anon: z.boolean(),
+                profile__last_seen_at: z.string().optional(),
+                general__created_at: z.string().optional(),
+                general__created_by: z.string().optional(),
+                general__updated_at: z.string().optional(),
+                general__updated_by: z.string().optional(),
+            });
+
+            export const AuthProvider = z.object({
+                auth__agent_id: z.string().min(1),
+                auth__provider_name: z.string().min(1),
+                auth__provider_uid: z.string().min(1),
+                auth__refresh_token: z.string().optional(),
+                auth__provider_email: z.string().email().optional(),
+                auth__is_primary: z.boolean(),
+                auth__metadata: z.record(z.string(), z.unknown()).optional(),
+                general__created_at: z.string().optional(),
+                general__created_by: z.string().optional(),
+                general__updated_at: z.string().optional(),
+                general__updated_by: z.string().optional(),
+            });
+
+            export const AuthSession = z.object({
+                general__session_id: z.string().min(1),
+                auth__agent_id: z.string().min(1),
+                auth__provider_name: z.string().min(1),
+                session__started_at: z.string().optional(),
+                session__last_seen_at: z.string().optional(),
+                session__expires_at: z.string(),
+                session__jwt: z.string().optional(),
+                session__is_active: z.boolean(),
+                general__created_at: z.string().optional(),
+                general__created_by: z.string().optional(),
+                general__updated_at: z.string().optional(),
+                general__updated_by: z.string().optional(),
+            });
+
+            export const AuthSyncGroup = z.object({
+                general__sync_group: z.string().min(1),
+                general__description: z.string().optional(),
+                server__tick__rate_ms: z.number().int().positive(),
+                server__tick__max_tick_count_buffer: z.number().int().positive(),
+                server__tick__enabled: z.boolean().optional(),
+                client__render_delay_ms: z.number().int().positive(),
+                client__max_prediction_time_ms: z.number().int().positive(),
+                network__packet_timing_variance_ms: z.number().int().positive(),
+                general__created_at: z.string().optional(),
+                general__created_by: z.string().optional(),
+                general__updated_at: z.string().optional(),
+                general__updated_by: z.string().optional(),
+            });
+
+            export const AuthRole = z.object({
+                auth__agent_id: z.string().min(1),
+                group__sync: z.string().min(1),
+                permissions__can_insert: z.boolean(),
+                permissions__can_update: z.boolean(),
+                permissions__can_delete: z.boolean(),
+                general__created_at: z.string().optional(),
+                general__created_by: z.string().optional(),
+                general__updated_at: z.string().optional(),
+                general__updated_by: z.string().optional(),
+            });
+
+            export const AssetCacheStats = z.object({
+                dir: z.string(),
+                maxMegabytes: z.number(),
+                totalMegabytes: z.number(),
+                fileCount: z.number(),
+                inFlight: z.number(),
+                lastMaintenanceAt: z.number().nullable(),
+                lastMaintenanceDurationMs: z.number().nullable(),
+                filesWarmedLastRun: z.number().nullable(),
+            });
+
             // ======================= Response Schemas =======================
             export const AuthSessionValidateSuccess = SuccessEnvelope;
             export const AuthAnonymousLoginSuccess = SuccessEnvelope.extend({
@@ -1939,7 +1706,7 @@ export namespace Communication {
             export const LogoutSuccess = SuccessEnvelope;
             export const LinkProviderSuccess = SuccessEnvelope.extend({ redirectUrl: z.string().url() });
             export const UnlinkProviderSuccess = SuccessEnvelope;
-            export const ListProvidersSuccess = SuccessEnvelope.extend({ providers: z.array(z.any()) });
+            export const ListProvidersSuccess = SuccessEnvelope.extend({ providers: z.array(AuthProvider) });
             export const WsUpgradeValidateSuccess = SuccessEnvelope.extend({
                 ok: z.boolean(),
                 reason: z.string(),
@@ -1948,429 +1715,354 @@ export namespace Communication {
                     .optional(),
             });
             export const WsUpgradeValidateResponse = z.union([WsUpgradeValidateSuccess, ErrorEnvelope]);
+
+            // Additional response schemas for stats endpoints
+            export const AuthStatsSuccess = SuccessEnvelope.extend({
+                uptime: z.number(),
+                connections: z.object({
+                    active: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    total: z.number(),
+                    failed: z.number(),
+                    successRate: z.number(),
+                }),
+                database: z.object({
+                    connected: z.boolean(),
+                    connections: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                }),
+                memory: z.object({
+                    heapUsed: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    heapTotal: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    external: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    rss: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                }),
+                cpu: z.object({
+                    user: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    system: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                }),
+            });
+
+            export const StateStatsSuccess = SuccessEnvelope.extend({
+                uptime: z.number(),
+                database: z.object({
+                    connected: z.boolean(),
+                }),
+                ticks: z.object({
+                    processing: z.array(z.string()),
+                    pending: z.record(z.string(), z.boolean()),
+                }),
+                entityExpiry: z.object({
+                    enabled: z.boolean(),
+                    intervalActive: z.boolean(),
+                    configuration: z.object({
+                        checkIntervalMs: z.number(),
+                    }).nullable(),
+                }),
+                metadataExpiry: z.object({
+                    enabled: z.boolean(),
+                    intervalActive: z.boolean(),
+                    configuration: z.object({
+                        checkIntervalMs: z.number(),
+                    }).nullable(),
+                }),
+                memory: z.object({
+                    heapUsed: z.number(),
+                }),
+                cpu: z.object({
+                    system: z.number(),
+                    user: z.number(),
+                }),
+            });
+
+            export const AssetStatsSuccess = SuccessEnvelope.extend({
+                uptime: z.number(),
+                connections: z.object({
+                    active: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    total: z.number(),
+                    failed: z.number(),
+                    successRate: z.number(),
+                }),
+                database: z.object({
+                    connected: z.boolean(),
+                    connections: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                }),
+                memory: z.object({
+                    heapUsed: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    heapTotal: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    external: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    rss: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                }),
+                cpu: z.object({
+                    user: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    system: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                }),
+                assets: z.object({
+                    cache: z.object({
+                        dir: z.string(),
+                        maxMegabytes: z.number(),
+                        totalMegabytes: z.number(),
+                        fileCount: z.number(),
+                        inFlight: z.number(),
+                        lastMaintenanceAt: z.number().nullable(),
+                        lastMaintenanceDurationMs: z.number().nullable(),
+                        filesWarmedLastRun: z.number().nullable(),
+                    }),
+                }),
+            });
+
+            export const WsStatsSuccess = SuccessEnvelope.extend({
+                uptime: z.number(),
+                connections: z.object({
+                    active: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    total: z.number(),
+                    failed: z.number(),
+                    successRate: z.number(),
+                }),
+                database: z.object({
+                    connected: z.boolean(),
+                    connections: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    pool: z.object({
+                        super: z.object({
+                            implementation: z.string(),
+                            metrics: z.object({
+                                max: z.number().optional(),
+                                min: z.number().optional(),
+                                size: z.number().optional(),
+                                idle: z.number().optional(),
+                                busy: z.number().optional(),
+                                pending: z.number().optional(),
+                            }).optional(),
+                        }).optional(),
+                        proxy: z.object({
+                            implementation: z.string(),
+                            metrics: z.object({
+                                max: z.number().optional(),
+                                min: z.number().optional(),
+                                size: z.number().optional(),
+                                idle: z.number().optional(),
+                                busy: z.number().optional(),
+                                pending: z.number().optional(),
+                            }).optional(),
+                        }).optional(),
+                        legacy: z.object({
+                            implementation: z.string(),
+                            metrics: z.object({
+                                max: z.number().optional(),
+                                min: z.number().optional(),
+                                size: z.number().optional(),
+                                idle: z.number().optional(),
+                                busy: z.number().optional(),
+                                pending: z.number().optional(),
+                            }).optional(),
+                        }).optional(),
+                    }).optional(),
+                }),
+                memory: z.object({
+                    heapUsed: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    heapTotal: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    external: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    rss: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                }),
+                cpu: z.object({
+                    user: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    system: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                }),
+                queries: z.object({
+                    queriesPerSecond: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        peak: z.number(),
+                    }),
+                    queryCompletionTime: z.object({
+                        averageMs: z.number(),
+                        p99Ms: z.number(),
+                        p999Ms: z.number(),
+                    }),
+                    requestSize: z.object({
+                        averageKB: z.number(),
+                        p99KB: z.number(),
+                        p999KB: z.number(),
+                    }),
+                    responseSize: z.object({
+                        averageKB: z.number(),
+                        p99KB: z.number(),
+                        p999KB: z.number(),
+                    }),
+                    totalQueries: z.number(),
+                    failedQueries: z.number(),
+                    successRate: z.number(),
+                }),
+                reflect: z.object({
+                    messagesPerSecond: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        peak: z.number(),
+                    }),
+                    messageDeliveryTime: z.object({
+                        averageMs: z.number(),
+                        p99Ms: z.number(),
+                        p999Ms: z.number(),
+                    }),
+                    messageSize: z.object({
+                        averageKB: z.number(),
+                        p99KB: z.number(),
+                        p999KB: z.number(),
+                    }),
+                    totalPublished: z.number(),
+                    totalDelivered: z.number(),
+                    totalAcknowledged: z.number(),
+                    failedDeliveries: z.number(),
+                    successRate: z.number(),
+                }),
+                endpoints: z.record(
+                    z.string(),
+                    z.object({
+                        requestsPerSecond: z.object({
+                            current: z.number(),
+                            average: z.number(),
+                            peak: z.number(),
+                        }),
+                        requestCompletionTime: z.object({
+                            averageMs: z.number(),
+                            p99Ms: z.number(),
+                            p999Ms: z.number(),
+                        }),
+                        requestSize: z.object({
+                            averageKB: z.number(),
+                            p99KB: z.number(),
+                            p999KB: z.number(),
+                        }),
+                        responseSize: z.object({
+                            averageKB: z.number(),
+                            p99KB: z.number(),
+                            p999KB: z.number(),
+                        }),
+                        totalRequests: z.number(),
+                        failedRequests: z.number(),
+                        successRate: z.number(),
+                    }),
+                ),
+            });
         }
-    }
-}
-
-export namespace Service {
-    export enum E_Service {
-        WORLD_API_MANAGER = "vircadia_world_api_manager",
-        WORLD_API_WS_MANAGER = "vircadia_world_api_ws_manager",
-        WORLD_API_AUTH_MANAGER = "vircadia_world_api_auth_manager",
-        WORLD_API_ASSET_MANAGER = "vircadia_world_api_asset_manager",
-        WORLD_STATE_MANAGER = "vircadia_world_state_manager",
-        POSTGRES = "vircadia_world_postgres",
-        PGWEB = "vircadia_world_pgweb",
-    }
-
-    export namespace API {
-        // ======================= Shared (Common) Types and Endpoints =======================
-        export namespace Common {
-            export interface I_PoolStatsMetrics {
-                max?: number;
-                min?: number;
-                size?: number;
-                idle?: number;
-                busy?: number;
-                pending?: number;
-            }
-
-            export interface I_PoolStats {
-                implementation: string;
-                metrics?: I_PoolStatsMetrics;
-            }
-
-            export interface I_QueryMetrics {
-                queriesPerSecond: {
-                    current: number;
-                    average: number;
-                    peak: number;
-                };
-                queryCompletionTime: {
-                    averageMs: number;
-                    p99Ms: number;
-                    p999Ms: number;
-                };
-                requestSize: {
-                    averageKB: number;
-                    p99KB: number;
-                    p999KB: number;
-                };
-                responseSize: {
-                    averageKB: number;
-                    p99KB: number;
-                    p999KB: number;
-                };
-                totalQueries: number;
-                failedQueries: number;
-                successRate: number;
-            }
-
-            export interface I_ReflectMetrics {
-                messagesPerSecond: {
-                    current: number;
-                    average: number;
-                    peak: number;
-                };
-                messageDeliveryTime: {
-                    averageMs: number;
-                    p99Ms: number;
-                    p999Ms: number;
-                };
-                messageSize: {
-                    averageKB: number;
-                    p99KB: number;
-                    p999KB: number;
-                };
-                totalPublished: number;
-                totalDelivered: number;
-                totalAcknowledged: number;
-                failedDeliveries: number;
-                successRate: number;
-            }
-
-            export interface I_EndpointMetrics {
-                requestsPerSecond: {
-                    current: number;
-                    average: number;
-                    peak: number;
-                };
-                requestCompletionTime: {
-                    averageMs: number;
-                    p99Ms: number;
-                    p999Ms: number;
-                };
-                requestSize: {
-                    averageKB: number;
-                    p99KB: number;
-                    p999KB: number;
-                };
-                responseSize: {
-                    averageKB: number;
-                    p99KB: number;
-                    p999KB: number;
-                };
-                totalRequests: number;
-                failedRequests: number;
-                successRate: number;
-            }
-
-            export interface I_EndpointStats {
-                [endpoint: string]: I_EndpointMetrics;
-            }
-
-            export interface I_SystemMetrics {
-                current: number;
-                average: number;
-                p99: number;
-                p999: number;
-            }
-
-            export interface I_ConnectionMetrics {
-                active: I_SystemMetrics;
-                total: number;
-                failed: number;
-                successRate: number;
-            }
-        }
-
-        // ======================= REST Auth =======================
-        export namespace Auth {
-            export const Stats_Endpoint = {
-                path: "/stats",
-                method: "GET",
-                createRequest: (): string => "",
-                createSuccess: (data: {
-                    uptime: number;
-                    connections: Common.I_ConnectionMetrics;
-                    database: {
-                        connected: boolean;
-                        connections: Common.I_SystemMetrics;
-                    };
-                    memory: {
-                        heapUsed: Common.I_SystemMetrics;
-                        heapTotal: Common.I_SystemMetrics;
-                        external: Common.I_SystemMetrics;
-                        rss: Common.I_SystemMetrics;
-                    };
-                    cpu: {
-                        user: Common.I_SystemMetrics;
-                        system: Common.I_SystemMetrics;
-                    };
-                }): {
-                    uptime: number;
-                    connections: Common.I_ConnectionMetrics;
-                    database: {
-                        connected: boolean;
-                        connections: Common.I_SystemMetrics;
-                    };
-                    memory: {
-                        heapUsed: Common.I_SystemMetrics;
-                        heapTotal: Common.I_SystemMetrics;
-                        external: Common.I_SystemMetrics;
-                        rss: Common.I_SystemMetrics;
-                    };
-                    cpu: {
-                        user: Common.I_SystemMetrics;
-                        system: Common.I_SystemMetrics;
-                    };
-                    success: true;
-                    timestamp: number;
-                } => ({
-                    uptime: data.uptime,
-                    connections: data.connections,
-                    database: data.database,
-                    memory: data.memory,
-                    cpu: data.cpu,
-                    success: true,
-                    timestamp: Date.now(),
-                }),
-                createError: (
-                    error: string,
-                ): {
-                    success: false;
-                    timestamp: number;
-                    error: string;
-                } => ({
-                    success: false,
-                    timestamp: Date.now(),
-                    error,
-                }),
-            } as const;
-        }
-
-        // ======================= REST Asset =======================
-        export namespace Asset {
-            export interface I_AssetCacheStats {
-                dir: string;
-                maxMegabytes: number;
-                totalMegabytes: number;
-                fileCount: number;
-                inFlight: number;
-                lastMaintenanceAt?: number | null;
-                lastMaintenanceDurationMs?: number | null;
-                filesWarmedLastRun?: number | null;
-            }
-
-            export const Stats_Endpoint = {
-                path: "/stats",
-                method: "GET",
-                createRequest: (): string => "",
-                createSuccess: (data: {
-                    uptime: number;
-                    connections: Common.I_ConnectionMetrics;
-                    database: {
-                        connected: boolean;
-                        connections: Common.I_SystemMetrics;
-                    };
-                    memory: {
-                        heapUsed: Common.I_SystemMetrics;
-                        heapTotal: Common.I_SystemMetrics;
-                        external: Common.I_SystemMetrics;
-                        rss: Common.I_SystemMetrics;
-                    };
-                    cpu: {
-                        user: Common.I_SystemMetrics;
-                        system: Common.I_SystemMetrics;
-                    };
-                    assets: {
-                        cache: I_AssetCacheStats;
-                    };
-                }): {
-                    uptime: number;
-                    connections: Common.I_ConnectionMetrics;
-                    database: {
-                        connected: boolean;
-                        connections: Common.I_SystemMetrics;
-                    };
-                    memory: {
-                        heapUsed: Common.I_SystemMetrics;
-                        heapTotal: Common.I_SystemMetrics;
-                        external: Common.I_SystemMetrics;
-                        rss: Common.I_SystemMetrics;
-                    };
-                    cpu: {
-                        user: Common.I_SystemMetrics;
-                        system: Common.I_SystemMetrics;
-                    };
-                    assets: {
-                        cache: I_AssetCacheStats;
-                    };
-                    success: true;
-                    timestamp: number;
-                } => ({
-                    uptime: data.uptime,
-                    connections: data.connections,
-                    database: data.database,
-                    memory: data.memory,
-                    cpu: data.cpu,
-                    assets: data.assets,
-                    success: true,
-                    timestamp: Date.now(),
-                }),
-                createError: (
-                    error: string,
-                ): {
-                    success: false;
-                    timestamp: number;
-                    error: string;
-                } => ({
-                    success: false,
-                    timestamp: Date.now(),
-                    error,
-                }),
-            } as const;
-        }
-
-        // ======================= WebSocket API =======================
-        export namespace WS {
-            export const Stats_Endpoint = {
-                path: "/stats",
-                method: "GET",
-                createRequest: (): string => "",
-                createSuccess: (data: {
-                    uptime: number;
-                    connections: Common.I_ConnectionMetrics;
-                    database: {
-                        connected: boolean;
-                        connections: Common.I_SystemMetrics;
-                        pool?: {
-                            super?: Common.I_PoolStats;
-                            proxy?: Common.I_PoolStats;
-                            legacy?: Common.I_PoolStats;
-                        };
-                    };
-                    memory: {
-                        heapUsed: Common.I_SystemMetrics;
-                        heapTotal: Common.I_SystemMetrics;
-                        external: Common.I_SystemMetrics;
-                        rss: Common.I_SystemMetrics;
-                    };
-                    cpu: {
-                        user: Common.I_SystemMetrics;
-                        system: Common.I_SystemMetrics;
-                    };
-                    queries: Common.I_QueryMetrics;
-                    reflect: Common.I_ReflectMetrics;
-                    endpoints: Common.I_EndpointStats;
-                }): {
-                    uptime: number;
-                    connections: Common.I_ConnectionMetrics;
-                    database: {
-                        connected: boolean;
-                        connections: Common.I_SystemMetrics;
-                        pool?: {
-                            super?: Common.I_PoolStats;
-                            proxy?: Common.I_PoolStats;
-                            legacy?: Common.I_PoolStats;
-                        };
-                    };
-                    memory: {
-                        heapUsed: Common.I_SystemMetrics;
-                        heapTotal: Common.I_SystemMetrics;
-                        external: Common.I_SystemMetrics;
-                        rss: Common.I_SystemMetrics;
-                    };
-                    cpu: {
-                        user: Common.I_SystemMetrics;
-                        system: Common.I_SystemMetrics;
-                    };
-                    queries: Common.I_QueryMetrics;
-                    reflect: Common.I_ReflectMetrics;
-                    endpoints: Common.I_EndpointStats;
-                    success: true;
-                    timestamp: number;
-                } => ({
-                    uptime: data.uptime,
-                    connections: data.connections,
-                    database: data.database,
-                    memory: data.memory,
-                    cpu: data.cpu,
-                    queries: data.queries,
-                    reflect: data.reflect,
-                    endpoints: data.endpoints,
-                    success: true,
-                    timestamp: Date.now(),
-                }),
-                createError: (
-                    error: string,
-                ): {
-                    success: false;
-                    timestamp: number;
-                    error: string;
-                } => ({
-                    success: false,
-                    timestamp: Date.now(),
-                    error,
-                }),
-            } as const;
-        }
-    }
-
-    export namespace Postgres {}
-
-    export namespace PGWeb {}
-
-    export namespace State {
-        export const Stats_Endpoint = {
-            method: "GET",
-            path: "/stats",
-            createRequest: (): string => "",
-            createSuccess: (data: {
-                uptime: number;
-                ticks: {
-                    processing: string[];
-                    pending: Record<string, boolean>;
-                };
-                database: {
-                    connected: boolean;
-                };
-                memory: {
-                    heapUsed: number;
-                };
-                cpu: {
-                    user: number;
-                    system: number;
-                };
-            }): {
-                uptime: number;
-                ticks: {
-                    processing: string[];
-                    pending: Record<string, boolean>;
-                };
-                database: {
-                    connected: boolean;
-                };
-                memory: {
-                    heapUsed: number;
-                };
-                cpu: {
-                    user: number;
-                    system: number;
-                };
-                success: true;
-                timestamp: number;
-            } => ({
-                uptime: data.uptime,
-                ticks: data.ticks,
-                database: data.database,
-                memory: data.memory,
-                cpu: data.cpu,
-                success: true,
-                timestamp: Date.now(),
-            }),
-            createError: (
-                error: string,
-            ): {
-                success: false;
-                timestamp: number;
-                error: string;
-            } => ({
-                success: false,
-                timestamp: Date.now(),
-                error,
-            }),
-        } as const;
     }
 }
 
