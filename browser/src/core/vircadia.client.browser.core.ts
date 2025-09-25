@@ -77,6 +77,7 @@ export class WsConnectionCore {
             resolve: (value: unknown) => void;
             reject: (reason: unknown) => void;
             timeout: ReturnType<typeof setTimeout>;
+            createdAt: number;
         }
     >();
     private eventListeners = new Map<string, Set<ClientCoreConnectionEventListener>>();
@@ -237,16 +238,25 @@ export class WsConnectionCore {
         }
 
         const requestId = crypto.randomUUID();
-        const message = new Communication.WebSocket.QueryRequestMessage({
-            query: data.query,
-            parameters: data.parameters,
+        const messageData = {
+            type: Communication.WebSocket.MessageType.QUERY_REQUEST,
+            timestamp: Date.now(),
             requestId,
             errorMessage: null,
-        });
+            query: data.query,
+            parameters: data.parameters,
+        };
+
+        // Validate message structure with Zod
+        const parsed = Communication.WebSocket.Z.QueryRequest.safeParse(messageData);
+        if (!parsed.success) {
+            throw new Error(`Invalid query request: ${parsed.error.message}`);
+        }
 
         debugLog(this.config, `Sending query with requestId: ${requestId}`);
 
         return new Promise<Communication.WebSocket.QueryResponseMessage<T>>((resolve, reject) => {
+            const createdAt = Date.now();
             const timeout = setTimeout(() => {
                 this.pendingRequests.delete(requestId);
                 reject(new Error("Request timeout"));
@@ -256,8 +266,9 @@ export class WsConnectionCore {
                 resolve: resolve as (value: unknown) => void,
                 reject,
                 timeout,
+                createdAt,
             });
-            this.ws?.send(JSON.stringify(message));
+            this.ws?.send(JSON.stringify(parsed.data));
         });
     }
 
@@ -267,7 +278,7 @@ export class WsConnectionCore {
         const connectionDuration = this.connectionStartTime ? now - this.connectionStartTime : undefined;
 
         const pendingRequests = Array.from(this.pendingRequests.entries()).map(([requestId, request]) => {
-            const elapsedMs = now - (request.timeout as unknown as number);
+            const elapsedMs = now - request.createdAt;
             return { requestId, elapsedMs };
         });
 
@@ -323,13 +334,24 @@ export class WsConnectionCore {
             throw new Error("Not connected to server");
         }
         const requestId = crypto.randomUUID();
-        const message = new Communication.WebSocket.ReflectPublishRequestMessage({
+        const messageData = {
+            type: Communication.WebSocket.MessageType.REFLECT_PUBLISH_REQUEST,
+            timestamp: Date.now(),
+            requestId,
+            errorMessage: null,
             syncGroup: data.syncGroup,
             channel: data.channel,
             payload: data.payload,
-            requestId,
-        });
+        };
+
+        // Validate message structure with Zod
+        const parsed = Communication.WebSocket.Z.ReflectPublishRequest.safeParse(messageData);
+        if (!parsed.success) {
+            throw new Error(`Invalid reflect publish request: ${parsed.error.message}`);
+        }
+
         return new Promise((resolve, reject) => {
+            const createdAt = Date.now();
             const timeout = setTimeout(() => {
                 this.pendingRequests.delete(requestId);
                 reject(new Error("Reflect publish timeout"));
@@ -338,8 +360,9 @@ export class WsConnectionCore {
                 resolve: (value) => resolve(value as Communication.WebSocket.ReflectAckResponseMessage),
                 reject,
                 timeout,
+                createdAt,
             });
-            this.ws?.send(JSON.stringify(message));
+            this.ws?.send(JSON.stringify(parsed.data));
         });
     }
 
@@ -370,13 +393,12 @@ export class WsConnectionCore {
                 debugError(this.config, "Invalid WS message envelope", parsed.error);
                 return;
             }
-            const message = parsed.data as Communication.WebSocket.Message;
+            const message = parsed.data;
 
             if (message.type === Communication.WebSocket.MessageType.SESSION_INFO_RESPONSE) {
-                const sessionMsg = message as Communication.WebSocket.SessionInfoMessage;
-                this.agentId = sessionMsg.agentId;
-                this.sessionId = sessionMsg.sessionId;
-                this.config.sessionId = sessionMsg.sessionId;
+                this.agentId = message.agentId;
+                this.sessionId = message.sessionId;
+                this.config.sessionId = message.sessionId;
                 this.emitEvent("statusChange");
                 return;
             }
@@ -384,11 +406,10 @@ export class WsConnectionCore {
             debugLog(this.config, `Parsed message request ID: ${message.requestId}`);
 
             if (message.type === Communication.WebSocket.MessageType.REFLECT_MESSAGE_DELIVERY) {
-                const m = message as Communication.WebSocket.ReflectDeliveryMessage;
-                const key = `${m.syncGroup}:${m.channel}`;
+                const key = `${message.syncGroup}:${message.channel}`;
                 const listeners = this.reflectListeners.get(key);
                 if (listeners) {
-                    for (const listener of listeners) listener(m);
+                    for (const listener of listeners) listener(message);
                 }
                 return;
             }
@@ -399,40 +420,26 @@ export class WsConnectionCore {
                 debugLog(this.config, `Processing request with ID: ${message.requestId}`);
                 clearTimeout(request.timeout);
                 this.pendingRequests.delete(message.requestId);
+
                 if (message.type === Communication.WebSocket.MessageType.GENERAL_ERROR_RESPONSE) {
-                    const err = (message as Communication.WebSocket.GeneralErrorResponseMessage).errorMessage ||
-                        "General error";
+                    const err = message.errorMessage || "General error";
                     const error = new Error(`Server error (requestId=${message.requestId}): ${err}`);
                     request.reject(error);
                     return;
                 }
 
                 if (message.type === Communication.WebSocket.MessageType.QUERY_RESPONSE) {
-                    const queryMsg = message as Communication.WebSocket.QueryResponseMessage;
-                    if (queryMsg.errorMessage) {
+                    if (message.errorMessage) {
                         const error = new Error(
-                            `Query failed (requestId=${message.requestId}): ${queryMsg.errorMessage}`,
+                            `Query failed (requestId=${message.requestId}): ${message.errorMessage}`,
                         );
                         request.reject(error);
                         return;
                     }
                 }
 
-                // Validate specific response envelopes where applicable
-                if (message.type === Communication.WebSocket.MessageType.QUERY_RESPONSE) {
-                    const valid = Communication.WebSocket.Z.QueryResponse.safeParse(message);
-                    if (!valid.success) {
-                        request.reject(new Error("Invalid QUERY_RESPONSE format"));
-                        return;
-                    }
-                }
-                if (message.type === Communication.WebSocket.MessageType.REFLECT_ACK_RESPONSE) {
-                    const valid = Communication.WebSocket.Z.ReflectAckResponse.safeParse(message);
-                    if (!valid.success) {
-                        request.reject(new Error("Invalid REFLECT_ACK_RESPONSE format"));
-                        return;
-                    }
-                }
+                // Message is already validated by AnyMessage discriminated union,
+                // so no additional validation needed for specific response types
                 request.resolve(message);
             }
         } catch (error) {
@@ -777,12 +784,12 @@ export class VircadiaBrowserClient {
                     const qp = Communication.REST.Z.WsUpgradeValidateQuery.parse({ token: params.token, provider: params.provider });
                     const url = new URL(`${ep.path}${ep.createRequest(qp)}`, baseUrl);
                     const resp = await fetch(url.toString(), { method: ep.method });
-                    const json = await resp.json().catch(() => ({ success: false, error: `HTTP ${resp.status}` }));
+                    const json = await resp.json().catch(() => ({ success: false, errorCode: "UNKNOWN_ERROR", message: `HTTP ${resp.status}` }));
                     const parsed = Communication.REST.Z.WsUpgradeValidateResponse.safeParse(json);
-                    if (!parsed.success) return { success: false, error: "Invalid response" };
+                    if (!parsed.success) return { success: false, errorCode: "INVALID_REQUEST", message: "Invalid response" };
                     return parsed.data;
                 } catch (e) {
-                    return { success: false, error: e instanceof Error ? e.message : String(e) };
+                    return { success: false, errorCode: "UNKNOWN_ERROR", message: e instanceof Error ? e.message : String(e) };
                 }
             },
         };
@@ -840,20 +847,20 @@ export class VircadiaBrowserClient {
                     provider: this.sharedConfig.authProvider,
                 });
                 sessionIsValid = !!sessionResp?.success;
-                if (!sessionIsValid) sessionError = sessionResp?.error;
+                if (!sessionIsValid) sessionError = sessionResp?.message || sessionResp?.error;
             } catch (e) {
                 sessionIsValid = false;
                 sessionError = e instanceof Error ? e.message : String(e);
             }
 
-            let upgradeDiagnostics: { success?: boolean; ok?: boolean; reason?: string; details?: Record<string, unknown>; error?: string } | undefined;
+            let upgradeDiagnostics: { success?: boolean; errorCode?: string; message?: string; timestamp?: number; ok?: boolean; reason?: string; details?: Record<string, unknown> } | undefined;
             try {
                 upgradeDiagnostics = await this.restWs.validateUpgrade({
                     token: this.sharedConfig.authToken,
                     provider: this.sharedConfig.authProvider,
                 });
             } catch (e) {
-                upgradeDiagnostics = { success: false, error: e instanceof Error ? e.message : String(e) };
+                upgradeDiagnostics = { success: false, errorCode: "UNKNOWN_ERROR", message: e instanceof Error ? e.message : String(e) };
             }
 
             if (sessionIsValid === false) {
@@ -862,15 +869,14 @@ export class VircadiaBrowserClient {
             }
 
             if (sessionIsValid === true) {
-                if (upgradeDiagnostics && upgradeDiagnostics.success) {
-                    const reason = upgradeDiagnostics.reason || (upgradeDiagnostics.ok ? "OK" : "UNKNOWN");
-                    const details = upgradeDiagnostics.details ? ` ${JSON.stringify(upgradeDiagnostics.details)}` : "";
-                    throw new Error(`Connection failed (session valid). Upgrade diagnostic: ${reason}${details}`);
+                if (upgradeDiagnostics && !upgradeDiagnostics.success) {
+                    const errorMsg = upgradeDiagnostics.message || "Unknown upgrade error";
+                    throw new Error(`Connection failed (session valid). Upgrade diagnostic error: ${errorMsg}`);
                 }
             }
 
             const baseMsg = err instanceof Error ? err.message : String(err);
-            const upgradeMsg = upgradeDiagnostics?.error ? ` Upgrade check error: ${upgradeDiagnostics.error}` : "";
+            const upgradeMsg = upgradeDiagnostics?.message ? ` Upgrade check error: ${upgradeDiagnostics.message}` : "";
             throw new Error(`Connection failed: ${baseMsg}.${upgradeMsg}`);
         }
     }

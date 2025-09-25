@@ -517,6 +517,32 @@ export namespace Communication {
             WS_STATS = "WS_STATS",
         }
 
+        export enum E_ErrorCode {
+            // WS Upgrade Validation Errors
+            WS_UPGRADE_DB_UNAVAILABLE = "WS_UPGRADE_DB_UNAVAILABLE",
+            WS_UPGRADE_MISSING_TOKEN = "WS_UPGRADE_MISSING_TOKEN",
+            WS_UPGRADE_MISSING_PROVIDER = "WS_UPGRADE_MISSING_PROVIDER",
+            WS_UPGRADE_JWT_INVALID = "WS_UPGRADE_JWT_INVALID",
+            WS_UPGRADE_SESSION_INVALID = "WS_UPGRADE_SESSION_INVALID",
+            WS_UPGRADE_SESSION_ALREADY_CONNECTED = "WS_UPGRADE_SESSION_ALREADY_CONNECTED",
+
+            // Auth Errors
+            AUTH_SESSION_INVALID = "AUTH_SESSION_INVALID",
+            AUTH_INVALID_REQUEST = "AUTH_INVALID_REQUEST",
+            AUTH_OAUTH_ERROR = "AUTH_OAUTH_ERROR",
+            AUTH_LINK_PROVIDER_ERROR = "AUTH_LINK_PROVIDER_ERROR",
+            AUTH_UNLINK_PROVIDER_ERROR = "AUTH_UNLINK_PROVIDER_ERROR",
+
+            // Asset Errors
+            ASSET_NOT_FOUND = "ASSET_NOT_FOUND",
+            ASSET_ACCESS_DENIED = "ASSET_ACCESS_DENIED",
+
+            // Generic Errors
+            UNKNOWN_ERROR = "UNKNOWN_ERROR",
+            INVALID_REQUEST = "INVALID_REQUEST",
+            SERVER_ERROR = "SERVER_ERROR",
+        }
+
         export const Endpoint: {
             [key in E_Endpoint]: {
                 path: string;
@@ -567,15 +593,18 @@ export namespace Communication {
                     timestamp: Date.now(),
                 }),
                 createError: (
-                    error: string,
+                    errorCode: string,
+                    message: string,
                 ): {
                     success: false;
                     timestamp: number;
-                    error: string;
+                    errorCode: string;
+                    message: string;
                 } => ({
                     success: false,
                     timestamp: Date.now(),
-                    error,
+                    errorCode,
+                    message,
                 }),
                 description:
                     "Validates a user session token from an authentication provider",
@@ -642,15 +671,18 @@ export namespace Communication {
                     data,
                 }),
                 createError: (
-                    error: string,
+                    errorCode: string,
+                    message: string,
                 ): {
                     success: false;
                     timestamp: number;
-                    error: string;
+                    errorCode: string;
+                    message: string;
                 } => ({
                     success: false,
                     timestamp: Date.now(),
-                    error,
+                    errorCode,
+                    message,
                 }),
                 description: "Logs in a user anonymously.",
                 parameters: [],
@@ -702,15 +734,18 @@ export namespace Communication {
                     timestamp: Date.now(),
                 }),
                 createError: (
-                    error: string,
+                    errorCode: string,
+                    message: string,
                 ): {
                     success: false;
                     timestamp: number;
-                    error: string;
+                    errorCode: string;
+                    message: string;
                 } => ({
                     success: false,
                     timestamp: Date.now(),
-                    error,
+                    errorCode,
+                    message,
                 }),
                 description:
                     "Initiates OAuth authorization flow for a specified provider",
@@ -802,15 +837,18 @@ export namespace Communication {
                     timestamp: Date.now(),
                 }),
                 createError: (
-                    error: string,
+                    errorCode: string,
+                    message: string,
                 ): {
                     success: false;
                     timestamp: number;
-                    error: string;
+                    errorCode: string;
+                    message: string;
                 } => ({
                     success: false,
                     timestamp: Date.now(),
-                    error,
+                    errorCode,
+                    message,
                 }),
                 description:
                     "Handles OAuth callback from the authorization provider",
@@ -915,15 +953,18 @@ export namespace Communication {
                     timestamp: Date.now(),
                 }),
                 createError: (
-                    error: string,
+                    errorCode: string,
+                    message: string,
                 ): {
                     success: false;
                     timestamp: number;
-                    error: string;
+                    errorCode: string;
+                    message: string;
                 } => ({
                     success: false,
                     timestamp: Date.now(),
-                    error,
+                    errorCode,
+                    message,
                 }),
                 description:
                     "Logs out the current session and invalidates the token",
@@ -983,15 +1024,18 @@ export namespace Communication {
                     timestamp: Date.now(),
                 }),
                 createError: (
-                    error: string,
+                    errorCode: string,
+                    message: string,
                 ): {
                     success: false;
                     timestamp: number;
-                    error: string;
+                    errorCode: string;
+                    message: string;
                 } => ({
                     success: false,
                     timestamp: Date.now(),
-                    error,
+                    errorCode,
+                    message,
                 }),
                 description:
                     "Initiates the process to link an additional authentication provider to an existing account",
@@ -1064,15 +1108,18 @@ export namespace Communication {
                     timestamp: Date.now(),
                 }),
                 createError: (
-                    error: string,
+                    errorCode: string,
+                    message: string,
                 ): {
                     success: false;
                     timestamp: number;
-                    error: string;
+                    errorCode: string;
+                    message: string;
                 } => ({
                     success: false,
                     timestamp: Date.now(),
-                    error,
+                    errorCode,
+                    message,
                 }),
                 description:
                     "Unlinks an authentication provider from the current account",
@@ -1138,15 +1185,18 @@ export namespace Communication {
                     timestamp: Date.now(),
                 }),
                 createError: (
-                    error: string,
+                    errorCode: string,
+                    message: string,
                 ): {
                     success: false;
                     timestamp: number;
-                    error: string;
+                    errorCode: string;
+                    message: string;
                 } => ({
                     success: false,
                     timestamp: Date.now(),
-                    error,
+                    errorCode,
+                    message,
                 }),
                 description:
                     "Lists all authentication providers linked to the current account",
@@ -1222,15 +1272,18 @@ export namespace Communication {
                     timestamp: Date.now(),
                 }),
                 createError: (
-                    error: string,
+                    errorCode: string,
+                    message: string,
                 ): {
                     success: false;
                     timestamp: number;
-                    error: string;
+                    errorCode: string;
+                    message: string;
                 } => ({
                     success: false,
                     timestamp: Date.now(),
-                    error,
+                    errorCode,
+                    message,
                 }),
                 description:
                     "Authenticated endpoint to retrieve an asset by its key (filename). Enforces ACL based on the asset's sync group.",
@@ -1306,15 +1359,18 @@ export namespace Communication {
                     timestamp: Date.now(),
                 }),
                 createError: (
-                    error: string,
+                    errorCode: string,
+                    message: string,
                 ): {
                     success: false;
                     timestamp: number;
-                    error: string;
+                    errorCode: string;
+                    message: string;
                 } => ({
                     success: false,
                     timestamp: Date.now(),
-                    error,
+                    errorCode,
+                    message,
                 }),
                 description: "Validates whether a WebSocket upgrade would succeed and returns the reason if it might fail",
                 parameters: [
@@ -1518,14 +1574,38 @@ export namespace Communication {
         // ======================= Zod Schemas =======================
         export namespace Z {
             export const SuccessEnvelope = z.object({ success: z.literal(true), timestamp: z.number() }).passthrough();
-            export const ErrorEnvelope = z.object({ success: z.literal(false), timestamp: z.number(), error: z.string() }).passthrough();
+            export const ErrorEnvelope = z.object({
+                success: z.literal(false),
+                timestamp: z.number(),
+                errorCode: z.string(),
+                message: z.string()
+            }).passthrough();
 
+            // Helper for parsing JSON strings safely
+            const jsonString = z.string().transform((str, ctx) => {
+                try {
+                    return str ? JSON.parse(str) : {};
+                } catch {
+                    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid JSON" });
+                    return z.NEVER;
+                }
+            });
+
+            // Request body schemas that handle JSON parsing
+            export const AuthSessionValidateRequestBody = jsonString.pipe(z.object({ token: z.string().min(1), provider: z.string().min(1) }));
+            export const LogoutRequestBody = jsonString.pipe(z.object({ sessionId: z.string().min(1) }));
+            export const LinkProviderRequestBody = jsonString.pipe(z.object({ provider: z.string().min(1), sessionId: z.string().min(1) }));
+            export const UnlinkProviderRequestBody = jsonString.pipe(z.object({ provider: z.string().min(1), providerUid: z.string().min(1), sessionId: z.string().min(1) }));
+
+            // Legacy object-only schemas for backward compatibility
             export const AuthSessionValidateRequest = z.object({ token: z.string().min(1), provider: z.string().min(1) });
-            export const OAuthAuthorizeQuery = z.object({ provider: z.string().min(1) });
-            export const OAuthCallbackQuery = z.object({ provider: z.string().min(1), code: z.string().min(1), state: z.string().optional() });
             export const LogoutRequest = z.object({ sessionId: z.string().min(1) });
             export const LinkProviderRequest = z.object({ provider: z.string().min(1), sessionId: z.string().min(1) });
             export const UnlinkProviderRequest = z.object({ provider: z.string().min(1), providerUid: z.string().min(1), sessionId: z.string().min(1) });
+
+            // Query parameter schemas (no JSON parsing needed)
+            export const OAuthAuthorizeQuery = z.object({ provider: z.string().min(1) });
+            export const OAuthCallbackQuery = z.object({ provider: z.string().min(1), code: z.string().min(1), state: z.string().optional() });
             export const ListProvidersQuery = z.object({ sessionId: z.string().min(1) });
 
             // Asset GET accepts either sessionId OR token+provider
