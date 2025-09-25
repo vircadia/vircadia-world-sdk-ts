@@ -168,7 +168,7 @@ export class WsConnectionCore {
             try {
                 this.updateConnectionStatus("connecting");
 
-                const url = new URL(this.config.apiWsUri);
+                const url = new URL(this.config.apiWsUri + Communication.REST.Endpoint.WS_UPGRADE_REQUEST.path);
                 if (url.protocol === "http:") url.protocol = "ws:";
                 else if (url.protocol === "https:") url.protocol = "wss:";
                 url.searchParams.set("token", this.config.authToken);

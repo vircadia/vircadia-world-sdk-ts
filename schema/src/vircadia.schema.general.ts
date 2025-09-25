@@ -1365,7 +1365,7 @@ export namespace Communication {
             },
             WS_UPGRADE_REQUEST: {
                 path: `${REST_BASE_WS_PATH}/request`,
-                method: "POST",
+                method: "GET",
                 createRequest: (data: {
                     token: string;
                     provider: string;
