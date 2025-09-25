@@ -423,7 +423,7 @@ export namespace Communication {
             timestamp: z.number(),
             requestId: z.string(),
             errorMessage: z.string().nullable(),
-            type: z.nativeEnum(MessageType),
+            type: z.enum(MessageType),
         });
 
         const Z_GeneralErrorResponse = Z_MessageBase.extend({
@@ -543,6 +543,7 @@ export namespace Communication {
             SERVER_ERROR = "SERVER_ERROR",
         }
 
+        // FIXME: Using Zod schemas and metadata registries, we can get rid of this, including with Zod generate JSON. WebSockets will need the same treatment.
         export const Endpoint: {
             [key in E_Endpoint]: {
                 path: string;
