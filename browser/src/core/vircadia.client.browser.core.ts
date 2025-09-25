@@ -54,7 +54,7 @@ const debugLog = (
     ...args: any[]
 ) => {
     if (config.debug && !config.suppress) {
-        console.log(message, ...args);
+        console.debug(message, ...args);
     }
 };
 
