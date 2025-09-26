@@ -120,8 +120,8 @@ export namespace Auth {
 
     export interface I_Profile {
         general__agent_profile_id: string;
-        profile__username: string;
-        auth__email: string;
+        profile__username?: string;
+        auth__email?: string;
         auth__is_admin: boolean;
         auth__is_anon: boolean;
         profile__last_seen_at?: string;
@@ -131,15 +131,54 @@ export namespace Auth {
         general__updated_by?: string;
     }
 
+    // Auth provider configuration (auth_providers table)
+    export interface I_AuthProviderConfig {
+        provider__name: string;
+        provider__display_name: string;
+        provider__enabled: boolean;
+        provider__client_id?: string;
+        provider__client_secret?: string;
+        provider__auth_url?: string;
+        provider__token_url?: string;
+        provider__userinfo_url?: string;
+        provider__end_session_url?: string;
+        provider__revocation_url?: string;
+        provider__device_authorization_url?: string;
+        provider__discovery_url?: string;
+        provider__scope?: string[];
+        provider__redirect_uris?: string[];
+        provider__issuer?: string;
+        provider__jwks_uri?: string;
+        provider__metadata?: Record<string, unknown>;
+        provider__icon_url?: string;
+        provider__jwt_secret: string;
+        provider__session_max_per_agent: number;
+        provider__session_duration_jwt_string: string;
+        provider__session_duration_ms: number;
+        provider__session_max_age_ms: number;
+        provider__session_inactive_expiry_ms: number;
+        provider__default_permissions__can_read: string[];
+        provider__default_permissions__can_insert: string[];
+        provider__default_permissions__can_update: string[];
+        provider__default_permissions__can_delete: string[];
+        general__created_at?: string;
+        general__created_by?: string;
+        general__updated_at?: string;
+        general__updated_by?: string;
+    }
+
+    // Agent auth provider association (agent_auth_providers table)
     export interface I_AuthProvider {
         auth__agent_id: string;
         auth__provider_name: string;
         auth__provider_uid: string;
-        auth__refresh_token?: string;
         auth__provider_email?: string;
-        auth__is_primary: boolean;
-        // biome-ignore lint/suspicious/noExplicitAny: allows provider metadata of arbitrary shape
-        auth__metadata?: Record<string, any>;
+        auth__access_token?: string;
+        auth__refresh_token?: string;
+        auth__token_expires_at?: string;
+        auth__is_verified: boolean;
+        auth__last_login_at?: string;
+        auth__metadata?: Record<string, unknown>;
         general__created_at?: string;
         general__created_by?: string;
         general__updated_at?: string;
@@ -150,8 +189,8 @@ export namespace Auth {
         general__session_id: string;
         auth__agent_id: string;
         auth__provider_name: string;
-        session__started_at?: string;
-        session__last_seen_at?: string;
+        session__started_at: string;
+        session__last_seen_at: string;
         session__expires_at: string;
         session__jwt?: string;
         session__is_active: boolean;
@@ -165,16 +204,13 @@ export namespace Auth {
         export interface I_SyncGroup {
             general__sync_group: string;
             general__description?: string;
-
             server__tick__rate_ms: number;
             server__tick__max_tick_count_buffer: number;
-            server__tick__enabled?: boolean;
-
+            server__tick__enabled: boolean;
             client__render_delay_ms: number;
             client__max_prediction_time_ms: number;
-
+            client__poll__rate_ms: number;
             network__packet_timing_variance_ms: number;
-
             general__created_at?: string;
             general__created_by?: string;
             general__updated_at?: string;
@@ -184,6 +220,7 @@ export namespace Auth {
         export interface I_Role {
             auth__agent_id: string;
             group__sync: string;
+            permissions__can_read: boolean;
             permissions__can_insert: boolean;
             permissions__can_update: boolean;
             permissions__can_delete: boolean;
@@ -192,6 +229,13 @@ export namespace Auth {
             general__updated_at?: string;
             general__updated_by?: string;
         }
+    }
+
+    export interface I_OAuthStateCache {
+        cache_key: string;
+        cache_value: string;
+        expires_at: string;
+        created_at?: string;
     }
 }
 
@@ -1691,11 +1735,46 @@ export namespace Communication {
 
             export const AuthProfile = z.object({
                 general__agent_profile_id: z.string().min(1),
-                profile__username: z.string().min(1),
-                auth__email: z.string().email(),
+                profile__username: z.string().optional(),
+                auth__email: z.string().email().optional(),
                 auth__is_admin: z.boolean(),
                 auth__is_anon: z.boolean(),
                 profile__last_seen_at: z.string().optional(),
+                general__created_at: z.string().optional(),
+                general__created_by: z.string().optional(),
+                general__updated_at: z.string().optional(),
+                general__updated_by: z.string().optional(),
+            });
+
+            export const AuthProviderConfig = z.object({
+                provider__name: z.string().min(1),
+                provider__display_name: z.string().min(1),
+                provider__enabled: z.boolean(),
+                provider__client_id: z.string().optional(),
+                provider__client_secret: z.string().optional(),
+                provider__auth_url: z.string().url().optional(),
+                provider__token_url: z.string().url().optional(),
+                provider__userinfo_url: z.string().url().optional(),
+                provider__end_session_url: z.string().url().optional(),
+                provider__revocation_url: z.string().url().optional(),
+                provider__device_authorization_url: z.string().url().optional(),
+                provider__discovery_url: z.string().url().optional(),
+                provider__scope: z.array(z.string()).optional(),
+                provider__redirect_uris: z.array(z.string()).optional(),
+                provider__issuer: z.string().optional(),
+                provider__jwks_uri: z.string().url().optional(),
+                provider__metadata: z.record(z.string(), z.unknown()).optional(),
+                provider__icon_url: z.string().url().optional(),
+                provider__jwt_secret: z.string().min(1),
+                provider__session_max_per_agent: z.number().int().positive(),
+                provider__session_duration_jwt_string: z.string().min(1),
+                provider__session_duration_ms: z.number().int().positive(),
+                provider__session_max_age_ms: z.number().int().positive(),
+                provider__session_inactive_expiry_ms: z.number().int().positive(),
+                provider__default_permissions__can_read: z.array(z.string()),
+                provider__default_permissions__can_insert: z.array(z.string()),
+                provider__default_permissions__can_update: z.array(z.string()),
+                provider__default_permissions__can_delete: z.array(z.string()),
                 general__created_at: z.string().optional(),
                 general__created_by: z.string().optional(),
                 general__updated_at: z.string().optional(),
@@ -1706,9 +1785,12 @@ export namespace Communication {
                 auth__agent_id: z.string().min(1),
                 auth__provider_name: z.string().min(1),
                 auth__provider_uid: z.string().min(1),
-                auth__refresh_token: z.string().optional(),
                 auth__provider_email: z.string().email().optional(),
-                auth__is_primary: z.boolean(),
+                auth__access_token: z.string().optional(),
+                auth__refresh_token: z.string().optional(),
+                auth__token_expires_at: z.string().optional(),
+                auth__is_verified: z.boolean(),
+                auth__last_login_at: z.string().optional(),
                 auth__metadata: z.record(z.string(), z.unknown()).optional(),
                 general__created_at: z.string().optional(),
                 general__created_by: z.string().optional(),
@@ -1720,8 +1802,8 @@ export namespace Communication {
                 general__session_id: z.string().min(1),
                 auth__agent_id: z.string().min(1),
                 auth__provider_name: z.string().min(1),
-                session__started_at: z.string().optional(),
-                session__last_seen_at: z.string().optional(),
+                session__started_at: z.string(),
+                session__last_seen_at: z.string(),
                 session__expires_at: z.string(),
                 session__jwt: z.string().optional(),
                 session__is_active: z.boolean(),
@@ -1736,9 +1818,10 @@ export namespace Communication {
                 general__description: z.string().optional(),
                 server__tick__rate_ms: z.number().int().positive(),
                 server__tick__max_tick_count_buffer: z.number().int().positive(),
-                server__tick__enabled: z.boolean().optional(),
+                server__tick__enabled: z.boolean(),
                 client__render_delay_ms: z.number().int().positive(),
                 client__max_prediction_time_ms: z.number().int().positive(),
+                client__poll__rate_ms: z.number().int().positive(),
                 network__packet_timing_variance_ms: z.number().int().positive(),
                 general__created_at: z.string().optional(),
                 general__created_by: z.string().optional(),
@@ -1749,6 +1832,7 @@ export namespace Communication {
             export const AuthRole = z.object({
                 auth__agent_id: z.string().min(1),
                 group__sync: z.string().min(1),
+                permissions__can_read: z.boolean(),
                 permissions__can_insert: z.boolean(),
                 permissions__can_update: z.boolean(),
                 permissions__can_delete: z.boolean(),
@@ -1756,6 +1840,13 @@ export namespace Communication {
                 general__created_by: z.string().optional(),
                 general__updated_at: z.string().optional(),
                 general__updated_by: z.string().optional(),
+            });
+
+            export const AuthOAuthStateCache = z.object({
+                cache_key: z.string().min(1),
+                cache_value: z.string().min(1),
+                expires_at: z.string(),
+                created_at: z.string().optional(),
             });
 
             export const AssetCacheStats = z.object({
