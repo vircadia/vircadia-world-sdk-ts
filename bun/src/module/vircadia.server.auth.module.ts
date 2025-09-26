@@ -96,10 +96,10 @@ export async function createAnonymousUser(db: SQL): Promise<{
                 [
                     {
                         provider__jwt_secret: string;
-                        provider__default_permissions__can_read: boolean;
-                        provider__default_permissions__can_insert: boolean;
-                        provider__default_permissions__can_update: boolean;
-                        provider__default_permissions__can_delete: boolean;
+                        provider__default_permissions__can_read: string[];
+                        provider__default_permissions__can_insert: string[];
+                        provider__default_permissions__can_update: string[];
+                        provider__default_permissions__can_delete: string[];
                     },
                 ]
             >`
@@ -179,16 +179,16 @@ export async function createAnonymousUser(db: SQL): Promise<{
                 )
             `;
 
-            // TODO: Add this to config with groups and mix of the provider perms for each, so defaults are defined there from a JSON structure, use CLI to configure as needed.
-            // Add sync group permissions for anonymous users to access public assets
-            const publicGroups = [
-                "public.REALTIME",
-                "public.NORMAL",
-                "public.BACKGROUND",
-                "public.STATIC",
-            ];
+            // Add sync group permissions based on provider default permissions
+            // Create a union of all sync groups from all permission arrays
+            const allGroups = new Set([
+                ...providerConfig.provider__default_permissions__can_read,
+                ...providerConfig.provider__default_permissions__can_insert,
+                ...providerConfig.provider__default_permissions__can_update,
+                ...providerConfig.provider__default_permissions__can_delete,
+            ]);
 
-            for (const group of publicGroups) {
+            for (const group of allGroups) {
                 await tx`
                     INSERT INTO auth.agent_sync_group_roles (
                         auth__agent_id,
@@ -200,11 +200,17 @@ export async function createAnonymousUser(db: SQL): Promise<{
                     ) VALUES (
                         ${agentId}::UUID,
                         ${group},
-                        ${providerConfig.provider__default_permissions__can_read},
-                        ${providerConfig.provider__default_permissions__can_insert},
-                        ${providerConfig.provider__default_permissions__can_update},
-                        ${providerConfig.provider__default_permissions__can_delete}
+                        ${providerConfig.provider__default_permissions__can_read.includes(group)},
+                        ${providerConfig.provider__default_permissions__can_insert.includes(group)},
+                        ${providerConfig.provider__default_permissions__can_update.includes(group)},
+                        ${providerConfig.provider__default_permissions__can_delete.includes(group)}
                     )
+                    ON CONFLICT (auth__agent_id, group__sync)
+                    DO UPDATE SET
+                        permissions__can_read = ${providerConfig.provider__default_permissions__can_read.includes(group)},
+                        permissions__can_insert = ${providerConfig.provider__default_permissions__can_insert.includes(group)},
+                        permissions__can_update = ${providerConfig.provider__default_permissions__can_update.includes(group)},
+                        permissions__can_delete = ${providerConfig.provider__default_permissions__can_delete.includes(group)}
                 `;
             }
 
