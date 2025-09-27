@@ -50,13 +50,12 @@ const clientBrowserEnvSchema = z.object({
         .default("/brand/favicon.svg"),
 
     VRCA_CLIENT_WEB_BABYLON_JS_APP_URL: z
-        .string()
         .url()
-        .default("https://app.vircadia.com"),
+        .default("https://next-app.vircadia.com"),
 
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_WS_URI: z
         .string()
-        .default("localhost:3020"),
+        .default("next-world.vircadia.com"),
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_WS_URI_USING_SSL: z
         .union([
             z.boolean(),
@@ -66,11 +65,11 @@ const clientBrowserEnvSchema = z.object({
                     (val) => val === "1" || val.toLowerCase() === "true",
                 ),
         ])
-        .default(false),
+        .default(true),
 
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_AUTH_URI: z
         .string()
-        .default("localhost:3022"),
+        .default("next-world.vircadia.com"),
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_AUTH_URI_USING_SSL: z
         .union([
             z.boolean(),
@@ -80,11 +79,11 @@ const clientBrowserEnvSchema = z.object({
                     (val) => val === "1" || val.toLowerCase() === "true",
                 ),
         ])
-        .default(false),
+        .default(true),
 
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_ASSET_URI: z
         .string()
-        .default("localhost:3023"),
+        .default("next-world.vircadia.com"),
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_ASSET_URI_USING_SSL: z
         .union([
             z.boolean(),
@@ -94,7 +93,7 @@ const clientBrowserEnvSchema = z.object({
                     (val) => val === "1" || val.toLowerCase() === "true",
                 ),
         ])
-        .default(false),
+        .default(true),
 
     VRCA_CLIENT_WEB_BABYLON_JS_PROD_HOST: z.string().default("0.0.0.0"),
     VRCA_CLIENT_WEB_BABYLON_JS_PROD_PORT: z.coerce.number().default(3025),

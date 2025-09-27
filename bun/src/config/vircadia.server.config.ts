@@ -36,11 +36,31 @@ const serverEnvSchema = z.object({
         .default(3020),
     VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
         .string()
-        .default("127.0.0.1"),
+        .default("next-world.vircadia.com"),
     VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_PORT_PUBLIC_AVAILABLE_AT: z.coerce
         .number()
-        .default(80),
+        .default(443),
     VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(true),
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_DEBUG: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_SUPPRESS: z
         .union([
             z.boolean(),
             z
@@ -83,11 +103,31 @@ const serverEnvSchema = z.object({
         .default(3022),
     VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
         .string()
-        .default("127.0.0.1"),
+        .default("next-world.vircadia.com"),
     VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_PUBLIC_AVAILABLE_AT: z.coerce
         .number()
-        .default(80),
+        .default(443),
     VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(true),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_DEBUG: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SUPPRESS: z
         .union([
             z.boolean(),
             z
@@ -130,10 +170,10 @@ const serverEnvSchema = z.object({
         .default(3023),
     VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
         .string()
-        .default("127.0.0.1"),
+        .default("next-world.vircadia.com"),
     VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_PUBLIC_AVAILABLE_AT: z.coerce
         .number()
-        .default(80),
+        .default(443),
     VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT: z
         .union([
             z.boolean(),
@@ -143,7 +183,7 @@ const serverEnvSchema = z.object({
                     (val) => val === "1" || val.toLowerCase() === "true",
                 ),
         ])
-        .default(false),
+        .default(true),
     VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAINTENANCE_INTERVAL_MS: z.coerce
         .number()
         .default(1000),
@@ -237,7 +277,13 @@ const serverEnvSchema = z.object({
         .default("CHANGE_ME!"),
     VRCA_SERVER_SERVICE_POSTGRES_EXTENSIONS: z
         .string()
-        .default("uuid-ossp,hstore,pgcrypto"),
+        .transform((val) =>
+            val
+                .split(",")
+                .map((ext) => ext.trim())
+                .filter((ext) => ext.length > 0),
+        )
+        .default(["uuid-ossp", "hstore", "pgcrypto"]),
 
     // PGWEB
     VRCA_SERVER_SERVICE_PGWEB_CONTAINER_NAME: z
