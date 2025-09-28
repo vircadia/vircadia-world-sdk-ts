@@ -70,26 +70,6 @@ const serverEnvSchema = z.object({
                 ),
         ])
         .default(false),
-    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_DEBUG: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
-    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_SUPPRESS: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
 
     // API REST auth manager
     VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_CONTAINER_NAME: z
@@ -117,26 +97,6 @@ const serverEnvSchema = z.object({
                 ),
         ])
         .default(true),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_DEBUG: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SUPPRESS: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
     VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_DEBUG: z
         .union([
             z.boolean(),
@@ -276,12 +236,14 @@ const serverEnvSchema = z.object({
         .string()
         .default("CHANGE_ME!"),
     VRCA_SERVER_SERVICE_POSTGRES_EXTENSIONS: z
-        .string()
+        .union([z.string(), z.array(z.string())])
         .transform((val) =>
-            val
-                .split(",")
-                .map((ext) => ext.trim())
-                .filter((ext) => ext.length > 0),
+            Array.isArray(val)
+                ? val
+                : val
+                      .split(",")
+                      .map((ext) => ext.trim())
+                      .filter((ext) => ext.length > 0),
         )
         .default(["uuid-ossp", "hstore", "pgcrypto"]),
 
