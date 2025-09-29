@@ -25,6 +25,9 @@ export type WsConnectionCoreInfo = {
     sessionId: string | null;
     instanceId: string | null;
     fullSessionId: string | null;
+    // Expose auth config surface without leaking raw tokens
+    authProvider: string;
+    hasAuthToken: boolean;
     sessionValidation?: {
         status: WsConnectionCoreAuthStatus;
         lastChecked: number;
@@ -338,6 +341,8 @@ export class WsConnectionCore {
                 this.sessionId && this.instanceId
                     ? `${this.sessionId}-${this.instanceId}`
                     : null,
+            authProvider: this.config.authProvider,
+            hasAuthToken: !!this.config.authToken,
             sessionValidation: this.sessionValidation || undefined,
             lastClose:
                 this.lastCloseCode !== null
@@ -1245,54 +1250,5 @@ export class VircadiaBrowserClient {
 
     buildAssetRequestUrl(key: string): string {
         return this.restAssetCore.buildAssetGetByKeyUrl({ key });
-    }
-
-    async fetchAssetAsBabylonUrl(key: string): Promise<{
-        url: string;
-        mimeType: string;
-        revoke: () => void;
-        source: "data-url" | "object-url";
-    }> {
-        const response = await this.restAssetCore.assetGetByKey({ key });
-        if (!response.ok) {
-            let serverError: string | undefined;
-            try {
-                const ct = response.headers.get("Content-Type") || "";
-                if (ct.includes("application/json")) {
-                    const j = await response.clone().json();
-                    serverError = (j as any)?.error || JSON.stringify(j);
-                }
-            } catch {}
-            throw new Error(
-                `Asset fetch failed: HTTP ${response.status}${serverError ? ` - ${serverError}` : ""}`,
-            );
-        }
-
-        const mimeType =
-            response.headers.get("Content-Type") || "application/octet-stream";
-        const arrayBuffer = await response.arrayBuffer();
-        const blob = new Blob([arrayBuffer], { type: mimeType });
-
-        const blobToDataUrl = (b: Blob): Promise<string> =>
-            new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.onerror = () =>
-                    reject(new Error("Failed to convert blob to data URL"));
-                reader.readAsDataURL(b);
-            });
-
-        if (mimeType.startsWith("model/")) {
-            const url = await blobToDataUrl(blob);
-            return { url, mimeType, revoke: () => {}, source: "data-url" };
-        }
-
-        const objectUrl = URL.createObjectURL(blob);
-        const revoke = () => {
-            try {
-                URL.revokeObjectURL(objectUrl);
-            } catch {}
-        };
-        return { url: objectUrl, mimeType, revoke, source: "object-url" };
     }
 }
