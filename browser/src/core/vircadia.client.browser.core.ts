@@ -1,8 +1,36 @@
 import type { z } from "zod";
-import {
-    Communication,
-    Service,
-} from "../../../schema/src/vircadia.schema.general";
+import { Communication } from "../../../schema/src/vircadia.schema.general";
+
+// ---------------- Shared REST response types (Zod-inferred) ----------------
+type RestErrorEnvelope = z.infer<typeof Communication.REST.Z.ErrorEnvelope>;
+
+export type AuthSessionValidateResponse =
+    | z.infer<typeof Communication.REST.Z.AuthSessionValidateSuccess>
+    | RestErrorEnvelope;
+export type AuthAnonymousLoginResponse =
+    | z.infer<typeof Communication.REST.Z.AuthAnonymousLoginSuccess>
+    | RestErrorEnvelope;
+export type OAuthAuthorizeResponse =
+    | z.infer<typeof Communication.REST.Z.OAuthAuthorizeSuccess>
+    | RestErrorEnvelope;
+export type OAuthCallbackResponse =
+    | z.infer<typeof Communication.REST.Z.OAuthCallbackSuccess>
+    | RestErrorEnvelope;
+export type LogoutResponse =
+    | z.infer<typeof Communication.REST.Z.LogoutSuccess>
+    | RestErrorEnvelope;
+export type LinkProviderResponse =
+    | z.infer<typeof Communication.REST.Z.LinkProviderSuccess>
+    | RestErrorEnvelope;
+export type UnlinkProviderResponse =
+    | z.infer<typeof Communication.REST.Z.UnlinkProviderSuccess>
+    | RestErrorEnvelope;
+export type ListProvidersResponse =
+    | z.infer<typeof Communication.REST.Z.ListProvidersSuccess>
+    | RestErrorEnvelope;
+export type WsUpgradeValidateResponse = z.infer<
+    typeof Communication.REST.Z.WsUpgradeValidateResponse
+>;
 
 export type WsConnectionCoreState = "connected" | "connecting" | "disconnected";
 
@@ -97,7 +125,6 @@ export class WsConnectionCore {
         lastChecked: number;
         error?: string;
     } | null = null;
-    private wasSessionValid = false;
     private instanceId: string;
     private reflectListeners = new Map<
         string,
@@ -233,7 +260,6 @@ export class WsConnectionCore {
                             this.updateConnectionStatus("connected");
                             this.connectionStartTime = Date.now();
                             this.sessionValidation = null;
-                            this.wasSessionValid = true;
                             debugLog(
                                 this.config,
                                 "WebSocket connection established",
@@ -379,7 +405,6 @@ export class WsConnectionCore {
         this.updateConnectionStatus("disconnected");
         this.connectionStartTime = null;
         this.sessionValidation = null;
-        this.wasSessionValid = false;
         this.config.sessionId = undefined;
         debugLog(this.config, "WebSocket disconnected");
     }
@@ -671,14 +696,14 @@ export class RestAuthCore {
         this.config = newConfig;
     }
 
-    private async makeRequest<T = any>(
+    private async makeRequest<TSuccess = unknown>(
         url: string,
         method: string,
         // biome-ignore lint/suspicious/noExplicitAny: Flexible body
         body?: any,
         headers: Record<string, string> = {},
-        responseSchema?: z.ZodType<T>,
-    ): Promise<T | { success: false; timestamp: number; error: string }> {
+        responseSchema?: z.ZodType<TSuccess>,
+    ): Promise<TSuccess | RestErrorEnvelope> {
         debugLog(this.config, `Making ${method} request to:`, url.toString(), {
             headers,
         });
@@ -708,12 +733,18 @@ export class RestAuthCore {
                     statusText: response.statusText,
                     response: responseData,
                 });
+                const message =
+                    (responseData && (responseData.message as string)) ||
+                    (responseData && (responseData.error as string)) ||
+                    `HTTP ${response.status}: ${response.statusText}`;
+                const errorCode =
+                    (responseData && (responseData.errorCode as string)) ||
+                    "SERVER_ERROR";
                 return {
                     success: false,
                     timestamp: Date.now(),
-                    error:
-                        responseData.error ||
-                        `HTTP ${response.status}: ${response.statusText}`,
+                    errorCode,
+                    message,
                 };
             }
             if (responseSchema) {
@@ -727,7 +758,8 @@ export class RestAuthCore {
                     return {
                         success: false,
                         timestamp: Date.now(),
-                        error: "Invalid response format",
+                        errorCode: "INVALID_REQUEST",
+                        message: "Invalid response format",
                     };
                 }
                 debugLog(this.config, `Request succeeded:`, {
@@ -742,13 +774,15 @@ export class RestAuthCore {
                 method,
                 response: responseData,
             });
-            return responseData as T;
+            return responseData as TSuccess;
         } catch (error) {
             debugError(this.config, "REST request failed:", error);
             return {
                 success: false,
                 timestamp: Date.now(),
-                error: error instanceof Error ? error.message : "Unknown error",
+                errorCode: "UNKNOWN_ERROR",
+                message:
+                    error instanceof Error ? error.message : "Unknown error",
             };
         }
     }
@@ -756,7 +790,7 @@ export class RestAuthCore {
     async validateSession(data: {
         token: string;
         provider: string;
-    }): Promise<any> {
+    }): Promise<AuthSessionValidateResponse> {
         const endpoint = Communication.REST.Endpoint.AUTH_SESSION_VALIDATE;
         const parsed =
             Communication.REST.Z.AuthSessionValidateRequest.safeParse(data);
@@ -764,7 +798,8 @@ export class RestAuthCore {
             return {
                 success: false,
                 timestamp: Date.now(),
-                error: "Invalid request",
+                errorCode: "INVALID_REQUEST",
+                message: "Invalid request",
             };
         }
         const requestBody = endpoint.createRequest(parsed.data);
@@ -778,7 +813,7 @@ export class RestAuthCore {
         );
     }
 
-    async loginAnonymous(): Promise<any> {
+    async loginAnonymous(): Promise<AuthAnonymousLoginResponse> {
         const endpoint = Communication.REST.Endpoint.AUTH_ANONYMOUS_LOGIN;
         const requestBody = endpoint.createRequest();
         const url = new URL(endpoint.path, this.config.apiRestAuthUri);
@@ -791,7 +826,7 @@ export class RestAuthCore {
         );
     }
 
-    async authorizeOAuth(provider: string): Promise<any> {
+    async authorizeOAuth(provider: string): Promise<OAuthAuthorizeResponse> {
         const endpoint = Communication.REST.Endpoint.AUTH_OAUTH_AUTHORIZE;
         const qp = Communication.REST.Z.OAuthAuthorizeQuery.parse({ provider });
         const queryParams = endpoint.createRequest(qp.provider);
@@ -812,7 +847,7 @@ export class RestAuthCore {
         provider: string;
         code: string;
         state?: string;
-    }): Promise<any> {
+    }): Promise<OAuthCallbackResponse> {
         const endpoint = Communication.REST.Endpoint.AUTH_OAUTH_CALLBACK;
         const qp = Communication.REST.Z.OAuthCallbackQuery.parse(params);
         const queryParams = endpoint.createRequest(qp);
@@ -829,7 +864,7 @@ export class RestAuthCore {
         );
     }
 
-    async logout(sessionId: string): Promise<any> {
+    async logout(sessionId: string): Promise<LogoutResponse> {
         const endpoint = Communication.REST.Endpoint.AUTH_LOGOUT;
         const requestBody = endpoint.createRequest(
             Communication.REST.Z.LogoutRequest.parse({ sessionId }).sessionId,
@@ -847,7 +882,7 @@ export class RestAuthCore {
     async linkProvider(data: {
         provider: string;
         sessionId: string;
-    }): Promise<any> {
+    }): Promise<LinkProviderResponse> {
         const endpoint = Communication.REST.Endpoint.AUTH_LINK_PROVIDER;
         const v = Communication.REST.Z.LinkProviderRequest.parse(data);
         const requestBody = endpoint.createRequest(v);
@@ -865,7 +900,7 @@ export class RestAuthCore {
         provider: string;
         providerUid: string;
         sessionId: string;
-    }): Promise<any> {
+    }): Promise<UnlinkProviderResponse> {
         const endpoint = Communication.REST.Endpoint.AUTH_UNLINK_PROVIDER;
         const v = Communication.REST.Z.UnlinkProviderRequest.parse(data);
         const requestBody = endpoint.createRequest(v);
@@ -879,7 +914,7 @@ export class RestAuthCore {
         );
     }
 
-    async listProviders(sessionId: string): Promise<any> {
+    async listProviders(sessionId: string): Promise<ListProvidersResponse> {
         const endpoint = Communication.REST.Endpoint.AUTH_LIST_PROVIDERS;
         const qp = Communication.REST.Z.ListProvidersQuery.parse({ sessionId });
         const queryParams = endpoint.createRequest(qp.sessionId);
@@ -921,7 +956,7 @@ export class VircadiaBrowserClient {
         validateUpgrade: (params: {
             token?: string;
             provider?: string;
-        }) => Promise<any>;
+        }) => Promise<WsUpgradeValidateResponse>;
     };
     public readonly connection: {
         connect: (options?: {
@@ -960,25 +995,25 @@ export class VircadiaBrowserClient {
         validateSession: (data: {
             token: string;
             provider: string;
-        }) => Promise<any>;
-        loginAnonymous: () => Promise<any>;
-        authorizeOAuth: (provider: string) => Promise<any>;
+        }) => Promise<AuthSessionValidateResponse>;
+        loginAnonymous: () => Promise<AuthAnonymousLoginResponse>;
+        authorizeOAuth: (provider: string) => Promise<OAuthAuthorizeResponse>;
         handleOAuthCallback: (params: {
             provider: string;
             code: string;
             state?: string;
-        }) => Promise<any>;
-        logout: () => Promise<any>;
+        }) => Promise<OAuthCallbackResponse>;
+        logout: () => Promise<LogoutResponse>;
         linkProvider: (data: {
             provider: string;
             sessionId: string;
-        }) => Promise<any>;
+        }) => Promise<LinkProviderResponse>;
         unlinkProvider: (data: {
             provider: string;
             providerUid: string;
             sessionId: string;
-        }) => Promise<any>;
-        listProviders: (sessionId: string) => Promise<any>;
+        }) => Promise<UnlinkProviderResponse>;
+        listProviders: (sessionId: string) => Promise<ListProvidersResponse>;
     };
     public readonly restAsset: {
         assetGetByKey: (params: { key: string }) => Promise<Response>;
@@ -1062,14 +1097,16 @@ export class VircadiaBrowserClient {
                             success: false,
                             errorCode: "INVALID_REQUEST",
                             message: "Invalid response",
-                        };
+                            timestamp: Date.now(),
+                        } as RestErrorEnvelope;
                     return parsed.data;
                 } catch (e) {
                     return {
                         success: false,
                         errorCode: "UNKNOWN_ERROR",
                         message: e instanceof Error ? e.message : String(e),
-                    };
+                        timestamp: Date.now(),
+                    } as RestErrorEnvelope;
                 }
             },
         };
@@ -1127,9 +1164,17 @@ export class VircadiaBrowserClient {
                     token: this.sharedConfig.authToken,
                     provider: this.sharedConfig.authProvider,
                 });
-                sessionIsValid = !!sessionResp?.success;
-                if (!sessionIsValid)
-                    sessionError = sessionResp?.message || sessionResp?.error;
+                sessionIsValid = !!(sessionResp as { success?: boolean })
+                    ?.success;
+                if (!sessionIsValid) {
+                    sessionError =
+                        ("message" in (sessionResp as object)
+                            ? (sessionResp as { message?: string }).message
+                            : undefined) ||
+                        ("error" in (sessionResp as object)
+                            ? (sessionResp as { error?: string }).error
+                            : undefined);
+                }
             } catch (e) {
                 sessionIsValid = false;
                 sessionError = e instanceof Error ? e.message : String(e);
@@ -1189,9 +1234,9 @@ export class VircadiaBrowserClient {
     }
 
     // Auth convenience methods that also update shared token/provider/sessionId
-    async loginAnonymous(): Promise<any> {
+    async loginAnonymous(): Promise<AuthAnonymousLoginResponse> {
         const resp = await this.restAuthCore.loginAnonymous();
-        if (resp && resp.success && resp.data) {
+        if (resp?.success && (resp as { data?: unknown })?.data) {
             if (typeof resp.data.token === "string")
                 this.sharedConfig.authToken = resp.data.token;
             // Anonymous provider constant from schema (fallback to "anon")
@@ -1203,7 +1248,7 @@ export class VircadiaBrowserClient {
         return resp;
     }
 
-    async authorizeOAuth(provider: string): Promise<any> {
+    async authorizeOAuth(provider: string): Promise<OAuthAuthorizeResponse> {
         // This just triggers a redirect URL; no state to update yet
         return this.restAuthCore.authorizeOAuth(provider);
     }
@@ -1212,9 +1257,9 @@ export class VircadiaBrowserClient {
         provider: string;
         code: string;
         state?: string;
-    }): Promise<any> {
+    }): Promise<OAuthCallbackResponse> {
         const resp = await this.restAuthCore.handleOAuthCallback(params);
-        if (resp && resp.success) {
+        if (resp?.success) {
             if (typeof resp.token === "string")
                 this.sharedConfig.authToken = resp.token;
             if (typeof resp.provider === "string")
@@ -1225,15 +1270,17 @@ export class VircadiaBrowserClient {
         return resp;
     }
 
-    async logout(): Promise<any> {
+    async logout(): Promise<LogoutResponse> {
         const sessionId = this.sharedConfig.sessionId;
-        let resp: any;
+        let resp: LogoutResponse;
         try {
             resp = await this.restAuthCore.logout(sessionId || "");
         } catch (e) {
             resp = {
                 success: false,
-                error: e instanceof Error ? e.message : String(e),
+                errorCode: "UNKNOWN_ERROR",
+                message: e instanceof Error ? e.message : String(e),
+                timestamp: Date.now(),
             };
         }
         // Always clear local session regardless of server response to ensure client-side logout
@@ -1241,7 +1288,9 @@ export class VircadiaBrowserClient {
         this.sharedConfig.authToken = "";
         this.sharedConfig.authProvider = "anon";
         this.wsCore.disconnect();
-        return resp && typeof resp === "object" ? resp : { success: true };
+        return resp && typeof resp === "object"
+            ? resp
+            : { success: true, timestamp: Date.now() };
     }
 
     // Note: Legacy Utilities getter removed in favor of top-level namespaces.
