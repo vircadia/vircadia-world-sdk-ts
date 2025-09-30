@@ -14,6 +14,12 @@ export class AclService {
     private readonly legacyDb: Sql | null;
     private readonly readableGroupsByAgent: Map<string, Set<string>> =
         new Map();
+    private readonly updatableGroupsByAgent: Map<string, Set<string>> =
+        new Map();
+    private readonly insertableGroupsByAgent: Map<string, Set<string>> =
+        new Map();
+    private readonly deletableGroupsByAgent: Map<string, Set<string>> =
+        new Map();
 
     constructor(args: { db: SQL; legacyDb?: Sql | null }) {
         this.db = args.db;
@@ -31,6 +37,48 @@ export class AclService {
                 if (group) set.add(group);
             }
             this.readableGroupsByAgent.set(agentId, set);
+
+            // Also warm updatable groups for write checks
+            const updateRows = await this.db<[{ group__sync: string }]>`
+                SELECT group__sync
+                FROM auth.agent_sync_group_roles
+                WHERE auth__agent_id = ${agentId}::uuid
+                  AND permissions__can_update = true
+            `;
+            const updateSet = new Set<string>();
+            for (const r of updateRows) {
+                const group = (r as { group__sync: string } | null)?.group__sync;
+                if (group) updateSet.add(group);
+            }
+            this.updatableGroupsByAgent.set(agentId, updateSet);
+
+            // Warm insertable groups
+            const insertRows = await this.db<[{ group__sync: string }]>`
+                SELECT group__sync
+                FROM auth.agent_sync_group_roles
+                WHERE auth__agent_id = ${agentId}::uuid
+                  AND permissions__can_insert = true
+            `;
+            const insertSet = new Set<string>();
+            for (const r of insertRows) {
+                const group = (r as { group__sync: string } | null)?.group__sync;
+                if (group) insertSet.add(group);
+            }
+            this.insertableGroupsByAgent.set(agentId, insertSet);
+
+            // Warm deletable groups
+            const deleteRows = await this.db<[{ group__sync: string }]>`
+                SELECT group__sync
+                FROM auth.agent_sync_group_roles
+                WHERE auth__agent_id = ${agentId}::uuid
+                  AND permissions__can_delete = true
+            `;
+            const deleteSet = new Set<string>();
+            for (const r of deleteRows) {
+                const group = (r as { group__sync: string } | null)?.group__sync;
+                if (group) deleteSet.add(group);
+            }
+            this.deletableGroupsByAgent.set(agentId, deleteSet);
         } catch (error) {
             BunLogModule({
                 prefix: LOG_PREFIX,
@@ -46,6 +94,21 @@ export class AclService {
 
     public canRead(agentId: string, syncGroup: string): boolean {
         const set = this.readableGroupsByAgent.get(agentId);
+        return !!set?.has(syncGroup);
+    }
+
+    public canUpdate(agentId: string, syncGroup: string): boolean {
+        const set = this.updatableGroupsByAgent.get(agentId);
+        return !!set?.has(syncGroup);
+    }
+
+    public canInsert(agentId: string, syncGroup: string): boolean {
+        const set = this.insertableGroupsByAgent.get(agentId);
+        return !!set?.has(syncGroup);
+    }
+
+    public canDelete(agentId: string, syncGroup: string): boolean {
+        const set = this.deletableGroupsByAgent.get(agentId);
         return !!set?.has(syncGroup);
     }
 
