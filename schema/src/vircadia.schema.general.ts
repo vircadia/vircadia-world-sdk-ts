@@ -206,11 +206,7 @@ export namespace Auth {
             general__description?: string;
             server__tick__rate_ms: number;
             server__tick__max_tick_count_buffer: number;
-            server__tick__enabled: boolean;
-            client__render_delay_ms: number;
-            client__max_prediction_time_ms: number;
-            client__poll__rate_ms: number;
-            network__packet_timing_variance_ms: number;
+            server__tick__state__enabled: boolean;
             general__created_at?: string;
             general__created_by?: string;
             general__updated_at?: string;
@@ -1818,11 +1814,7 @@ export namespace Communication {
                 general__description: z.string().optional(),
                 server__tick__rate_ms: z.number().int().positive(),
                 server__tick__max_tick_count_buffer: z.number().int().positive(),
-                server__tick__enabled: z.boolean(),
-                client__render_delay_ms: z.number().int().positive(),
-                client__max_prediction_time_ms: z.number().int().positive(),
-                client__poll__rate_ms: z.number().int().positive(),
-                network__packet_timing_variance_ms: z.number().int().positive(),
+                server__tick__state__enabled: z.boolean(),
                 general__created_at: z.string().optional(),
                 general__created_by: z.string().optional(),
                 general__updated_at: z.string().optional(),
