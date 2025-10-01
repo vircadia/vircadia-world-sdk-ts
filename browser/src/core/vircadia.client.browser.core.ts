@@ -409,12 +409,12 @@ export class WsConnectionCore {
         debugLog(this.config, "WebSocket disconnected");
     }
 
-    publishReflect(data: {
+    async publishReflect(data: {
         syncGroup: string;
         channel: string;
         payload: unknown;
         timeoutMs?: number;
-    }): Promise<Communication.WebSocket.ReflectAckResponseMessage> {
+    }): Promise<Communication.WebSocket.ReflectAckResponseMessage | null> {
         if (!this.isClientConnected()) {
             throw new Error("Not connected to server");
         }
@@ -429,7 +429,6 @@ export class WsConnectionCore {
             payload: data.payload,
         };
 
-        // Validate message structure with Zod
         const parsed =
             Communication.WebSocket.Z.ReflectPublishRequest.safeParse(
                 messageData,
@@ -440,23 +439,30 @@ export class WsConnectionCore {
             );
         }
 
-        return new Promise((resolve, reject) => {
-            const createdAt = Date.now();
-            const timeout = setTimeout(() => {
-                this.pendingRequests.delete(requestId);
-                reject(new Error("Reflect publish timeout"));
-            }, data.timeoutMs ?? 5000);
-            this.pendingRequests.set(requestId, {
-                resolve: (value) =>
-                    resolve(
-                        value as Communication.WebSocket.ReflectAckResponseMessage,
-                    ),
-                reject,
-                timeout,
-                createdAt,
-            });
-            this.ws?.send(JSON.stringify(parsed.data));
-        });
+        // Send and register a pending entry to optionally receive ACK errors.
+        // Timeout resolves silently; only explicit error ACKs will reject.
+        return new Promise<Communication.WebSocket.ReflectAckResponseMessage | null>(
+            (resolve, reject) => {
+                const createdAt = Date.now();
+                const timeout = setTimeout(() => {
+                    this.pendingRequests.delete(requestId);
+                    // Silent resolve on timeout (server sends ACK only on error)
+                    resolve(null);
+                }, data.timeoutMs ?? 5000);
+
+                this.pendingRequests.set(requestId, {
+                    resolve: (value: unknown) =>
+                        resolve(
+                            value as Communication.WebSocket.ReflectAckResponseMessage | null,
+                        ),
+                    reject,
+                    timeout,
+                    createdAt,
+                });
+
+                this.ws?.send(JSON.stringify(parsed.data));
+            },
+        );
     }
 
     subscribeReflect(
@@ -525,6 +531,22 @@ export class WsConnectionCore {
                 return;
             }
 
+            // Handle unsolicited reflect ACK errors (server may send only on errors)
+            if (
+                message.type ===
+                Communication.WebSocket.MessageType.REFLECT_ACK_RESPONSE
+            ) {
+                const pending = this.pendingRequests.get(message.requestId);
+                if (!pending && message.errorMessage) {
+                    // Only log unsolicited errors if no pending entry exists
+                    debugError(
+                        this.config,
+                        `Reflect ACK error (unsolicited, requestId=${message.requestId}): ${message.errorMessage}`,
+                    );
+                }
+                // Do not return; allow pendingRequests match to handle resolve/reject
+            }
+
             const request = this.pendingRequests.get(message.requestId);
 
             if (request) {
@@ -558,6 +580,21 @@ export class WsConnectionCore {
                         request.reject(error);
                         return;
                     }
+                }
+
+                // Handle reflect ACKs for publishReflect pending entries
+                if (
+                    message.type ===
+                    Communication.WebSocket.MessageType.REFLECT_ACK_RESPONSE
+                ) {
+                    if (message.errorMessage) {
+                        const error = new Error(
+                            `Reflect publish failed (requestId=${message.requestId}): ${message.errorMessage}`,
+                        );
+                        request.reject(error);
+                        return;
+                    }
+                    // Success ACK (if ever sent) resolves
                 }
 
                 // Message is already validated by AnyMessage discriminated union,
@@ -981,7 +1018,7 @@ export class VircadiaBrowserClient {
             channel: string;
             payload: unknown;
             timeoutMs?: number;
-        }) => Promise<Communication.WebSocket.ReflectAckResponseMessage>;
+        }) => Promise<Communication.WebSocket.ReflectAckResponseMessage | null>;
         subscribeReflect: (
             syncGroup: string,
             channel: string,
