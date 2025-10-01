@@ -101,6 +101,12 @@ const clientBrowserEnvSchema = z.object({
     // Development Web Babylon JS Client
     VRCA_CLIENT_WEB_BABYLON_JS_DEV_HOST: z.string().default("0.0.0.0"),
     VRCA_CLIENT_WEB_BABYLON_JS_DEV_PORT: z.coerce.number().default(3066),
+
+    // User components directory (relative to ./src/user)
+    // Example: "vircadia-world-seeds" will load from ./src/user/vircadia-world-seeds
+    VRCA_CLIENT_WEB_BABYLON_JS_USER_COMPONENTS_DIR: z
+        .string()
+        .default("vircadia-world-seeds/antares"),
 });
 
 // Parse client environment variables with runtime (localStorage) overrides
@@ -118,7 +124,7 @@ const baseEnv =
 const mergedEnv: Record<string, unknown> = { ...baseEnv };
 
 try {
-    if (typeof window !== "undefined" && window.localStorage) {
+    if (window?.localStorage) {
         const disabledFlag = window.localStorage.getItem(
             "VRCA_CLIENT_WEB_BABYLON_JS_DEBUG_SESSION_TOKEN_DISABLED",
         );
