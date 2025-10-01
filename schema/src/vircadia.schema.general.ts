@@ -207,6 +207,7 @@ export namespace Auth {
             server__tick__rate_ms: number;
             server__tick__max_tick_count_buffer: number;
             server__tick__state__enabled: boolean;
+            server__tick__reflect__enabled: boolean;
             general__created_at?: string;
             general__created_by?: string;
             general__updated_at?: string;
@@ -1815,6 +1816,7 @@ export namespace Communication {
                 server__tick__rate_ms: z.number().int().positive(),
                 server__tick__max_tick_count_buffer: z.number().int().positive(),
                 server__tick__state__enabled: z.boolean(),
+                server__tick__reflect__enabled: z.boolean(),
                 general__created_at: z.string().optional(),
                 general__created_by: z.string().optional(),
                 general__updated_at: z.string().optional(),
