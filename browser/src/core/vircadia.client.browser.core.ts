@@ -2,7 +2,7 @@ import type { z } from "zod";
 import { Communication } from "../../../schema/src/vircadia.schema.general";
 
 // TODO: Make errors clearer from here to UI on why a request failed, especially on asset gets which may bypass the browser core, so we need clear Zod schemas for all responses so we can process errors.
-// TODO: Use browser storage sync here so this is the source of truth from now on to prevent auth complications.
+// TODO: Create profile endpoints, at least for /me, but unsure if to put that directly in the DB under 2_AUTH and use queries for it or to do it here.
 
 // ---------------- Shared REST response types (Zod-inferred) ----------------
 type RestErrorEnvelope = z.infer<typeof Communication.REST.Z.ErrorEnvelope>;
