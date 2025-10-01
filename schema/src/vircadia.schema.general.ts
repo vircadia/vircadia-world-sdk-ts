@@ -762,8 +762,14 @@ export namespace Communication {
             AUTH_OAUTH_AUTHORIZE: {
                 path: `${REST_BASE_AUTH_PATH}/oauth/authorize`,
                 method: "GET",
-                createRequest: (provider: string): string =>
-                    `?provider=${encodeURIComponent(provider)}`,
+                createRequest: (
+                    provider: string,
+                    redirectUri: string,
+                ): string => {
+                    const sp = new URLSearchParams({ provider: provider });
+                    sp.set("redirectUri", redirectUri);
+                    return `?${sp.toString()}`;
+                },
                 createSuccess: (
                     redirectUrl: string,
                 ): {
@@ -798,6 +804,13 @@ export namespace Communication {
                         required: true,
                         description:
                             "The OAuth provider to use (e.g., 'azure')",
+                    },
+                    {
+                        name: "redirectUri",
+                        type: "string",
+                        required: true,
+                        description:
+                            "Redirect URI to register and use for this OAuth flow",
                     },
                 ],
                 returns: {
@@ -1130,7 +1143,7 @@ export namespace Communication {
                 },
             },
             AUTH_UNLINK_PROVIDER: {
-                 path: `${REST_BASE_AUTH_PATH}/unlink-provider`,
+                path: `${REST_BASE_AUTH_PATH}/unlink-provider`,
                 method: "POST",
                 createRequest: (data: {
                     provider: string;
@@ -1414,7 +1427,8 @@ export namespace Communication {
                     errorCode,
                     message,
                 }),
-                description: "Validates whether a WebSocket upgrade would succeed and returns the reason if it might fail",
+                description:
+                    "Validates whether a WebSocket upgrade would succeed and returns the reason if it might fail",
                 parameters: [
                     {
                         name: "token",
@@ -1436,27 +1450,32 @@ export namespace Communication {
                         {
                             name: "ok",
                             type: "boolean",
-                            description: "Whether the WebSocket upgrade would succeed",
+                            description:
+                                "Whether the WebSocket upgrade would succeed",
                         },
                         {
                             name: "reason",
                             type: "string",
-                            description: "Reason code explaining the validation result",
+                            description:
+                                "Reason code explaining the validation result",
                         },
                         {
                             name: "details",
                             type: "object",
-                            description: "Optional details about the validation result",
+                            description:
+                                "Optional details about the validation result",
                         },
                         {
                             name: "success",
                             type: "boolean",
-                            description: "Indicates if the request was successful",
+                            description:
+                                "Indicates if the request was successful",
                         },
                         {
                             name: "timestamp",
                             type: "number",
-                            description: "Unix timestamp when the response was generated",
+                            description:
+                                "Unix timestamp when the response was generated",
                         },
                     ],
                 },
@@ -1472,7 +1491,11 @@ export namespace Communication {
                     success: true;
                     timestamp: number;
                 }): any => ({ ...data, success: true, timestamp: Date.now() }),
-                createError: (error: string): any => ({ success: false, timestamp: Date.now(), error }),
+                createError: (error: string): any => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
                 description: "Requests a WebSocket upgrade",
                 parameters: [
                     {
@@ -1488,7 +1511,10 @@ export namespace Communication {
                         description: "Provider name for JWT validation",
                     },
                 ],
-                returns: { type: "object", description: "WebSocket upgrade request response" },
+                returns: {
+                    type: "object",
+                    description: "WebSocket upgrade request response",
+                },
             },
             AUTH_STATS: {
                 path: `${REST_BASE_AUTH_PATH}/stats`,
@@ -1496,17 +1522,72 @@ export namespace Communication {
                 createRequest: (): string => "",
                 createSuccess: (data: {
                     uptime: number;
-                    connections: { active: { current: number; average: number; p99: number; p999: number }; total: number; failed: number; successRate: number };
-                    database: { connected: boolean; connections: { current: number; average: number; p99: number; p999: number } };
-                    memory: {
-                        heapUsed: { current: number; average: number; p99: number; p999: number };
-                        heapTotal: { current: number; average: number; p99: number; p999: number };
-                        external: { current: number; average: number; p99: number; p999: number };
-                        rss: { current: number; average: number; p99: number; p999: number };
+                    connections: {
+                        active: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        total: number;
+                        failed: number;
+                        successRate: number;
                     };
-                    cpu: { user: { current: number; average: number; p99: number; p999: number }; system: { current: number; average: number; p99: number; p999: number } };
+                    database: {
+                        connected: boolean;
+                        connections: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                    };
+                    memory: {
+                        heapUsed: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        heapTotal: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        external: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        rss: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                    };
+                    cpu: {
+                        user: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        system: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                    };
                 }): any => ({ ...data, success: true, timestamp: Date.now() }),
-                createError: (error: string): any => ({ success: false, timestamp: Date.now(), error }),
+                createError: (error: string): any => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
                 description: "Auth service statistics",
                 parameters: [],
                 returns: { type: "object", description: "Auth stats response" },
@@ -1517,21 +1598,90 @@ export namespace Communication {
                 createRequest: (): string => "",
                 createSuccess: (data: {
                     uptime: number;
-                    connections: { active: { current: number; average: number; p99: number; p999: number }; total: number; failed: number; successRate: number };
-                    database: { connected: boolean; connections: { current: number; average: number; p99: number; p999: number } };
-                    memory: {
-                        heapUsed: { current: number; average: number; p99: number; p999: number };
-                        heapTotal: { current: number; average: number; p99: number; p999: number };
-                        external: { current: number; average: number; p99: number; p999: number };
-                        rss: { current: number; average: number; p99: number; p999: number };
+                    connections: {
+                        active: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        total: number;
+                        failed: number;
+                        successRate: number;
                     };
-                    cpu: { user: { current: number; average: number; p99: number; p999: number }; system: { current: number; average: number; p99: number; p999: number } };
-                    assets: { cache: { dir: string; maxMegabytes: number; totalMegabytes: number; fileCount: number; inFlight: number; lastMaintenanceAt?: number | null; lastMaintenanceDurationMs?: number | null; filesWarmedLastRun?: number | null } };
+                    database: {
+                        connected: boolean;
+                        connections: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                    };
+                    memory: {
+                        heapUsed: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        heapTotal: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        external: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        rss: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                    };
+                    cpu: {
+                        user: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        system: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                    };
+                    assets: {
+                        cache: {
+                            dir: string;
+                            maxMegabytes: number;
+                            totalMegabytes: number;
+                            fileCount: number;
+                            inFlight: number;
+                            lastMaintenanceAt?: number | null;
+                            lastMaintenanceDurationMs?: number | null;
+                            filesWarmedLastRun?: number | null;
+                        };
+                    };
                 }): any => ({ ...data, success: true, timestamp: Date.now() }),
-                createError: (error: string): any => ({ success: false, timestamp: Date.now(), error }),
+                createError: (error: string): any => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
                 description: "Asset service statistics",
                 parameters: [],
-                returns: { type: "object", description: "Asset stats response" },
+                returns: {
+                    type: "object",
+                    description: "Asset stats response",
+                },
             },
             STATE_STATS: {
                 path: `${REST_BASE_STATE_PATH}/stats`,
@@ -1561,10 +1711,17 @@ export namespace Communication {
                     memory: { heapUsed: number };
                     cpu: { system: number; user: number };
                 }): any => ({ ...data, success: true, timestamp: Date.now() }),
-                createError: (error: string): any => ({ success: false, timestamp: Date.now(), error }),
+                createError: (error: string): any => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
                 description: "State service statistics",
                 parameters: [],
-                returns: { type: "object", description: "State stats response" },
+                returns: {
+                    type: "object",
+                    description: "State stats response",
+                },
             },
             WS_STATS: {
                 path: `${REST_BASE_WS_PATH}/stats`,
@@ -1572,41 +1729,181 @@ export namespace Communication {
                 createRequest: (): string => "",
                 createSuccess: (data: {
                     uptime: number;
-                    connections: { active: { current: number; average: number; p99: number; p999: number }; total: number; failed: number; successRate: number };
+                    connections: {
+                        active: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        total: number;
+                        failed: number;
+                        successRate: number;
+                    };
                     database: {
                         connected: boolean;
-                        connections: { current: number; average: number; p99: number; p999: number };
-                        pool?: { super?: { implementation: string; metrics?: { max?: number; min?: number; size?: number; idle?: number; busy?: number; pending?: number } }; proxy?: { implementation: string; metrics?: { max?: number; min?: number; size?: number; idle?: number; busy?: number; pending?: number } }; legacy?: { implementation: string; metrics?: { max?: number; min?: number; size?: number; idle?: number; busy?: number; pending?: number } } };
+                        connections: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        pool?: {
+                            super?: {
+                                implementation: string;
+                                metrics?: {
+                                    max?: number;
+                                    min?: number;
+                                    size?: number;
+                                    idle?: number;
+                                    busy?: number;
+                                    pending?: number;
+                                };
+                            };
+                            proxy?: {
+                                implementation: string;
+                                metrics?: {
+                                    max?: number;
+                                    min?: number;
+                                    size?: number;
+                                    idle?: number;
+                                    busy?: number;
+                                    pending?: number;
+                                };
+                            };
+                            legacy?: {
+                                implementation: string;
+                                metrics?: {
+                                    max?: number;
+                                    min?: number;
+                                    size?: number;
+                                    idle?: number;
+                                    busy?: number;
+                                    pending?: number;
+                                };
+                            };
+                        };
                     };
                     memory: {
-                        heapUsed: { current: number; average: number; p99: number; p999: number };
-                        heapTotal: { current: number; average: number; p99: number; p999: number };
-                        external: { current: number; average: number; p99: number; p999: number };
-                        rss: { current: number; average: number; p99: number; p999: number };
+                        heapUsed: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        heapTotal: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        external: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        rss: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
                     };
-                    cpu: { user: { current: number; average: number; p99: number; p999: number }; system: { current: number; average: number; p99: number; p999: number } };
+                    cpu: {
+                        user: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        system: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                    };
                     queries: {
-                        queriesPerSecond: { current: number; average: number; peak: number };
-                        queryCompletionTime: { averageMs: number; p99Ms: number; p999Ms: number };
-                        requestSize: { averageKB: number; p99KB: number; p999KB: number };
-                        responseSize: { averageKB: number; p99KB: number; p999KB: number };
+                        queriesPerSecond: {
+                            current: number;
+                            average: number;
+                            peak: number;
+                        };
+                        queryCompletionTime: {
+                            averageMs: number;
+                            p99Ms: number;
+                            p999Ms: number;
+                        };
+                        requestSize: {
+                            averageKB: number;
+                            p99KB: number;
+                            p999KB: number;
+                        };
+                        responseSize: {
+                            averageKB: number;
+                            p99KB: number;
+                            p999KB: number;
+                        };
                         totalQueries: number;
                         failedQueries: number;
                         successRate: number;
                     };
                     reflect: {
-                        messagesPerSecond: { current: number; average: number; peak: number };
-                        messageDeliveryTime: { averageMs: number; p99Ms: number; p999Ms: number };
-                        messageSize: { averageKB: number; p99KB: number; p999KB: number };
+                        messagesPerSecond: {
+                            current: number;
+                            average: number;
+                            peak: number;
+                        };
+                        messageDeliveryTime: {
+                            averageMs: number;
+                            p99Ms: number;
+                            p999Ms: number;
+                        };
+                        messageSize: {
+                            averageKB: number;
+                            p99KB: number;
+                            p999KB: number;
+                        };
                         totalPublished: number;
                         totalDelivered: number;
                         totalAcknowledged: number;
                         failedDeliveries: number;
                         successRate: number;
                     };
-                    endpoints: { [endpoint: string]: { requestsPerSecond: { current: number; average: number; peak: number }; requestCompletionTime: { averageMs: number; p99Ms: number; p999Ms: number }; requestSize: { averageKB: number; p99KB: number; p999KB: number }; responseSize: { averageKB: number; p99KB: number; p999KB: number }; totalRequests: number; failedRequests: number; successRate: number } };
+                    endpoints: {
+                        [endpoint: string]: {
+                            requestsPerSecond: {
+                                current: number;
+                                average: number;
+                                peak: number;
+                            };
+                            requestCompletionTime: {
+                                averageMs: number;
+                                p99Ms: number;
+                                p999Ms: number;
+                            };
+                            requestSize: {
+                                averageKB: number;
+                                p99KB: number;
+                                p999KB: number;
+                            };
+                            responseSize: {
+                                averageKB: number;
+                                p99KB: number;
+                                p999KB: number;
+                            };
+                            totalRequests: number;
+                            failedRequests: number;
+                            successRate: number;
+                        };
+                    };
                 }): any => ({ ...data, success: true, timestamp: Date.now() }),
-                createError: (error: string): any => ({ success: false, timestamp: Date.now(), error }),
+                createError: (error: string): any => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
                 description: "WS service statistics",
                 parameters: [],
                 returns: { type: "object", description: "WS stats response" },
@@ -1615,57 +1912,128 @@ export namespace Communication {
 
         // ======================= Zod Schemas =======================
         export namespace Z {
-            export const SuccessEnvelope = z.object({ success: z.literal(true), timestamp: z.number() }).passthrough();
-            export const ErrorEnvelope = z.object({
-                success: z.literal(false),
-                timestamp: z.number(),
-                errorCode: z.string(),
-                message: z.string()
-            }).passthrough();
+            export const SuccessEnvelope = z
+                .object({ success: z.literal(true), timestamp: z.number() })
+                .passthrough();
+            export const ErrorEnvelope = z
+                .object({
+                    success: z.literal(false),
+                    timestamp: z.number(),
+                    errorCode: z.string(),
+                    message: z.string(),
+                })
+                .passthrough();
 
             // Helper for parsing JSON strings safely
             const jsonString = z.string().transform((str, ctx) => {
                 try {
                     return str ? JSON.parse(str) : {};
                 } catch {
-                    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid JSON" });
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: "Invalid JSON",
+                    });
                     return z.NEVER;
                 }
             });
 
             // Request body schemas that handle JSON parsing
-            export const AuthSessionValidateRequestBody = jsonString.pipe(z.object({ token: z.string().min(1), provider: z.string().min(1) }));
-            export const LogoutRequestBody = jsonString.pipe(z.object({ sessionId: z.string().min(1) }));
-            export const LinkProviderRequestBody = jsonString.pipe(z.object({ provider: z.string().min(1), sessionId: z.string().min(1) }));
-            export const UnlinkProviderRequestBody = jsonString.pipe(z.object({ provider: z.string().min(1), providerUid: z.string().min(1), sessionId: z.string().min(1) }));
+            export const AuthSessionValidateRequestBody = jsonString.pipe(
+                z.object({
+                    token: z.string().min(1),
+                    provider: z.string().min(1),
+                }),
+            );
+            export const LogoutRequestBody = jsonString.pipe(
+                z.object({ sessionId: z.string().min(1) }),
+            );
+            export const LinkProviderRequestBody = jsonString.pipe(
+                z.object({
+                    provider: z.string().min(1),
+                    sessionId: z.string().min(1),
+                }),
+            );
+            export const UnlinkProviderRequestBody = jsonString.pipe(
+                z.object({
+                    provider: z.string().min(1),
+                    providerUid: z.string().min(1),
+                    sessionId: z.string().min(1),
+                }),
+            );
 
             // Legacy object-only schemas for backward compatibility
-            export const AuthSessionValidateRequest = z.object({ token: z.string().min(1), provider: z.string().min(1) });
-            export const LogoutRequest = z.object({ sessionId: z.string().min(1) });
-            export const LinkProviderRequest = z.object({ provider: z.string().min(1), sessionId: z.string().min(1) });
-            export const UnlinkProviderRequest = z.object({ provider: z.string().min(1), providerUid: z.string().min(1), sessionId: z.string().min(1) });
+            export const AuthSessionValidateRequest = z.object({
+                token: z.string().min(1),
+                provider: z.string().min(1),
+            });
+            export const LogoutRequest = z.object({
+                sessionId: z.string().min(1),
+            });
+            export const LinkProviderRequest = z.object({
+                provider: z.string().min(1),
+                sessionId: z.string().min(1),
+            });
+            export const UnlinkProviderRequest = z.object({
+                provider: z.string().min(1),
+                providerUid: z.string().min(1),
+                sessionId: z.string().min(1),
+            });
 
             // Query parameter schemas (no JSON parsing needed)
-            export const OAuthAuthorizeQuery = z.object({ provider: z.string().min(1) });
-            export const OAuthCallbackQuery = z.object({ provider: z.string().min(1), code: z.string().min(1), state: z.string().optional() });
-            export const ListProvidersQuery = z.object({ sessionId: z.string().min(1) });
+            export const OAuthAuthorizeQuery = z.object({
+                provider: z.string().min(1),
+                redirectUri: z.string().url().optional(),
+            });
+            export const OAuthCallbackQuery = z.object({
+                provider: z.string().min(1),
+                code: z.string().min(1),
+                state: z.string().optional(),
+            });
+            export const ListProvidersQuery = z.object({
+                sessionId: z.string().min(1),
+            });
 
             // Asset GET accepts either sessionId OR token+provider
             export const AssetGetByKeyQuery = z.union([
-                z.object({ key: z.string().min(1), sessionId: z.string().min(1), token: z.string().optional(), provider: z.string().optional() }),
-                z.object({ key: z.string().min(1), sessionId: z.string().optional(), token: z.string().min(1), provider: z.string().min(1) }),
+                z.object({
+                    key: z.string().min(1),
+                    sessionId: z.string().min(1),
+                    token: z.string().optional(),
+                    provider: z.string().optional(),
+                }),
+                z.object({
+                    key: z.string().min(1),
+                    sessionId: z.string().optional(),
+                    token: z.string().min(1),
+                    provider: z.string().min(1),
+                }),
             ]);
 
-            export const WsUpgradeValidateQuery = z.object({ token: z.string().optional(), provider: z.string().optional() });
+            export const WsUpgradeValidateQuery = z.object({
+                token: z.string().optional(),
+                provider: z.string().optional(),
+            });
 
             // Additional request schemas for other endpoints
-            export const WsUpgradeRequest = z.object({ token: z.string().min(1), provider: z.string().min(1) });
+            export const WsUpgradeRequest = z.object({
+                token: z.string().min(1),
+                provider: z.string().min(1),
+            });
 
             // ======================= Main Interface Zod Schemas =======================
             export const ConfigEntityConfig = z.object({
-                entity_config__script_compilation_timeout_ms: z.number().int().positive(),
-                entity_config__expiry_check_interval_ms: z.number().int().positive(),
-                entity_config__metadata_expiry_check_interval_ms: z.number().int().positive(),
+                entity_config__script_compilation_timeout_ms: z
+                    .number()
+                    .int()
+                    .positive(),
+                entity_config__expiry_check_interval_ms: z
+                    .number()
+                    .int()
+                    .positive(),
+                entity_config__metadata_expiry_check_interval_ms: z
+                    .number()
+                    .int()
+                    .positive(),
             });
 
             export const Entity = z.object({
@@ -1675,8 +2043,16 @@ export namespace Communication {
                 general__created_by: z.string().optional(),
                 general__updated_at: z.string().optional(),
                 general__updated_by: z.string().optional(),
-                general__expiry__delete_since_updated_at_ms: z.number().int().nonnegative().optional(),
-                general__expiry__delete_since_created_at_ms: z.number().int().nonnegative().optional(),
+                general__expiry__delete_since_updated_at_ms: z
+                    .number()
+                    .int()
+                    .nonnegative()
+                    .optional(),
+                general__expiry__delete_since_created_at_ms: z
+                    .number()
+                    .int()
+                    .nonnegative()
+                    .optional(),
                 group__load_priority: z.number().int(),
                 meta__data: z.unknown().optional(),
                 general__initialized_at: z.string().optional(),
@@ -1693,8 +2069,16 @@ export namespace Communication {
                 general__created_by: z.string().optional(),
                 general__updated_at: z.string().optional(),
                 general__updated_by: z.string().optional(),
-                general__expiry__delete_since_updated_at_ms: z.number().int().nonnegative().optional(),
-                general__expiry__delete_since_created_at_ms: z.number().int().nonnegative().optional(),
+                general__expiry__delete_since_updated_at_ms: z
+                    .number()
+                    .int()
+                    .nonnegative()
+                    .optional(),
+                general__expiry__delete_since_created_at_ms: z
+                    .number()
+                    .int()
+                    .nonnegative()
+                    .optional(),
             });
 
             export const EntityAsset = z.object({
@@ -1704,7 +2088,10 @@ export namespace Communication {
                 general__updated_at: z.string().optional(),
                 general__updated_by: z.string().optional(),
                 group__sync: z.string().optional(),
-                asset__data__bytea: typeof Buffer !== 'undefined' ? z.instanceof(Buffer).optional() : z.any().optional(),
+                asset__data__bytea:
+                    typeof Buffer !== "undefined"
+                        ? z.instanceof(Buffer).optional()
+                        : z.any().optional(),
                 asset__mime_type: z.string().optional(),
                 asset__data__bytea_updated_at: z.string().optional(),
             });
@@ -1760,14 +2147,19 @@ export namespace Communication {
                 provider__redirect_uris: z.array(z.string()).optional(),
                 provider__issuer: z.string().optional(),
                 provider__jwks_uri: z.string().url().optional(),
-                provider__metadata: z.record(z.string(), z.unknown()).optional(),
+                provider__metadata: z
+                    .record(z.string(), z.unknown())
+                    .optional(),
                 provider__icon_url: z.string().url().optional(),
                 provider__jwt_secret: z.string().min(1),
                 provider__session_max_per_agent: z.number().int().positive(),
                 provider__session_duration_jwt_string: z.string().min(1),
                 provider__session_duration_ms: z.number().int().positive(),
                 provider__session_max_age_ms: z.number().int().positive(),
-                provider__session_inactive_expiry_ms: z.number().int().positive(),
+                provider__session_inactive_expiry_ms: z
+                    .number()
+                    .int()
+                    .positive(),
                 provider__default_permissions__can_read: z.array(z.string()),
                 provider__default_permissions__can_insert: z.array(z.string()),
                 provider__default_permissions__can_update: z.array(z.string()),
@@ -1814,7 +2206,10 @@ export namespace Communication {
                 general__sync_group: z.string().min(1),
                 general__description: z.string().optional(),
                 server__tick__rate_ms: z.number().int().positive(),
-                server__tick__max_tick_count_buffer: z.number().int().positive(),
+                server__tick__max_tick_count_buffer: z
+                    .number()
+                    .int()
+                    .positive(),
                 server__tick__state__enabled: z.boolean(),
                 server__tick__reflect__enabled: z.boolean(),
                 general__created_at: z.string().optional(),
@@ -1857,9 +2252,15 @@ export namespace Communication {
             // ======================= Response Schemas =======================
             export const AuthSessionValidateSuccess = SuccessEnvelope;
             export const AuthAnonymousLoginSuccess = SuccessEnvelope.extend({
-                data: z.object({ token: z.string(), agentId: z.string(), sessionId: z.string() }),
+                data: z.object({
+                    token: z.string(),
+                    agentId: z.string(),
+                    sessionId: z.string(),
+                }),
             });
-            export const OAuthAuthorizeSuccess = SuccessEnvelope.extend({ redirectUrl: z.string().url() });
+            export const OAuthAuthorizeSuccess = SuccessEnvelope.extend({
+                redirectUrl: z.string().url(),
+            });
             export const OAuthCallbackSuccess = SuccessEnvelope.extend({
                 token: z.string(),
                 agentId: z.string(),
@@ -1870,17 +2271,28 @@ export namespace Communication {
                 username: z.string().optional(),
             });
             export const LogoutSuccess = SuccessEnvelope;
-            export const LinkProviderSuccess = SuccessEnvelope.extend({ redirectUrl: z.string().url() });
+            export const LinkProviderSuccess = SuccessEnvelope.extend({
+                redirectUrl: z.string().url(),
+            });
             export const UnlinkProviderSuccess = SuccessEnvelope;
-            export const ListProvidersSuccess = SuccessEnvelope.extend({ providers: z.array(AuthProvider) });
+            export const ListProvidersSuccess = SuccessEnvelope.extend({
+                providers: z.array(AuthProvider),
+            });
             export const WsUpgradeValidateSuccess = SuccessEnvelope.extend({
                 ok: z.boolean(),
                 reason: z.string(),
                 details: z
-                    .object({ agentId: z.string().optional(), sessionId: z.string().optional(), errorReason: z.string().optional() })
+                    .object({
+                        agentId: z.string().optional(),
+                        sessionId: z.string().optional(),
+                        errorReason: z.string().optional(),
+                    })
                     .optional(),
             });
-            export const WsUpgradeValidateResponse = z.union([WsUpgradeValidateSuccess, ErrorEnvelope]);
+            export const WsUpgradeValidateResponse = z.union([
+                WsUpgradeValidateSuccess,
+                ErrorEnvelope,
+            ]);
 
             // Additional response schemas for stats endpoints
             export const AuthStatsSuccess = SuccessEnvelope.extend({
@@ -1959,16 +2371,20 @@ export namespace Communication {
                 entityExpiry: z.object({
                     enabled: z.boolean(),
                     intervalActive: z.boolean(),
-                    configuration: z.object({
-                        checkIntervalMs: z.number(),
-                    }).nullable(),
+                    configuration: z
+                        .object({
+                            checkIntervalMs: z.number(),
+                        })
+                        .nullable(),
                 }),
                 metadataExpiry: z.object({
                     enabled: z.boolean(),
                     intervalActive: z.boolean(),
-                    configuration: z.object({
-                        checkIntervalMs: z.number(),
-                    }).nullable(),
+                    configuration: z
+                        .object({
+                            checkIntervalMs: z.number(),
+                        })
+                        .nullable(),
                 }),
                 memory: z.object({
                     heapUsed: z.number(),
@@ -2076,41 +2492,55 @@ export namespace Communication {
                         p99: z.number(),
                         p999: z.number(),
                     }),
-                    pool: z.object({
-                        super: z.object({
-                            implementation: z.string(),
-                            metrics: z.object({
-                                max: z.number().optional(),
-                                min: z.number().optional(),
-                                size: z.number().optional(),
-                                idle: z.number().optional(),
-                                busy: z.number().optional(),
-                                pending: z.number().optional(),
-                            }).optional(),
-                        }).optional(),
-                        proxy: z.object({
-                            implementation: z.string(),
-                            metrics: z.object({
-                                max: z.number().optional(),
-                                min: z.number().optional(),
-                                size: z.number().optional(),
-                                idle: z.number().optional(),
-                                busy: z.number().optional(),
-                                pending: z.number().optional(),
-                            }).optional(),
-                        }).optional(),
-                        legacy: z.object({
-                            implementation: z.string(),
-                            metrics: z.object({
-                                max: z.number().optional(),
-                                min: z.number().optional(),
-                                size: z.number().optional(),
-                                idle: z.number().optional(),
-                                busy: z.number().optional(),
-                                pending: z.number().optional(),
-                            }).optional(),
-                        }).optional(),
-                    }).optional(),
+                    pool: z
+                        .object({
+                            super: z
+                                .object({
+                                    implementation: z.string(),
+                                    metrics: z
+                                        .object({
+                                            max: z.number().optional(),
+                                            min: z.number().optional(),
+                                            size: z.number().optional(),
+                                            idle: z.number().optional(),
+                                            busy: z.number().optional(),
+                                            pending: z.number().optional(),
+                                        })
+                                        .optional(),
+                                })
+                                .optional(),
+                            proxy: z
+                                .object({
+                                    implementation: z.string(),
+                                    metrics: z
+                                        .object({
+                                            max: z.number().optional(),
+                                            min: z.number().optional(),
+                                            size: z.number().optional(),
+                                            idle: z.number().optional(),
+                                            busy: z.number().optional(),
+                                            pending: z.number().optional(),
+                                        })
+                                        .optional(),
+                                })
+                                .optional(),
+                            legacy: z
+                                .object({
+                                    implementation: z.string(),
+                                    metrics: z
+                                        .object({
+                                            max: z.number().optional(),
+                                            min: z.number().optional(),
+                                            size: z.number().optional(),
+                                            idle: z.number().optional(),
+                                            busy: z.number().optional(),
+                                            pending: z.number().optional(),
+                                        })
+                                        .optional(),
+                                })
+                                .optional(),
+                        })
+                        .optional(),
                 }),
                 memory: z.object({
                     heapUsed: z.object({
