@@ -1,6 +1,9 @@
 import type { z } from "zod";
 import { Communication } from "../../../schema/src/vircadia.schema.general";
 
+// TODO: Make errors clearer from here to UI on why a request failed, especially on asset gets which may bypass the browser core, so we need clear Zod schemas for all responses so we can process errors.
+// TODO: Use browser storage sync here so this is the source of truth from now on to prevent auth complications.
+
 // ---------------- Shared REST response types (Zod-inferred) ----------------
 type RestErrorEnvelope = z.infer<typeof Communication.REST.Z.ErrorEnvelope>;
 
@@ -980,6 +983,7 @@ export interface VircadiaBrowserClientConfig {
     authToken: string;
     authProvider: string;
     sessionId?: string;
+    storageKey?: string;
     debug?: boolean;
     suppress?: boolean;
 }
@@ -989,6 +993,13 @@ export class VircadiaBrowserClient {
     private wsCore: WsConnectionCore;
     private restAuthCore: RestAuthCore;
     private restAssetCore: RestAssetCore;
+    private authListeners = new Set<() => void>();
+    private lastPersisted = {
+        tokenPresent: false,
+        provider: "",
+        sessionId: undefined as string | undefined,
+        agentId: undefined as string | undefined,
+    };
     private restWs: {
         validateUpgrade: (params: {
             token?: string;
@@ -1058,6 +1069,7 @@ export class VircadiaBrowserClient {
 
     constructor(config: VircadiaBrowserClientConfig) {
         this.sharedConfig = config;
+        this.loadPersistedAuth();
         // Pass the SAME object reference so sessionId updates propagate across cores
         this.wsCore = new WsConnectionCore(this.sharedConfig);
         this.restAuthCore = new RestAuthCore(this.sharedConfig);
@@ -1147,6 +1159,19 @@ export class VircadiaBrowserClient {
                 }
             },
         };
+
+        this.wsCore.addEventListener("statusChange", () => {
+            const info = this.wsCore.getConnectionInfo();
+            if (info.sessionId !== this.lastPersisted.sessionId) {
+                this.sharedConfig.sessionId = info.sessionId || undefined;
+                this.persistAuth();
+                this.emitAuthChange();
+            }
+            if (info.agentId && info.agentId !== this.lastPersisted.agentId) {
+                this.persistAgentId(info.agentId);
+                this.emitAuthChange();
+            }
+        });
     }
 
     // ---------------- Configuration setters ----------------
@@ -1164,10 +1189,14 @@ export class VircadiaBrowserClient {
 
     setAuthToken(token: string): void {
         this.sharedConfig.authToken = token;
+        this.persistAuth();
+        this.emitAuthChange();
     }
 
     setAuthProvider(provider: string): void {
         this.sharedConfig.authProvider = provider;
+        this.persistAuth();
+        this.emitAuthChange();
     }
 
     setDebug(isDebug: boolean): void {
@@ -1180,6 +1209,8 @@ export class VircadiaBrowserClient {
 
     setSessionId(sessionId: string | undefined): void {
         this.sharedConfig.sessionId = sessionId;
+        this.persistAuth();
+        this.emitAuthChange();
     }
 
     getSessionId(): string | undefined {
@@ -1268,6 +1299,8 @@ export class VircadiaBrowserClient {
         this.wsCore.disconnect();
         // Clear sessionId in shared config to avoid stale state for REST
         this.sharedConfig.sessionId = undefined;
+        this.persistAuth();
+        this.emitAuthChange();
     }
 
     // Auth convenience methods that also update shared token/provider/sessionId
@@ -1281,6 +1314,8 @@ export class VircadiaBrowserClient {
                 this.sharedConfig.authProvider || "anon";
             if (typeof resp.data.sessionId === "string")
                 this.sharedConfig.sessionId = resp.data.sessionId;
+            this.persistAuth();
+            this.emitAuthChange();
         }
         return resp;
     }
@@ -1303,6 +1338,8 @@ export class VircadiaBrowserClient {
                 this.sharedConfig.authProvider = resp.provider;
             if (typeof resp.sessionId === "string")
                 this.sharedConfig.sessionId = resp.sessionId;
+            this.persistAuth();
+            this.emitAuthChange();
         }
         return resp;
     }
@@ -1325,6 +1362,8 @@ export class VircadiaBrowserClient {
         this.sharedConfig.authToken = "";
         this.sharedConfig.authProvider = "anon";
         this.wsCore.disconnect();
+        this.clearPersistedAuth();
+        this.emitAuthChange();
         return resp && typeof resp === "object"
             ? resp
             : { success: true, timestamp: Date.now() };
@@ -1336,5 +1375,225 @@ export class VircadiaBrowserClient {
 
     buildAssetRequestUrl(key: string): string {
         return this.restAssetCore.buildAssetGetByKeyUrl({ key });
+    }
+
+    // ---------------- Browser storage helpers ----------------
+    private getStorageKeys() {
+        const base = this.sharedConfig.storageKey?.trim();
+        if (!base) return null;
+        const prefix = `vircadia:${base}`;
+        return {
+            token: `${prefix}:token`,
+            provider: `${prefix}:provider`,
+            sessionId: `${prefix}:sessionId`,
+            agentId: `${prefix}:agentId`,
+        } as const;
+    }
+
+    private loadPersistedAuth(): void {
+        const keys = this.getStorageKeys();
+        if (!keys) return;
+        try {
+            const ls = window.localStorage;
+            const token = ls.getItem(keys.token) || "";
+            const provider =
+                ls.getItem(keys.provider) ||
+                this.sharedConfig.authProvider ||
+                "anon";
+            const sessionId = ls.getItem(keys.sessionId) || undefined;
+            const agentId = ls.getItem(keys.agentId) || undefined;
+
+            if (token && token.length > 0) this.sharedConfig.authToken = token;
+            if (provider) this.sharedConfig.authProvider = provider;
+            if (sessionId) this.sharedConfig.sessionId = sessionId;
+            this.lastPersisted.agentId = agentId;
+            this.lastPersisted.sessionId = sessionId;
+            this.lastPersisted.provider = provider;
+            this.lastPersisted.tokenPresent = !!token;
+        } catch {
+            // ignore storage errors
+        }
+    }
+
+    private persistAuth(): void {
+        const keys = this.getStorageKeys();
+        if (!keys) return;
+        try {
+            const ls = window.localStorage;
+            const tokenPresent =
+                !!this.sharedConfig.authToken &&
+                this.sharedConfig.authToken.length > 0;
+            const provider = this.sharedConfig.authProvider || "anon";
+            const sessionId = this.sharedConfig.sessionId;
+            if (tokenPresent)
+                ls.setItem(keys.token, this.sharedConfig.authToken);
+            else ls.removeItem(keys.token);
+            ls.setItem(keys.provider, provider);
+            if (sessionId) ls.setItem(keys.sessionId, sessionId);
+            else ls.removeItem(keys.sessionId);
+            this.lastPersisted.tokenPresent = tokenPresent;
+            this.lastPersisted.provider = provider;
+            this.lastPersisted.sessionId = sessionId;
+        } catch {
+            // no-op
+        }
+    }
+
+    private persistAgentId(agentId: string): void {
+        const keys = this.getStorageKeys();
+        if (!keys) return;
+        try {
+            const ls = window.localStorage;
+            if (agentId) ls.setItem(keys.agentId, agentId);
+            else ls.removeItem(keys.agentId);
+            this.lastPersisted.agentId = agentId || undefined;
+        } catch {
+            // no-op
+        }
+    }
+
+    private clearPersistedAuth(): void {
+        const keys = this.getStorageKeys();
+        if (!keys) return;
+        try {
+            const ls = window.localStorage;
+            ls.removeItem(keys.token);
+            ls.removeItem(keys.provider);
+            ls.removeItem(keys.sessionId);
+            ls.removeItem(keys.agentId);
+            this.lastPersisted = {
+                tokenPresent: false,
+                provider: "",
+                sessionId: undefined,
+                agentId: undefined,
+            };
+        } catch {
+            // no-op
+        }
+    }
+
+    // Public getters for stored values (simple strings/objects)
+    getAuthToken(): string {
+        return this.sharedConfig.authToken || "";
+    }
+
+    getStoredToken(): string | null {
+        const keys = this.getStorageKeys();
+        if (!keys) return null;
+        try {
+            return window.localStorage.getItem(keys.token);
+        } catch {
+            return null;
+        }
+    }
+
+    getStoredProvider(): string {
+        const keys = this.getStorageKeys();
+        if (!keys) return this.sharedConfig.authProvider || "anon";
+        try {
+            return (
+                window.localStorage.getItem(keys.provider) ||
+                this.sharedConfig.authProvider ||
+                "anon"
+            );
+        } catch {
+            return this.sharedConfig.authProvider || "anon";
+        }
+    }
+
+    getStoredSessionId(): string | null {
+        const keys = this.getStorageKeys();
+        if (!keys) return this.sharedConfig.sessionId || null;
+        try {
+            return window.localStorage.getItem(keys.sessionId);
+        } catch {
+            return this.sharedConfig.sessionId || null;
+        }
+    }
+
+    getStoredAgentId(): string | null {
+        const keys = this.getStorageKeys();
+        if (!keys) return this.lastPersisted.agentId || null;
+        try {
+            return window.localStorage.getItem(keys.agentId);
+        } catch {
+            return this.lastPersisted.agentId || null;
+        }
+    }
+
+    setStoredAgentId(agentId: string | null): void {
+        const keys = this.getStorageKeys();
+        if (!keys) return;
+        try {
+            const ls = window.localStorage;
+            if (agentId) ls.setItem(keys.agentId, agentId);
+            else ls.removeItem(keys.agentId);
+            this.lastPersisted.agentId = agentId || undefined;
+            this.emitAuthChange();
+        } catch {
+            // no-op
+        }
+    }
+
+    getStoredAccount<T = unknown>(): T | null {
+        const keys = this.getStorageKeys();
+        if (!keys) return null;
+        try {
+            const accountKey = `${keys.agentId.replace(/:agentId$/, "")}:account`;
+            const raw = window.localStorage.getItem(accountKey);
+            return raw ? (JSON.parse(raw) as T) : null;
+        } catch {
+            return null;
+        }
+    }
+
+    setStoredAccount(value: unknown | null): void {
+        const keys = this.getStorageKeys();
+        if (!keys) return;
+        try {
+            const accountKey = `${keys.agentId.replace(/:agentId$/, "")}:account`;
+            if (value === null || value === undefined)
+                window.localStorage.removeItem(accountKey);
+            else window.localStorage.setItem(accountKey, JSON.stringify(value));
+            this.emitAuthChange();
+        } catch {
+            // no-op
+        }
+    }
+
+    getAuthState(): {
+        hasToken: boolean;
+        provider: string;
+        sessionId?: string;
+        agentId?: string;
+    } {
+        const info = this.wsCore.getConnectionInfo();
+        return {
+            hasToken:
+                !!this.sharedConfig.authToken &&
+                this.sharedConfig.authToken.length > 0,
+            provider:
+                this.sharedConfig.authProvider || info.authProvider || "anon",
+            sessionId: this.sharedConfig.sessionId,
+            agentId: info.agentId || this.lastPersisted.agentId,
+        };
+    }
+
+    addAuthChangeListener(listener: () => void): () => void {
+        this.authListeners.add(listener);
+        return () => this.authListeners.delete(listener);
+    }
+
+    private emitAuthChange(): void {
+        for (const l of this.authListeners) l();
+    }
+
+    clearLocalAuth(): void {
+        this.sharedConfig.sessionId = undefined;
+        this.sharedConfig.authToken = "";
+        this.sharedConfig.authProvider = "anon";
+        this.wsCore.disconnect();
+        this.clearPersistedAuth();
+        this.emitAuthChange();
     }
 }
