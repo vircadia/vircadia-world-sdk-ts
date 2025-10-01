@@ -1982,7 +1982,7 @@ export namespace Communication {
             // Query parameter schemas (no JSON parsing needed)
             export const OAuthAuthorizeQuery = z.object({
                 provider: z.string().min(1),
-                redirectUri: z.string().url().optional(),
+                redirectUri: z.string(),
             });
             export const OAuthCallbackQuery = z.object({
                 provider: z.string().min(1),

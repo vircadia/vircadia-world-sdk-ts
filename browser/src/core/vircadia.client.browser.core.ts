@@ -868,11 +868,8 @@ export class RestAuthCore {
 
     async authorizeOAuth(provider: string): Promise<OAuthAuthorizeResponse> {
         const endpoint = Communication.REST.Endpoint.AUTH_OAUTH_AUTHORIZE;
-        // Try to include the current website origin as redirectUri so the server can validate and use it
-        let redirectUri: string | undefined;
-        try {
-            redirectUri = window.location.origin;
-        } catch {}
+        // Include the current website origin as redirectUri so the server can validate and use it
+        const redirectUri: string = window.location.origin;
         const qp = Communication.REST.Z.OAuthAuthorizeQuery.parse({
             provider,
             redirectUri,
