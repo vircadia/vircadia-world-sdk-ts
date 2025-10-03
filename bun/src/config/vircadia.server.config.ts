@@ -280,6 +280,89 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_CADDY_EMAIL: z.string().default("hello@vircadia.com"),
     VRCA_SERVER_SERVICE_CADDY_TLS_API: z.string().optional(),
     VRCA_SERVER_SERVICE_CADDY_TLS_APP: z.string().optional(),
+
+    // Auth Providers - Azure Entra ID
+    // TODO: Rename these to prefix with SERVER_SERVICE_ and so on.
+    VRCA_SERVER_AUTH_AZURE_CLIENT_ID: z.string().default(""),
+    VRCA_SERVER_AUTH_AZURE_CLIENT_SECRET: z.string().default(""),
+    VRCA_SERVER_AUTH_AZURE_TENANT_ID: z.string().default("common"),
+    VRCA_SERVER_AUTH_AZURE_JWT_SECRET: z.string().default("CHANGE_ME_TO_SECURE_SECRET_KEY"),
+    VRCA_SERVER_AUTH_AZURE_SCOPES: z
+        .union([z.string(), z.array(z.string())])
+        .transform((val) =>
+            Array.isArray(val)
+                ? val
+                : val
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter((s) => s.length > 0),
+        )
+        .default(["openid", "profile", "email", "User.Read"]),
+
+    VRCA_SERVER_AUTH_AZURE_ENABLED: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform((val) => val === "1" || val.toLowerCase() === "true"),
+        ])
+        .default(false),
+    VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_READ: z
+        .union([z.string(), z.array(z.string())])
+        .transform((val) =>
+            Array.isArray(val)
+                ? val
+                : val
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter((s) => s.length > 0),
+        )
+        .default([]),
+    VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_INSERT: z
+        .union([z.string(), z.array(z.string())])
+        .transform((val) =>
+            Array.isArray(val)
+                ? val
+                : val
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter((s) => s.length > 0),
+        )
+        .default([]),
+    VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_UPDATE: z
+        .union([z.string(), z.array(z.string())])
+        .transform((val) =>
+            Array.isArray(val)
+                ? val
+                : val
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter((s) => s.length > 0),
+        )
+        .default([]),
+    VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_DELETE: z
+        .union([z.string(), z.array(z.string())])
+        .transform((val) =>
+            Array.isArray(val)
+                ? val
+                : val
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter((s) => s.length > 0),
+        )
+        .default([]),
+
+    VRCA_SERVER_AUTH_AZURE_REDIRECT_URIS: z
+        .union([z.string(), z.array(z.string())])
+        .transform((val) =>
+            Array.isArray(val)
+                ? val
+                : val
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter((s) => s.length > 0),
+        )
+        .default([]),
 });
 
 // Parse server environment variables
