@@ -106,7 +106,7 @@ const clientBrowserEnvSchema = z.object({
     // Example: "vircadia-world-seeds" will load from ./src/user/vircadia-world-seeds
     VRCA_CLIENT_WEB_BABYLON_JS_USER_COMPONENTS_DIR: z
         .string()
-        .default("vircadia-world-seeds/antares"),
+        .default("default"),
 });
 
 // Parse client environment variables with runtime (localStorage) overrides
