@@ -28,7 +28,7 @@ const clientBrowserEnvSchema = z.object({
         .string()
         .default("system"),
 
-    VRCA_CLIENT_WEB_BABYLON_JS_AUTO_CONNECT: z
+    VRCA_CLIENT_WEB_BABYLON_JS_AUTO_CONNECT_ANONYMOUS: z
         .union([
             z.boolean(),
             z
