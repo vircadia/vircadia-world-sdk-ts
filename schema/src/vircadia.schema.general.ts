@@ -367,6 +367,7 @@ export namespace Communication {
             public channel: string;
             // biome-ignore lint/suspicious/noExplicitAny: payload can be any JSON-serializable
             public payload: any;
+            public requestAcknowledgement?: boolean;
 
             constructor(data: {
                 syncGroup: string;
@@ -375,6 +376,7 @@ export namespace Communication {
                 payload: any;
                 requestId: string;
                 errorMessage?: string | null;
+                requestAcknowledgement?: boolean;
             }) {
                 this.timestamp = Date.now();
                 this.requestId = data.requestId;
@@ -382,6 +384,8 @@ export namespace Communication {
                 this.syncGroup = data.syncGroup;
                 this.channel = data.channel;
                 this.payload = data.payload;
+                this.requestAcknowledgement =
+                    data.requestAcknowledgement ?? false;
             }
         }
 
@@ -499,6 +503,7 @@ export namespace Communication {
             syncGroup: z.string(),
             channel: z.string(),
             payload: z.unknown(),
+            requestAcknowledgement: z.boolean().optional().default(false),
         });
 
         const Z_ReflectDelivery = Z_MessageBase.extend({

@@ -3,6 +3,7 @@ import { Communication } from "../../../schema/src/vircadia.schema.general";
 
 // TODO: Make errors clearer from here to UI on why a request failed, especially on asset gets which may bypass the browser core, so we need clear Zod schemas for all responses so we can process errors.
 // TODO: Create profile endpoints, at least for /me, but unsure if to put that directly in the DB under 2_AUTH and use queries for it or to do it here.
+// TODO: Combine them all into one class, why can't we share configs? We should share config.
 
 // ---------------- Shared REST response types (Zod-inferred) ----------------
 type RestErrorEnvelope = z.infer<typeof Communication.REST.Z.ErrorEnvelope>;
@@ -102,6 +103,9 @@ const debugError = (
         console.error(message, ...args);
     }
 };
+
+const DEFAULT_WS_QUERY_TIMEOUT = 10000;
+const DEFAULT_WS_PUBLISH_TIMEOUT = 5000;
 
 export class WsConnectionCore {
     private ws: WebSocket | null = null;
@@ -330,7 +334,7 @@ export class WsConnectionCore {
                 const timeout = setTimeout(() => {
                     this.pendingRequests.delete(requestId);
                     reject(new Error("Request timeout"));
-                }, data.timeoutMs ?? 10000);
+                }, data.timeoutMs ?? DEFAULT_WS_QUERY_TIMEOUT);
 
                 this.pendingRequests.set(requestId, {
                     resolve: resolve as (value: unknown) => void,
@@ -417,6 +421,7 @@ export class WsConnectionCore {
         channel: string;
         payload: unknown;
         timeoutMs?: number;
+        requestAcknowledgement?: boolean;
     }): Promise<Communication.WebSocket.ReflectAckResponseMessage | null> {
         if (!this.isClientConnected()) {
             throw new Error("Not connected to server");
@@ -430,6 +435,7 @@ export class WsConnectionCore {
             syncGroup: data.syncGroup,
             channel: data.channel,
             payload: data.payload,
+            requestAcknowledgement: data.requestAcknowledgement ?? false,
         };
 
         const parsed =
@@ -451,7 +457,7 @@ export class WsConnectionCore {
                     this.pendingRequests.delete(requestId);
                     // Silent resolve on timeout (server sends ACK only on error)
                     resolve(null);
-                }, data.timeoutMs ?? 5000);
+                }, data.timeoutMs ?? DEFAULT_WS_PUBLISH_TIMEOUT);
 
                 this.pendingRequests.set(requestId, {
                     resolve: (value: unknown) =>
@@ -1034,6 +1040,7 @@ export class VircadiaBrowserClient {
             channel: string;
             payload: unknown;
             timeoutMs?: number;
+            requestAcknowledgement?: boolean;
         }) => Promise<Communication.WebSocket.ReflectAckResponseMessage | null>;
         subscribeReflect: (
             syncGroup: string,
