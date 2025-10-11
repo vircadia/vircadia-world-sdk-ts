@@ -9,7 +9,10 @@
         "type": "git",
         "url": "git+https://github.com/vircadia/vircadia-world.git"
     },
-    "files": ["./browser/dist", "README.md"],
+    "files": [
+        "./browser/dist",
+        "README.md"
+    ],
     "publishConfig": {
         "access": "public"
     },
@@ -37,7 +40,7 @@
         "@types/lodash-es": "catalog:types",
         "@types/node": "catalog:types",
         "@types/tmp": "^0.2.6",
-        "bun-types": "latest"
+        "bun-types": "catalog:types"
     },
     "scripts": {
         "build": "bun run clean && bun run build:browser:vue",
