@@ -18,6 +18,51 @@ import { z } from "zod";
  */
 export const ClientBrowserStateSchema = z.object({
     sceneReady: z.boolean(),
+    isAutonomousAgent: z.boolean(),
+    autonomousAgent: z
+        .object({
+            tts: z.object({
+                loading: z.boolean(),
+                step: z.string(),
+                progressPct: z.number(),
+                generating: z.boolean(),
+                ready: z.boolean(),
+            }),
+            llm: z.object({
+                loading: z.boolean(),
+                step: z.string(),
+                progressPct: z.number(),
+                generating: z.boolean(),
+                ready: z.boolean(),
+            }),
+            stt: z.object({
+                loading: z.boolean(),
+                step: z.string(),
+                processing: z.boolean(),
+                ready: z.boolean(),
+                active: z.boolean(),
+                attachedIds: z.array(z.string()),
+            }),
+            vad: z.object({
+                recording: z.boolean(),
+                segmentsCount: z.number(),
+                lastSegmentAt: z.number().nullable(),
+            }),
+            webrtc: z.object({
+                connected: z.boolean(),
+                peersCount: z.number(),
+                localStream: z.boolean(),
+            }),
+            audio: z.object({
+                rmsLevel: z.number(),
+                rmsPct: z.number(),
+            }),
+            speaking: z.boolean(),
+            transcriptsCount: z.number(),
+            llmOutputsCount: z.number(),
+            conversationItemsCount: z.number(),
+        })
+        .optional(),
 });
 
 /**
@@ -39,9 +84,14 @@ declare global {
  */
 function getState(): ClientBrowserState {
     if (typeof window === "undefined") {
-        return { sceneReady: false };
+        return { sceneReady: false, isAutonomousAgent: false };
     }
-    return window.__VircadiaClientBrowserState__ ?? { sceneReady: false };
+    return (
+        window.__VircadiaClientBrowserState__ ?? {
+            sceneReady: false,
+            isAutonomousAgent: false,
+        }
+    );
 }
 
 /**
@@ -64,7 +114,10 @@ function resetState(): void {
     if (typeof window === "undefined") {
         return;
     }
-    window.__VircadiaClientBrowserState__ = { sceneReady: false };
+    window.__VircadiaClientBrowserState__ = {
+        sceneReady: false,
+        isAutonomousAgent: false,
+    };
 }
 
 /**
@@ -83,6 +136,31 @@ export const clientBrowserState = {
      */
     setSceneReady(ready: boolean): void {
         setState({ sceneReady: ready });
+    },
+
+    /**
+     * Check if running as autonomous agent
+     */
+    isAutonomousAgent(): boolean {
+        return getState().isAutonomousAgent;
+    },
+
+    /**
+     * Set the autonomous agent flag
+     */
+    setIsAutonomousAgent(isAgent: boolean): void {
+        setState({ isAutonomousAgent: isAgent });
+    },
+
+    /**
+     * Set the autonomous agent state
+     */
+    setAutonomousAgentState(state: unknown): void {
+        setState({
+            autonomousAgent: state as NonNullable<
+                ClientBrowserState["autonomousAgent"]
+            >,
+        });
     },
 
     /**
