@@ -31,9 +31,8 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_CONTAINER_BIND_EXTERNAL: z
         .string()
         .default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
-        .number()
-        .default(3020),
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_PORT_CONTAINER_BIND_EXTERNAL:
+        z.coerce.number().default(3020),
     VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
         .string()
         .default("next-world.vircadia.com"),
@@ -75,28 +74,26 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_CONTAINER_NAME: z
         .string()
         .default("vircadia_world_api_rest_auth_manager"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_CONTAINER_BIND_EXTERNAL: z
-        .string()
-        .default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
-        .number()
-        .default(3022),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_CONTAINER_BIND_EXTERNAL:
+        z.string().default("0.0.0.0"),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_CONTAINER_BIND_EXTERNAL:
+        z.coerce.number().default(3022),
     VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
         .string()
         .default("next-world.vircadia.com"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_PUBLIC_AVAILABLE_AT: z.coerce
-        .number()
-        .default(443),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(true),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_PUBLIC_AVAILABLE_AT:
+        z.coerce.number().default(443),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT:
+        z
+            .union([
+                z.boolean(),
+                z
+                    .string()
+                    .transform(
+                        (val) => val === "1" || val.toLowerCase() === "true",
+                    ),
+            ])
+            .default(true),
     VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_DEBUG: z
         .union([
             z.boolean(),
@@ -122,35 +119,33 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_CONTAINER_NAME: z
         .string()
         .default("vircadia_world_api_rest_asset_manager"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_CONTAINER_BIND_EXTERNAL: z
-        .string()
-        .default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
-        .number()
-        .default(3023),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_CONTAINER_BIND_EXTERNAL:
+        z.string().default("0.0.0.0"),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_CONTAINER_BIND_EXTERNAL:
+        z.coerce.number().default(3023),
     VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
         .string()
         .default("next-world.vircadia.com"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_PUBLIC_AVAILABLE_AT: z.coerce
-        .number()
-        .default(443),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(true),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAINTENANCE_INTERVAL_MS: z.coerce
-        .number()
-        .default(1000),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAX_BYTES: z.coerce
-        .number()
-        .default(4096 * 1024 * 1024),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_DIR: z.string().default("/cache"),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_PUBLIC_AVAILABLE_AT:
+        z.coerce.number().default(443),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT:
+        z
+            .union([
+                z.boolean(),
+                z
+                    .string()
+                    .transform(
+                        (val) => val === "1" || val.toLowerCase() === "true",
+                    ),
+            ])
+            .default(true),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAINTENANCE_INTERVAL_MS:
+        z.coerce.number().default(1000),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAX_BYTES:
+        z.coerce.number().default(4096 * 1024 * 1024),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_DIR: z
+        .string()
+        .default("/cache"),
     VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_DEBUG: z
         .union([
             z.boolean(),
@@ -162,6 +157,50 @@ const serverEnvSchema = z.object({
         ])
         .default(false),
     VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_SUPPRESS: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
+
+    // API REST inference manager
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_CONTAINER_NAME: z
+        .string()
+        .default("vircadia_world_api_rest_inference_manager"),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_HOST_CONTAINER_BIND_EXTERNAL:
+        z.string().default("0.0.0.0"),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_PORT_CONTAINER_BIND_EXTERNAL:
+        z.coerce.number().default(3024),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_HOST_PUBLIC_AVAILABLE_AT:
+        z.string().default("next-world.vircadia.com"),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_PORT_PUBLIC_AVAILABLE_AT:
+        z.coerce.number().default(443),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT:
+        z
+            .union([
+                z.boolean(),
+                z
+                    .string()
+                    .transform(
+                        (val) => val === "1" || val.toLowerCase() === "true",
+                    ),
+            ])
+            .default(true),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_DEBUG: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(false),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_SUPPRESS: z
         .union([
             z.boolean(),
             z
@@ -286,7 +325,9 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_AUTH_AZURE_CLIENT_ID: z.string().default(""),
     VRCA_SERVER_AUTH_AZURE_CLIENT_SECRET: z.string().default(""),
     VRCA_SERVER_AUTH_AZURE_TENANT_ID: z.string().default("common"),
-    VRCA_SERVER_AUTH_AZURE_JWT_SECRET: z.string().default("CHANGE_ME_TO_SECURE_SECRET_KEY"),
+    VRCA_SERVER_AUTH_AZURE_JWT_SECRET: z
+        .string()
+        .default("CHANGE_ME_TO_SECURE_SECRET_KEY"),
     VRCA_SERVER_AUTH_AZURE_SCOPES: z
         .union([z.string(), z.array(z.string())])
         .transform((val) =>
@@ -304,7 +345,9 @@ const serverEnvSchema = z.object({
             z.boolean(),
             z
                 .string()
-                .transform((val) => val === "1" || val.toLowerCase() === "true"),
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
         ])
         .default(false),
     VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_READ: z

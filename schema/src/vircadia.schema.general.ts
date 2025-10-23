@@ -240,6 +240,7 @@ export namespace Communication {
     export const REST_BASE_WS_PATH = "/world/rest/ws";
     export const REST_BASE_AUTH_PATH = "/world/rest/auth";
     export const REST_BASE_ASSET_PATH = "/world/rest/asset";
+    export const REST_BASE_INFERENCE_PATH = "/world/rest/inference";
     export const REST_BASE_STATE_PATH = "/world/rest/state";
 
     export namespace WebSocket {
@@ -559,6 +560,7 @@ export namespace Communication {
             WS_UPGRADE_REQUEST = "WS_UPGRADE_REQUEST",
             AUTH_STATS = "AUTH_STATS",
             ASSET_STATS = "ASSET_STATS",
+            INFERENCE_STATS = "INFERENCE_STATS",
             STATE_STATS = "STATE_STATS",
             WS_STATS = "WS_STATS",
         }
@@ -1688,6 +1690,85 @@ export namespace Communication {
                     description: "Asset stats response",
                 },
             },
+            INFERENCE_STATS: {
+                path: `${REST_BASE_INFERENCE_PATH}/stats`,
+                method: "GET",
+                createRequest: (): string => "",
+                createSuccess: (data: {
+                    uptime: number;
+                    connections: {
+                        active: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        total: number;
+                        failed: number;
+                        successRate: number;
+                    };
+                    database: {
+                        connected: boolean;
+                        connections: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                    };
+                    memory: {
+                        heapUsed: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        heapTotal: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        external: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        rss: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                    };
+                    cpu: {
+                        user: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                        system: {
+                            current: number;
+                            average: number;
+                            p99: number;
+                            p999: number;
+                        };
+                    };
+                }): any => ({ ...data, success: true, timestamp: Date.now() }),
+                createError: (error: string): any => ({
+                    success: false,
+                    timestamp: Date.now(),
+                    error,
+                }),
+                description: "Inference service statistics",
+                parameters: [],
+                returns: {
+                    type: "object",
+                    description: "Inference stats response",
+                },
+            },
             STATE_STATS: {
                 path: `${REST_BASE_STATE_PATH}/stats`,
                 method: "GET",
@@ -2472,6 +2553,70 @@ export namespace Communication {
                         lastMaintenanceAt: z.number().nullable(),
                         lastMaintenanceDurationMs: z.number().nullable(),
                         filesWarmedLastRun: z.number().nullable(),
+                    }),
+                }),
+            });
+
+            export const InferenceStatsSuccess = SuccessEnvelope.extend({
+                uptime: z.number(),
+                connections: z.object({
+                    active: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    total: z.number(),
+                    failed: z.number(),
+                    successRate: z.number(),
+                }),
+                database: z.object({
+                    connected: z.boolean(),
+                    connections: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                }),
+                memory: z.object({
+                    heapUsed: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    heapTotal: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    external: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    rss: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                }),
+                cpu: z.object({
+                    user: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
+                    }),
+                    system: z.object({
+                        current: z.number(),
+                        average: z.number(),
+                        p99: z.number(),
+                        p999: z.number(),
                     }),
                 }),
             });
