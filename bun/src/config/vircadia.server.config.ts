@@ -415,15 +415,15 @@ const serverEnvSchema = z.object({
 
     // Inference Providers - Groq
     VRCA_SERVER_SERVICE_INFERENCE_GROQ_API_KEY: z.string().default(""),
-    VRCA_SERVER_SERVICE_INFERENCE_GROQ_BASE_URL: z
-        .string()
-        .default("https://api.groq.com"),
     VRCA_SERVER_SERVICE_INFERENCE_GROQ_STT_MODEL: z
         .string()
         .default("whisper-large-v3"),
     VRCA_SERVER_SERVICE_INFERENCE_GROQ_TTS_MODEL: z
         .string()
         .default("playai-tts"),
+    VRCA_SERVER_SERVICE_INFERENCE_GROQ_TTS_VOICE: z
+        .string()
+        .default("Arista-PlayAI"),
 });
 
 // Parse server environment variables
