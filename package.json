@@ -25,21 +25,21 @@
     "sideEffects": false,
     "dependencies": {
         "@vueuse/core": "catalog:vue",
-        "eight-colors": "latest",
+        "eight-colors": "catalog:utils",
         "jsonwebtoken": "catalog:",
-        "lodash-es": "^4.17.21",
+        "lodash-es": "catalog:utils",
         "postgres": "catalog:",
-        "tmp": "^0.2.3",
+        "tmp": "catalog:utils",
         "typescript": "catalog:",
         "vue": "catalog:vue",
         "zod": "catalog:",
-        "idb": "^8.0.2"
+        "idb": "catalog:utils"
     },
     "devDependencies": {
         "@types/jsonwebtoken": "catalog:types",
         "@types/lodash-es": "catalog:types",
         "@types/node": "catalog:types",
-        "@types/tmp": "^0.2.6",
+        "@types/tmp": "catalog:types",
         "bun-types": "catalog:types"
     },
     "scripts": {
