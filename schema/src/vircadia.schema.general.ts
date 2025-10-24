@@ -561,6 +561,10 @@ export namespace Communication {
             AUTH_STATS = "AUTH_STATS",
             ASSET_STATS = "ASSET_STATS",
             INFERENCE_STATS = "INFERENCE_STATS",
+            INFERENCE_LLM = "INFERENCE_LLM",
+            INFERENCE_LLM_STREAM = "INFERENCE_LLM_STREAM",
+            INFERENCE_STT = "INFERENCE_STT",
+            INFERENCE_TTS = "INFERENCE_TTS",
             STATE_STATS = "STATE_STATS",
             WS_STATS = "WS_STATS",
         }
@@ -1767,6 +1771,204 @@ export namespace Communication {
                 returns: {
                     type: "object",
                     description: "Inference stats response",
+                },
+            },
+            INFERENCE_LLM: {
+                path: `${REST_BASE_INFERENCE_PATH}/llm`,
+                method: "POST",
+                createRequest: (data: {
+                    prompt: string;
+                    temperature?: number;
+                    maxTokens?: number;
+                    stopSequences?: string[];
+                }): string => JSON.stringify(data),
+                createSuccess: (data: {
+                    text: string;
+                    finishReason: string;
+                    tokens: number;
+                    processingTimeMs: number;
+                    tokensPerSecond: number;
+                }): any => ({ success: true, ...data }),
+                createError: (error: string): any => ({
+                    success: false,
+                    error,
+                }),
+                description: "Generate text using LLM",
+                parameters: [
+                    {
+                        name: "prompt",
+                        type: "string",
+                        required: true,
+                        description: "The prompt to generate text from",
+                    },
+                    {
+                        name: "temperature",
+                        type: "number",
+                        required: false,
+                        description: "Sampling temperature",
+                    },
+                    {
+                        name: "maxTokens",
+                        type: "number",
+                        required: false,
+                        description: "Maximum tokens to generate",
+                    },
+                    {
+                        name: "stopSequences",
+                        type: "string[]",
+                        required: false,
+                        description: "Stop sequences",
+                    },
+                ],
+                returns: {
+                    type: "object",
+                    description: "LLM generation response",
+                },
+            },
+            INFERENCE_LLM_STREAM: {
+                path: `${REST_BASE_INFERENCE_PATH}/llm/stream`,
+                method: "POST",
+                createRequest: (data: {
+                    prompt: string;
+                    temperature?: number;
+                    maxTokens?: number;
+                    stopSequences?: string[];
+                }): string => JSON.stringify(data),
+                createSuccess: (): any => ({ success: true }),
+                createError: (error: string): any => ({
+                    success: false,
+                    error,
+                }),
+                description: "Stream text generation using LLM",
+                parameters: [
+                    {
+                        name: "prompt",
+                        type: "string",
+                        required: true,
+                        description: "The prompt to generate text from",
+                    },
+                    {
+                        name: "temperature",
+                        type: "number",
+                        required: false,
+                        description: "Sampling temperature",
+                    },
+                    {
+                        name: "maxTokens",
+                        type: "number",
+                        required: false,
+                        description: "Maximum tokens to generate",
+                    },
+                    {
+                        name: "stopSequences",
+                        type: "string[]",
+                        required: false,
+                        description: "Stop sequences",
+                    },
+                ],
+                returns: {
+                    type: "ReadableStream",
+                    description: "SSE stream of text chunks",
+                },
+            },
+            INFERENCE_STT: {
+                path: `${REST_BASE_INFERENCE_PATH}/stt`,
+                method: "POST",
+                createRequest: (): string => "",
+                createSuccess: (data: {
+                    text: string;
+                    language: string;
+                    processingTimeMs: number;
+                    audioDurationMs: number;
+                }): any => ({ success: true, ...data }),
+                createError: (error: string): any => ({
+                    success: false,
+                    error,
+                }),
+                description: "Convert speech to text",
+                parameters: [
+                    {
+                        name: "audio",
+                        type: "File",
+                        required: true,
+                        description: "Audio file to transcribe",
+                    },
+                    {
+                        name: "language",
+                        type: "string",
+                        required: false,
+                        description: "Language code (e.g., 'en', 'es')",
+                    },
+                    {
+                        name: "prompt",
+                        type: "string",
+                        required: false,
+                        description: "Prompt for transcription",
+                    },
+                    {
+                        name: "responseFormat",
+                        type: "string",
+                        required: false,
+                        description:
+                            "Response format: 'json', 'text', or 'verbose_json'",
+                    },
+                    {
+                        name: "temperature",
+                        type: "number",
+                        required: false,
+                        description: "Sampling temperature",
+                    },
+                ],
+                returns: {
+                    type: "object",
+                    description: "STT transcription response",
+                },
+            },
+            INFERENCE_TTS: {
+                path: `${REST_BASE_INFERENCE_PATH}/tts`,
+                method: "POST",
+                createRequest: (data: {
+                    text: string;
+                    speed?: number;
+                    voice?: string;
+                    responseFormat?: string;
+                }): string => JSON.stringify(data),
+                createSuccess: (): any => ({ success: true }),
+                createError: (error: string): any => ({
+                    success: false,
+                    error,
+                }),
+                description: "Convert text to speech",
+                parameters: [
+                    {
+                        name: "text",
+                        type: "string",
+                        required: true,
+                        description: "Text to synthesize",
+                    },
+                    {
+                        name: "speed",
+                        type: "number",
+                        required: false,
+                        description: "Speech speed multiplier",
+                    },
+                    {
+                        name: "voice",
+                        type: "string",
+                        required: false,
+                        description: "Voice to use",
+                    },
+                    {
+                        name: "responseFormat",
+                        type: "string",
+                        required: false,
+                        description:
+                            "Audio format: 'wav', 'mp3', 'opus', or 'flac'",
+                    },
+                ],
+                returns: {
+                    type: "Blob",
+                    description: "Audio file",
                 },
             },
             STATE_STATS: {

@@ -406,6 +406,24 @@ const serverEnvSchema = z.object({
                       .filter((s) => s.length > 0),
         )
         .default([]),
+
+    // Inference Providers - Cerebras
+    VRCA_SERVER_SERVICE_INFERENCE_CEREBRAS_API_KEY: z.string().default(""),
+    VRCA_SERVER_SERVICE_INFERENCE_CEREBRAS_MODEL: z
+        .string()
+        .default("qwen-3-32b"),
+
+    // Inference Providers - Groq
+    VRCA_SERVER_SERVICE_INFERENCE_GROQ_API_KEY: z.string().default(""),
+    VRCA_SERVER_SERVICE_INFERENCE_GROQ_BASE_URL: z
+        .string()
+        .default("https://api.groq.com"),
+    VRCA_SERVER_SERVICE_INFERENCE_GROQ_STT_MODEL: z
+        .string()
+        .default("whisper-large-v3"),
+    VRCA_SERVER_SERVICE_INFERENCE_GROQ_TTS_MODEL: z
+        .string()
+        .default("playai-tts"),
 });
 
 // Parse server environment variables

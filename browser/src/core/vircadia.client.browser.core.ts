@@ -1034,12 +1034,187 @@ export class RestAuthCore {
     }
 }
 
+export interface RestInferenceCoreConfig {
+    apiRestInferenceUri: string;
+    debug?: boolean;
+    suppress?: boolean;
+}
+
+export class RestInferenceCore {
+    constructor(private config: RestInferenceCoreConfig) {}
+
+    updateConfig(newConfig: RestInferenceCoreConfig): void {
+        this.config = newConfig;
+    }
+
+    async llm(params: {
+        prompt: string;
+        temperature?: number;
+        maxTokens?: number;
+        stopSequences?: string[];
+    }): Promise<{
+        success: boolean;
+        text?: string;
+        finishReason?: string;
+        tokens?: number;
+        processingTimeMs?: number;
+        tokensPerSecond?: number;
+        error?: string;
+    }> {
+        const endpoint = Communication.REST.Endpoint.INFERENCE_LLM;
+        const url = new URL(endpoint.path, this.config.apiRestInferenceUri);
+
+        debugLog(this.config, "Calling LLM endpoint:", url.toString());
+
+        try {
+            const response = await fetch(url.toString(), {
+                method: endpoint.method,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: endpoint.createRequest(params),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                debugError(this.config, "LLM request failed:", {
+                    status: response.status,
+                    data,
+                });
+                return {
+                    success: false,
+                    error: data.error || "Failed to generate text",
+                };
+            }
+
+            return data;
+        } catch (error) {
+            debugError(this.config, "LLM request error:", error);
+            return {
+                success: false,
+                error: "Request failed",
+            };
+        }
+    }
+
+    async llmStream(params: {
+        prompt: string;
+        temperature?: number;
+        maxTokens?: number;
+        stopSequences?: string[];
+    }): Promise<ReadableStream> {
+        const endpoint = Communication.REST.Endpoint.INFERENCE_LLM_STREAM;
+        const url = new URL(endpoint.path, this.config.apiRestInferenceUri);
+
+        debugLog(this.config, "Calling LLM stream endpoint:", url.toString());
+
+        const response = await fetch(url.toString(), {
+            method: endpoint.method,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: endpoint.createRequest(params),
+        });
+
+        if (!response.ok) {
+            throw new Error(`LLM stream request failed: ${response.status}`);
+        }
+
+        return response.body as ReadableStream;
+    }
+
+    async stt(params: {
+        audio: File;
+        language?: string;
+        prompt?: string;
+        responseFormat?: "json" | "text" | "verbose_json";
+        temperature?: number;
+    }): Promise<{
+        success: boolean;
+        text?: string;
+        language?: string;
+        processingTimeMs?: number;
+        audioDurationMs?: number;
+        error?: string;
+    }> {
+        const endpoint = Communication.REST.Endpoint.INFERENCE_STT;
+        const url = new URL(endpoint.path, this.config.apiRestInferenceUri);
+
+        debugLog(this.config, "Calling STT endpoint:", url.toString());
+
+        try {
+            const formData = new FormData();
+            formData.append("audio", params.audio);
+            if (params.language) formData.append("language", params.language);
+            if (params.prompt) formData.append("prompt", params.prompt);
+            if (params.responseFormat)
+                formData.append("responseFormat", params.responseFormat);
+            if (params.temperature !== undefined)
+                formData.append("temperature", params.temperature.toString());
+
+            const response = await fetch(url.toString(), {
+                method: endpoint.method,
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                debugError(this.config, "STT request failed:", {
+                    status: response.status,
+                    data,
+                });
+                return {
+                    success: false,
+                    error: data.error || "Failed to transcribe audio",
+                };
+            }
+
+            return data;
+        } catch (error) {
+            debugError(this.config, "STT request error:", error);
+            return {
+                success: false,
+                error: "Request failed",
+            };
+        }
+    }
+
+    async tts(params: {
+        text: string;
+        speed?: number;
+        voice?: string;
+        responseFormat?: "wav" | "mp3" | "opus" | "flac";
+    }): Promise<Blob> {
+        const endpoint = Communication.REST.Endpoint.INFERENCE_TTS;
+        const url = new URL(endpoint.path, this.config.apiRestInferenceUri);
+
+        debugLog(this.config, "Calling TTS endpoint:", url.toString());
+
+        const response = await fetch(url.toString(), {
+            method: endpoint.method,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: endpoint.createRequest(params),
+        });
+
+        if (!response.ok) {
+            throw new Error(`TTS request failed: ${response.status}`);
+        }
+
+        return await response.blob();
+    }
+}
+
 // ======================= Unified Browser Client =======================
 
 export interface VircadiaBrowserClientConfig {
     apiWsUri: string;
     apiRestAuthUri: string;
     apiRestAssetUri: string;
+    apiRestInferenceUri: string;
     // REST base for WS manager (HTTP) used for diagnostics
     apiRestWsUri?: string;
     authToken: string;
@@ -1055,6 +1230,7 @@ export class VircadiaBrowserClient {
     private wsCore: WsConnectionCore;
     private restAuthCore: RestAuthCore;
     private restAssetCore: RestAssetCore;
+    private restInferenceCore: RestInferenceCore;
     private authListeners = new Set<() => void>();
     private lastPersisted = {
         tokenPresent: false,
@@ -1129,6 +1305,48 @@ export class VircadiaBrowserClient {
     public readonly restAsset: {
         assetGetByKey: (params: { key: string }) => Promise<Response>;
     };
+    public readonly restInference: {
+        llm: (params: {
+            prompt: string;
+            temperature?: number;
+            maxTokens?: number;
+            stopSequences?: string[];
+        }) => Promise<{
+            success: boolean;
+            text?: string;
+            finishReason?: string;
+            tokens?: number;
+            processingTimeMs?: number;
+            tokensPerSecond?: number;
+            error?: string;
+        }>;
+        llmStream: (params: {
+            prompt: string;
+            temperature?: number;
+            maxTokens?: number;
+            stopSequences?: string[];
+        }) => Promise<ReadableStream>;
+        stt: (params: {
+            audio: File;
+            language?: string;
+            prompt?: string;
+            responseFormat?: "json" | "text" | "verbose_json";
+            temperature?: number;
+        }) => Promise<{
+            success: boolean;
+            text?: string;
+            language?: string;
+            processingTimeMs?: number;
+            audioDurationMs?: number;
+            error?: string;
+        }>;
+        tts: (params: {
+            text: string;
+            speed?: number;
+            voice?: string;
+            responseFormat?: "wav" | "mp3" | "opus" | "flac";
+        }) => Promise<Blob>;
+    };
 
     constructor(config: VircadiaBrowserClientConfig) {
         this.sharedConfig = config;
@@ -1137,6 +1355,7 @@ export class VircadiaBrowserClient {
         this.wsCore = new WsConnectionCore(this.sharedConfig);
         this.restAuthCore = new RestAuthCore(this.sharedConfig);
         this.restAssetCore = new RestAssetCore(this.sharedConfig);
+        this.restInferenceCore = new RestInferenceCore(this.sharedConfig);
 
         // Namespaced helpers that use shared variables directly
         this.connection = {
@@ -1168,6 +1387,13 @@ export class VircadiaBrowserClient {
 
         this.restAsset = {
             assetGetByKey: (params) => this.restAssetCore.assetGetByKey(params),
+        };
+
+        this.restInference = {
+            llm: (params) => this.restInferenceCore.llm(params),
+            llmStream: (params) => this.restInferenceCore.llmStream(params),
+            stt: (params) => this.restInferenceCore.stt(params),
+            tts: (params) => this.restInferenceCore.tts(params),
         };
 
         // Minimal WS REST helper for diagnostics only

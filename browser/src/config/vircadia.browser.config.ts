@@ -95,6 +95,20 @@ const clientBrowserEnvSchema = z.object({
         ])
         .default(true),
 
+    VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_INFERENCE_URI: z
+        .string()
+        .default("next-world.vircadia.com"),
+    VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_INFERENCE_URI_USING_SSL: z
+        .union([
+            z.boolean(),
+            z
+                .string()
+                .transform(
+                    (val) => val === "1" || val.toLowerCase() === "true",
+                ),
+        ])
+        .default(true),
+
     VRCA_CLIENT_WEB_BABYLON_JS_PROD_HOST: z.string().default("0.0.0.0"),
     VRCA_CLIENT_WEB_BABYLON_JS_PROD_PORT: z.coerce.number().default(3025),
 
