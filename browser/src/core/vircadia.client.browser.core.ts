@@ -244,7 +244,7 @@ export class WsConnectionCore {
                 const connectionTimeoutMs = options?.timeoutMs || 30000;
 
                 await Promise.race([
-                    new Promise<void>((resolve, reject) => {
+                    new Promise<void>((_resolve, reject) => {
                         if (!this.ws)
                             return reject(
                                 new Error("WebSocket not initialized"),
@@ -264,14 +264,13 @@ export class WsConnectionCore {
                         this.ws.onopen = () => {
                             if (this.ws)
                                 this.ws.onclose = this.handleClose.bind(this);
-                            this.updateConnectionStatus("connected");
                             this.connectionStartTime = Date.now();
                             this.sessionValidation = null;
                             debugLog(
                                 this.config,
                                 "WebSocket connection established",
                             );
-                            resolve();
+                            // Don't resolve yet - wait for SESSION_INFO_RESPONSE
                         };
 
                         this.ws.onerror = () => {
@@ -280,6 +279,56 @@ export class WsConnectionCore {
                         };
 
                         this.ws.onclose = handleConnectionError;
+                    }),
+                    new Promise<void>((resolve, _reject) => {
+                        // Wait for SESSION_INFO_RESPONSE before resolving
+                        let resolved = false;
+                        let checkInterval: ReturnType<
+                            typeof setInterval
+                        > | null = null;
+
+                        const cleanup = () => {
+                            if (checkInterval) {
+                                clearInterval(checkInterval);
+                                checkInterval = null;
+                            }
+                            this.removeEventListener(
+                                "statusChange",
+                                checkSessionInfo,
+                            );
+                        };
+
+                        const checkSessionInfo = () => {
+                            if (this.sessionId && !resolved) {
+                                resolved = true;
+                                debugLog(
+                                    this.config,
+                                    "Session info received, connection fully established",
+                                );
+                                cleanup();
+                                resolve();
+                            }
+                        };
+
+                        // Listen for status change events (emitted when sessionId is set)
+                        this.addEventListener("statusChange", checkSessionInfo);
+
+                        // Also check periodically as fallback
+                        checkInterval = setInterval(() => {
+                            if (this.sessionId && !resolved) {
+                                resolved = true;
+                                // Status will be set to "connected" when SESSION_INFO_RESPONSE is handled
+                                cleanup();
+                                resolve();
+                            }
+                        }, 50);
+
+                        // Cleanup after timeout
+                        setTimeout(() => {
+                            if (!resolved) {
+                                cleanup();
+                            }
+                        }, connectionTimeoutMs);
                     }),
                     new Promise<never>((_, reject) => {
                         setTimeout(
@@ -519,6 +568,8 @@ export class WsConnectionCore {
                 this.agentId = message.agentId;
                 this.sessionId = message.sessionId;
                 this.config.sessionId = message.sessionId;
+                // Now that we have session info, mark as fully connected
+                this.updateConnectionStatus("connected");
                 this.emitEvent("statusChange");
                 return;
             }
