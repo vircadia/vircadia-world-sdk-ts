@@ -1206,6 +1206,46 @@ export class RestInferenceCore {
 
         return await response.blob();
     }
+
+    async capabilities(): Promise<{
+        success: boolean;
+        stt?: boolean;
+        tts?: boolean;
+        llm?: boolean;
+        error?: string;
+    }> {
+        const endpoint = Communication.REST.Endpoint.INFERENCE_CAPABILITIES;
+        const url = new URL(endpoint.path, this.config.apiRestInferenceUri);
+
+        debugLog(this.config, "Calling capabilities endpoint:", url.toString());
+
+        try {
+            const response = await fetch(url.toString(), {
+                method: endpoint.method,
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                debugError(this.config, "Capabilities request failed:", {
+                    status: response.status,
+                    data,
+                });
+                return {
+                    success: false,
+                    error: data.error || "Failed to get capabilities",
+                };
+            }
+
+            return data;
+        } catch (error) {
+            debugError(this.config, "Capabilities request error:", error);
+            return {
+                success: false,
+                error: "Request failed",
+            };
+        }
+    }
 }
 
 // ======================= Unified Browser Client =======================
@@ -1346,6 +1386,13 @@ export class VircadiaBrowserClient {
             voice?: string;
             responseFormat?: "wav" | "mp3" | "opus" | "flac";
         }) => Promise<Blob>;
+        capabilities: () => Promise<{
+            success: boolean;
+            stt?: boolean;
+            tts?: boolean;
+            llm?: boolean;
+            error?: string;
+        }>;
     };
 
     constructor(config: VircadiaBrowserClientConfig) {
@@ -1394,6 +1441,7 @@ export class VircadiaBrowserClient {
             llmStream: (params) => this.restInferenceCore.llmStream(params),
             stt: (params) => this.restInferenceCore.stt(params),
             tts: (params) => this.restInferenceCore.tts(params),
+            capabilities: () => this.restInferenceCore.capabilities(),
         };
 
         // Minimal WS REST helper for diagnostics only

@@ -565,6 +565,7 @@ export namespace Communication {
             INFERENCE_LLM_STREAM = "INFERENCE_LLM_STREAM",
             INFERENCE_STT = "INFERENCE_STT",
             INFERENCE_TTS = "INFERENCE_TTS",
+            INFERENCE_CAPABILITIES = "INFERENCE_CAPABILITIES",
             STATE_STATS = "STATE_STATS",
             WS_STATS = "WS_STATS",
         }
@@ -1971,6 +1972,26 @@ export namespace Communication {
                     description: "Audio file",
                 },
             },
+            INFERENCE_CAPABILITIES: {
+                path: `${REST_BASE_INFERENCE_PATH}/capabilities`,
+                method: "GET",
+                createRequest: (): string => "",
+                createSuccess: (data: {
+                    stt: boolean;
+                    tts: boolean;
+                    llm: boolean;
+                }): any => ({ success: true, ...data }),
+                createError: (error: string): any => ({
+                    success: false,
+                    error,
+                }),
+                description: "Get inference service capabilities",
+                parameters: [],
+                returns: {
+                    type: "object",
+                    description: "Capabilities response",
+                },
+            },
             STATE_STATS: {
                 path: `${REST_BASE_STATE_PATH}/stats`,
                 method: "GET",
@@ -2821,6 +2842,12 @@ export namespace Communication {
                         p999: z.number(),
                     }),
                 }),
+            });
+
+            export const InferenceCapabilitiesSuccess = SuccessEnvelope.extend({
+                stt: z.boolean(),
+                tts: z.boolean(),
+                llm: z.boolean(),
             });
 
             export const WsStatsSuccess = SuccessEnvelope.extend({
