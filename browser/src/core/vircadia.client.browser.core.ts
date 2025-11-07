@@ -137,6 +137,27 @@ export class WsConnectionCore {
         string,
         Set<(msg: Communication.WebSocket.ReflectDeliveryMessage) => void>
     >();
+    private entityListeners = new Map<
+        string,
+        {
+            entityName: string;
+            listener: (
+                msg: Communication.WebSocket.EntityDeliveryMessage,
+            ) => void;
+        }
+    >();
+    private entityServerSubscriptions = new Map<string, number>();
+    private metadataListeners = new Map<
+        string,
+        {
+            entityName: string;
+            metadataKey: string | null;
+            listener: (
+                msg: Communication.WebSocket.EntityMetadataDeliveryMessage,
+            ) => void;
+        }
+    >();
+    private metadataServerSubscriptions = new Map<string, number>();
     private lastCloseCode: number | null = null;
     private lastCloseReason: string | null = null;
 
@@ -462,6 +483,10 @@ export class WsConnectionCore {
         this.connectionStartTime = null;
         this.sessionValidation = null;
         this.config.sessionId = undefined;
+        this.entityListeners.clear();
+        this.metadataListeners.clear();
+        this.entityServerSubscriptions.clear();
+        this.metadataServerSubscriptions.clear();
         debugLog(this.config, "WebSocket disconnected");
     }
 
@@ -540,6 +565,391 @@ export class WsConnectionCore {
         };
     }
 
+    private async sendEntitySubscribe(
+        entityName: string,
+        timeoutMs?: number,
+    ): Promise<void> {
+        const requestId = crypto.randomUUID();
+        const messageData = {
+            type: Communication.WebSocket.MessageType.ENTITY_SUBSCRIBE_REQUEST,
+            timestamp: Date.now(),
+            requestId,
+            errorMessage: null,
+            entityName,
+        };
+
+        const parsed =
+            Communication.WebSocket.Z.EntitySubscribeRequest.safeParse(
+                messageData,
+            );
+        if (!parsed.success) {
+            throw new Error(
+                `Invalid entity subscribe request: ${parsed.error.message}`,
+            );
+        }
+
+        await new Promise<void>((resolve, reject) => {
+            const createdAt = Date.now();
+            const timeout = setTimeout(() => {
+                this.pendingRequests.delete(requestId);
+                reject(new Error("Request timeout"));
+            }, timeoutMs ?? DEFAULT_WS_QUERY_TIMEOUT);
+
+            this.pendingRequests.set(requestId, {
+                resolve: (value: unknown) => {
+                    clearTimeout(timeout);
+                    this.pendingRequests.delete(requestId);
+                    const response =
+                        value as Communication.WebSocket.EntitySubscribeResponseMessage;
+                    if (response.errorMessage || !response.subscribed) {
+                        reject(
+                            new Error(
+                                response.errorMessage || "Subscribe failed",
+                            ),
+                        );
+                        return;
+                    }
+                    resolve();
+                },
+                reject: (reason: unknown) => {
+                    clearTimeout(timeout);
+                    this.pendingRequests.delete(requestId);
+                    reject(reason);
+                },
+                timeout,
+                createdAt,
+            });
+
+            this.ws?.send(JSON.stringify(parsed.data));
+        });
+    }
+
+    private async sendEntityUnsubscribe(
+        entityName: string,
+        timeoutMs?: number,
+    ): Promise<void> {
+        const requestId = crypto.randomUUID();
+        const messageData = {
+            type: Communication.WebSocket.MessageType.ENTITY_UNSUBSCRIBE_REQUEST,
+            timestamp: Date.now(),
+            requestId,
+            errorMessage: null,
+            entityName,
+        };
+
+        const parsed =
+            Communication.WebSocket.Z.EntityUnsubscribeRequest.safeParse(
+                messageData,
+            );
+        if (!parsed.success) {
+            throw new Error(
+                `Invalid entity unsubscribe request: ${parsed.error.message}`,
+            );
+        }
+
+        await new Promise<void>((resolve, reject) => {
+            const createdAt = Date.now();
+            const timeout = setTimeout(() => {
+                this.pendingRequests.delete(requestId);
+                reject(new Error("Request timeout"));
+            }, timeoutMs ?? DEFAULT_WS_QUERY_TIMEOUT);
+
+            this.pendingRequests.set(requestId, {
+                resolve: (value: unknown) => {
+                    clearTimeout(timeout);
+                    this.pendingRequests.delete(requestId);
+                    const response =
+                        value as Communication.WebSocket.EntityUnsubscribeResponseMessage;
+                    if (response.errorMessage || !response.removed) {
+                        reject(
+                            new Error(
+                                response.errorMessage ||
+                                    "Unsubscribe failed",
+                            ),
+                        );
+                        return;
+                    }
+                    resolve();
+                },
+                reject: (reason: unknown) => {
+                    clearTimeout(timeout);
+                    this.pendingRequests.delete(requestId);
+                    reject(reason);
+                },
+                timeout,
+                createdAt,
+            });
+
+            this.ws?.send(JSON.stringify(parsed.data));
+        });
+    }
+
+    private async sendEntityMetadataSubscribe(
+        entityName: string,
+        metadataKey: string | null,
+        timeoutMs?: number,
+    ): Promise<void> {
+        const requestId = crypto.randomUUID();
+        const messageData: Record<string, unknown> = {
+            type: Communication.WebSocket.MessageType
+                .ENTITY_METADATA_SUBSCRIBE_REQUEST,
+            timestamp: Date.now(),
+            requestId,
+            errorMessage: null,
+            entityName,
+        };
+        if (metadataKey) {
+            messageData.metadataKey = metadataKey;
+        }
+
+        const parsed =
+            Communication.WebSocket.Z.EntityMetadataSubscribeRequest.safeParse(
+                messageData,
+            );
+        if (!parsed.success) {
+            throw new Error(
+                `Invalid entity metadata subscribe request: ${parsed.error.message}`,
+            );
+        }
+
+        await new Promise<void>((resolve, reject) => {
+            const createdAt = Date.now();
+            const timeout = setTimeout(() => {
+                this.pendingRequests.delete(requestId);
+                reject(new Error("Request timeout"));
+            }, timeoutMs ?? DEFAULT_WS_QUERY_TIMEOUT);
+
+            this.pendingRequests.set(requestId, {
+                resolve: (value: unknown) => {
+                    clearTimeout(timeout);
+                    this.pendingRequests.delete(requestId);
+                    const response =
+                        value as Communication.WebSocket.EntityMetadataSubscribeResponseMessage;
+                    if (response.errorMessage || !response.subscribed) {
+                        reject(
+                            new Error(
+                                response.errorMessage ||
+                                    "Metadata subscribe failed",
+                            ),
+                        );
+                        return;
+                    }
+                    resolve();
+                },
+                reject: (reason: unknown) => {
+                    clearTimeout(timeout);
+                    this.pendingRequests.delete(requestId);
+                    reject(reason);
+                },
+                timeout,
+                createdAt,
+            });
+
+            this.ws?.send(JSON.stringify(parsed.data));
+        });
+    }
+
+    private async sendEntityMetadataUnsubscribe(
+        entityName: string,
+        metadataKey: string | null,
+        timeoutMs?: number,
+    ): Promise<void> {
+        const requestId = crypto.randomUUID();
+        const messageData: Record<string, unknown> = {
+            type: Communication.WebSocket.MessageType
+                .ENTITY_METADATA_UNSUBSCRIBE_REQUEST,
+            timestamp: Date.now(),
+            requestId,
+            errorMessage: null,
+            entityName,
+        };
+        if (metadataKey) {
+            messageData.metadataKey = metadataKey;
+        }
+
+        const parsed =
+            Communication.WebSocket.Z.EntityMetadataUnsubscribeRequest.safeParse(
+                messageData,
+            );
+        if (!parsed.success) {
+            throw new Error(
+                `Invalid entity metadata unsubscribe request: ${parsed.error.message}`,
+            );
+        }
+
+        await new Promise<void>((resolve, reject) => {
+            const createdAt = Date.now();
+            const timeout = setTimeout(() => {
+                this.pendingRequests.delete(requestId);
+                reject(new Error("Request timeout"));
+            }, timeoutMs ?? DEFAULT_WS_QUERY_TIMEOUT);
+
+            this.pendingRequests.set(requestId, {
+                resolve: (value: unknown) => {
+                    clearTimeout(timeout);
+                    this.pendingRequests.delete(requestId);
+                    const response =
+                        value as Communication.WebSocket.EntityMetadataUnsubscribeResponseMessage;
+                    if (response.errorMessage || !response.removed) {
+                        reject(
+                            new Error(
+                                response.errorMessage ||
+                                    "Metadata unsubscribe failed",
+                            ),
+                        );
+                        return;
+                    }
+                    resolve();
+                },
+                reject: (reason: unknown) => {
+                    clearTimeout(timeout);
+                    this.pendingRequests.delete(requestId);
+                    reject(reason);
+                },
+                timeout,
+                createdAt,
+            });
+
+            this.ws?.send(JSON.stringify(parsed.data));
+        });
+    }
+
+    async subscribeEntity(data: {
+        entityName: string;
+        listener: (
+            msg: Communication.WebSocket.EntityDeliveryMessage,
+        ) => void;
+        timeoutMs?: number;
+    }): Promise<{ remove: () => Promise<void> }> {
+        if (!this.isClientConnected()) {
+            throw new Error("Not connected to server");
+        }
+        if (typeof data.listener !== "function") {
+            throw new Error("Listener is required for entity subscription");
+        }
+
+        const entityName = data.entityName.trim();
+        if (!entityName) {
+            throw new Error("entityName is required");
+        }
+
+        const current = this.entityServerSubscriptions.get(entityName) ?? 0;
+        if (current === 0) {
+            await this.sendEntitySubscribe(entityName, data.timeoutMs);
+        }
+        this.entityServerSubscriptions.set(entityName, current + 1);
+
+        const handleId = crypto.randomUUID();
+        this.entityListeners.set(handleId, {
+            entityName,
+            listener: data.listener,
+        });
+
+        return {
+            remove: async () => {
+                if (!this.entityListeners.delete(handleId)) {
+                    return;
+                }
+                const remaining = this.entityServerSubscriptions.get(
+                    entityName,
+                );
+                if (!remaining) {
+                    return;
+                }
+                if (remaining <= 1) {
+                    try {
+                        await this.sendEntityUnsubscribe(
+                            entityName,
+                            data.timeoutMs,
+                        );
+                    } finally {
+                        this.entityServerSubscriptions.delete(entityName);
+                    }
+                } else {
+                    this.entityServerSubscriptions.set(
+                        entityName,
+                        remaining - 1,
+                    );
+                }
+            },
+        };
+    }
+
+    async subscribeEntityMetadata(data: {
+        entityName: string;
+        metadataKey?: string;
+        listener: (
+            msg: Communication.WebSocket.EntityMetadataDeliveryMessage,
+        ) => void;
+        timeoutMs?: number;
+    }): Promise<{ remove: () => Promise<void> }> {
+        if (!this.isClientConnected()) {
+            throw new Error("Not connected to server");
+        }
+        if (typeof data.listener !== "function") {
+            throw new Error(
+                "Listener is required for entity metadata subscription",
+            );
+        }
+
+        const entityName = data.entityName.trim();
+        if (!entityName) {
+            throw new Error("entityName is required");
+        }
+
+        const metadataKey = data.metadataKey?.trim() || null;
+        const subscriptionKey = `${entityName}|${metadataKey ?? "*"}`;
+        const current =
+            this.metadataServerSubscriptions.get(subscriptionKey) ?? 0;
+        if (current === 0) {
+            await this.sendEntityMetadataSubscribe(
+                entityName,
+                metadataKey,
+                data.timeoutMs,
+            );
+        }
+        this.metadataServerSubscriptions.set(subscriptionKey, current + 1);
+
+        const handleId = crypto.randomUUID();
+        this.metadataListeners.set(handleId, {
+            entityName,
+            metadataKey,
+            listener: data.listener,
+        });
+
+        return {
+            remove: async () => {
+                if (!this.metadataListeners.delete(handleId)) {
+                    return;
+                }
+                const remaining = this.metadataServerSubscriptions.get(
+                    subscriptionKey,
+                );
+                if (!remaining) {
+                    return;
+                }
+                if (remaining <= 1) {
+                    try {
+                        await this.sendEntityMetadataUnsubscribe(
+                            entityName,
+                            metadataKey,
+                            data.timeoutMs,
+                        );
+                    } finally {
+                        this.metadataServerSubscriptions.delete(
+                            subscriptionKey,
+                        );
+                    }
+                } else {
+                    this.metadataServerSubscriptions.set(
+                        subscriptionKey,
+                        remaining - 1,
+                    );
+                }
+            },
+        };
+    }
+
     private handleMessage(event: MessageEvent): void {
         try {
             debugLog(
@@ -587,6 +997,38 @@ export class WsConnectionCore {
                 const listeners = this.reflectListeners.get(key);
                 if (listeners) {
                     for (const listener of listeners) listener(message);
+                }
+                return;
+            }
+
+            if (
+                message.type ===
+                Communication.WebSocket.MessageType.ENTITY_DELIVERY
+            ) {
+                const listeners = Array.from(this.entityListeners.values());
+                for (const entry of listeners) {
+                    if (entry.entityName === message.entityName) {
+                        entry.listener(message);
+                    }
+                }
+                return;
+            }
+
+            if (
+                message.type ===
+                Communication.WebSocket.MessageType.ENTITY_METADATA_DELIVERY
+            ) {
+                const listeners = Array.from(this.metadataListeners.values());
+                for (const entry of listeners) {
+                    if (entry.entityName !== message.entityName) {
+                        continue;
+                    }
+                    if (
+                        entry.metadataKey === null ||
+                        entry.metadataKey === message.metadataKey
+                    ) {
+                        entry.listener(message);
+                    }
                 }
                 return;
             }
@@ -1316,6 +1758,21 @@ export class VircadiaBrowserClient {
                 msg: Communication.WebSocket.ReflectDeliveryMessage,
             ) => void,
         ) => () => void;
+        subscribeEntity: (data: {
+            entityName: string;
+            listener: (
+                msg: Communication.WebSocket.EntityDeliveryMessage,
+            ) => void;
+            timeoutMs?: number;
+        }) => Promise<{ remove: () => Promise<void> }>;
+        subscribeEntityMetadata: (data: {
+            entityName: string;
+            metadataKey?: string;
+            listener: (
+                msg: Communication.WebSocket.EntityMetadataDeliveryMessage,
+            ) => void;
+            timeoutMs?: number;
+        }) => Promise<{ remove: () => Promise<void> }>;
         getConnectionInfo: () => WsConnectionCoreInfo;
     };
     public readonly restAuth: {
@@ -1416,6 +1873,9 @@ export class VircadiaBrowserClient {
             publishReflect: (data) => this.wsCore.publishReflect(data),
             subscribeReflect: (syncGroup, channel, listener) =>
                 this.wsCore.subscribeReflect(syncGroup, channel, listener),
+            subscribeEntity: (options) => this.wsCore.subscribeEntity(options),
+            subscribeEntityMetadata: (options) =>
+                this.wsCore.subscribeEntityMetadata(options),
             getConnectionInfo: () => this.wsCore.getConnectionInfo(),
         };
 

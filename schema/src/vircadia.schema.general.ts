@@ -254,6 +254,22 @@ export namespace Communication {
             REFLECT_PUBLISH_REQUEST = "REFLECT_PUBLISH_REQUEST",
             REFLECT_MESSAGE_DELIVERY = "REFLECT_MESSAGE_DELIVERY",
             REFLECT_ACK_RESPONSE = "REFLECT_ACK_RESPONSE",
+            ENTITY_SUBSCRIBE_REQUEST = "ENTITY_SUBSCRIBE_REQUEST",
+            ENTITY_SUBSCRIBE_RESPONSE = "ENTITY_SUBSCRIBE_RESPONSE",
+            ENTITY_UNSUBSCRIBE_REQUEST = "ENTITY_UNSUBSCRIBE_REQUEST",
+            ENTITY_UNSUBSCRIBE_RESPONSE = "ENTITY_UNSUBSCRIBE_RESPONSE",
+            ENTITY_DELIVERY = "ENTITY_DELIVERY",
+            ENTITY_METADATA_SUBSCRIBE_REQUEST = "ENTITY_METADATA_SUBSCRIBE_REQUEST",
+            ENTITY_METADATA_SUBSCRIBE_RESPONSE = "ENTITY_METADATA_SUBSCRIBE_RESPONSE",
+            ENTITY_METADATA_UNSUBSCRIBE_REQUEST = "ENTITY_METADATA_UNSUBSCRIBE_REQUEST",
+            ENTITY_METADATA_UNSUBSCRIBE_RESPONSE = "ENTITY_METADATA_UNSUBSCRIBE_RESPONSE",
+            ENTITY_METADATA_DELIVERY = "ENTITY_METADATA_DELIVERY",
+        }
+
+        export enum DatabaseOperation {
+            INSERT = "INSERT",
+            UPDATE = "UPDATE",
+            DELETE = "DELETE",
         }
 
         interface BaseMessage {
@@ -446,6 +462,239 @@ export namespace Communication {
             }
         }
 
+        export class EntitySubscribeRequestMessage implements BaseMessage {
+            public readonly type = MessageType.ENTITY_SUBSCRIBE_REQUEST;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public entityName: string;
+
+            constructor(data: { requestId: string; entityName: string }) {
+                this.timestamp = Date.now();
+                this.requestId = data.requestId;
+                this.errorMessage = null;
+                this.entityName = data.entityName;
+            }
+        }
+
+        export class EntitySubscribeResponseMessage implements BaseMessage {
+            public readonly type = MessageType.ENTITY_SUBSCRIBE_RESPONSE;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public entityName: string;
+            public subscribed: boolean;
+
+            constructor(data: {
+                requestId: string;
+                entityName: string;
+                subscribed: boolean;
+                errorMessage?: string | null;
+            }) {
+                this.timestamp = Date.now();
+                this.requestId = data.requestId;
+                this.errorMessage = data.errorMessage ?? null;
+                this.entityName = data.entityName;
+                this.subscribed = data.subscribed;
+            }
+        }
+
+        export class EntityUnsubscribeRequestMessage implements BaseMessage {
+            public readonly type = MessageType.ENTITY_UNSUBSCRIBE_REQUEST;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public entityName: string;
+
+            constructor(data: { requestId: string; entityName: string }) {
+                this.timestamp = Date.now();
+                this.requestId = data.requestId;
+                this.errorMessage = null;
+                this.entityName = data.entityName;
+            }
+        }
+
+        export class EntityUnsubscribeResponseMessage implements BaseMessage {
+            public readonly type = MessageType.ENTITY_UNSUBSCRIBE_RESPONSE;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public entityName: string;
+            public removed: boolean;
+
+            constructor(data: {
+                requestId: string;
+                entityName: string;
+                removed: boolean;
+                errorMessage?: string | null;
+            }) {
+                this.timestamp = Date.now();
+                this.requestId = data.requestId;
+                this.errorMessage = data.errorMessage ?? null;
+                this.entityName = data.entityName;
+                this.removed = data.removed;
+            }
+        }
+
+        export class EntityDeliveryMessage implements BaseMessage {
+            public readonly type = MessageType.ENTITY_DELIVERY;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public entityName: string;
+            public operation: DatabaseOperation;
+            public syncGroup: string;
+            public data: unknown;
+
+            constructor(data: {
+                entityName: string;
+                operation: DatabaseOperation;
+                syncGroup: string;
+                payload: unknown;
+            }) {
+                this.timestamp = Date.now();
+                this.requestId = data.entityName;
+                this.errorMessage = null;
+                this.entityName = data.entityName;
+                this.operation = data.operation;
+                this.syncGroup = data.syncGroup;
+                this.data = data.payload;
+            }
+        }
+
+        export class EntityMetadataSubscribeRequestMessage
+            implements BaseMessage
+        {
+            public readonly type =
+                MessageType.ENTITY_METADATA_SUBSCRIBE_REQUEST;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public entityName: string;
+            public metadataKey?: string;
+
+            constructor(data: {
+                requestId: string;
+                entityName: string;
+                metadataKey?: string;
+            }) {
+                this.timestamp = Date.now();
+                this.requestId = data.requestId;
+                this.errorMessage = null;
+                this.entityName = data.entityName;
+                this.metadataKey = data.metadataKey;
+            }
+        }
+
+        export class EntityMetadataSubscribeResponseMessage
+            implements BaseMessage
+        {
+            public readonly type =
+                MessageType.ENTITY_METADATA_SUBSCRIBE_RESPONSE;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public entityName: string;
+            public metadataKey: string | null;
+            public subscribed: boolean;
+
+            constructor(data: {
+                requestId: string;
+                entityName: string;
+                metadataKey?: string | null;
+                subscribed: boolean;
+                errorMessage?: string | null;
+            }) {
+                this.timestamp = Date.now();
+                this.requestId = data.requestId;
+                this.errorMessage = data.errorMessage ?? null;
+                this.entityName = data.entityName;
+                this.metadataKey = data.metadataKey ?? null;
+                this.subscribed = data.subscribed;
+            }
+        }
+
+        export class EntityMetadataUnsubscribeRequestMessage
+            implements BaseMessage
+        {
+            public readonly type =
+                MessageType.ENTITY_METADATA_UNSUBSCRIBE_REQUEST;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public entityName: string;
+            public metadataKey?: string;
+
+            constructor(data: {
+                requestId: string;
+                entityName: string;
+                metadataKey?: string;
+            }) {
+                this.timestamp = Date.now();
+                this.requestId = data.requestId;
+                this.errorMessage = null;
+                this.entityName = data.entityName;
+                this.metadataKey = data.metadataKey;
+            }
+        }
+
+        export class EntityMetadataUnsubscribeResponseMessage
+            implements BaseMessage
+        {
+            public readonly type =
+                MessageType.ENTITY_METADATA_UNSUBSCRIBE_RESPONSE;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public entityName: string;
+            public metadataKey: string | null;
+            public removed: boolean;
+
+            constructor(data: {
+                requestId: string;
+                entityName: string;
+                metadataKey?: string | null;
+                removed: boolean;
+                errorMessage?: string | null;
+            }) {
+                this.timestamp = Date.now();
+                this.requestId = data.requestId;
+                this.errorMessage = data.errorMessage ?? null;
+                this.entityName = data.entityName;
+                this.metadataKey = data.metadataKey ?? null;
+                this.removed = data.removed;
+            }
+        }
+
+        export class EntityMetadataDeliveryMessage implements BaseMessage {
+            public readonly type = MessageType.ENTITY_METADATA_DELIVERY;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public entityName: string;
+            public metadataKey: string;
+            public operation: DatabaseOperation;
+            public syncGroup: string;
+            public data: unknown;
+
+            constructor(data: {
+                entityName: string;
+                metadataKey: string;
+                operation: DatabaseOperation;
+                syncGroup: string;
+                payload: unknown;
+            }) {
+                this.timestamp = Date.now();
+                this.requestId = `${data.entityName}:${data.metadataKey}`;
+                this.errorMessage = null;
+                this.entityName = data.entityName;
+                this.metadataKey = data.metadataKey;
+                this.operation = data.operation;
+                this.syncGroup = data.syncGroup;
+                this.data = data.payload;
+            }
+        }
+
         export type Message =
             | GeneralErrorResponseMessage
             | QueryRequestMessage
@@ -454,7 +703,17 @@ export namespace Communication {
             | SessionInfoMessage
             | ReflectPublishRequestMessage
             | ReflectDeliveryMessage
-            | ReflectAckResponseMessage;
+            | ReflectAckResponseMessage
+            | EntitySubscribeRequestMessage
+            | EntitySubscribeResponseMessage
+            | EntityUnsubscribeRequestMessage
+            | EntityUnsubscribeResponseMessage
+            | EntityDeliveryMessage
+            | EntityMetadataSubscribeRequestMessage
+            | EntityMetadataSubscribeResponseMessage
+            | EntityMetadataUnsubscribeRequestMessage
+            | EntityMetadataUnsubscribeResponseMessage
+            | EntityMetadataDeliveryMessage;
 
         export function isMessageType<T extends Message>(
             message: Message,
@@ -522,6 +781,71 @@ export namespace Communication {
             delivered: z.number(),
         });
 
+        const Z_EntitySubscribeRequest = Z_MessageBase.extend({
+            type: z.literal(MessageType.ENTITY_SUBSCRIBE_REQUEST),
+            entityName: z.string().min(1),
+        });
+
+        const Z_EntitySubscribeResponse = Z_MessageBase.extend({
+            type: z.literal(MessageType.ENTITY_SUBSCRIBE_RESPONSE),
+            entityName: z.string().min(1),
+            subscribed: z.boolean(),
+        });
+
+        const Z_EntityUnsubscribeRequest = Z_MessageBase.extend({
+            type: z.literal(MessageType.ENTITY_UNSUBSCRIBE_REQUEST),
+            entityName: z.string().min(1),
+        });
+
+        const Z_EntityUnsubscribeResponse = Z_MessageBase.extend({
+            type: z.literal(MessageType.ENTITY_UNSUBSCRIBE_RESPONSE),
+            entityName: z.string().min(1),
+            removed: z.boolean(),
+        });
+
+        const Z_EntityDelivery = Z_MessageBase.extend({
+            type: z.literal(MessageType.ENTITY_DELIVERY),
+            entityName: z.string().min(1),
+            operation: z.nativeEnum(DatabaseOperation),
+            syncGroup: z.string(),
+            data: z.unknown(),
+        });
+
+        const Z_EntityMetadataSubscribeRequest = Z_MessageBase.extend({
+            type: z.literal(MessageType.ENTITY_METADATA_SUBSCRIBE_REQUEST),
+            entityName: z.string().min(1),
+            metadataKey: z.string().optional(),
+        });
+
+        const Z_EntityMetadataSubscribeResponse = Z_MessageBase.extend({
+            type: z.literal(MessageType.ENTITY_METADATA_SUBSCRIBE_RESPONSE),
+            entityName: z.string().min(1),
+            metadataKey: z.string().nullable(),
+            subscribed: z.boolean(),
+        });
+
+        const Z_EntityMetadataUnsubscribeRequest = Z_MessageBase.extend({
+            type: z.literal(MessageType.ENTITY_METADATA_UNSUBSCRIBE_REQUEST),
+            entityName: z.string().min(1),
+            metadataKey: z.string().optional(),
+        });
+
+        const Z_EntityMetadataUnsubscribeResponse = Z_MessageBase.extend({
+            type: z.literal(MessageType.ENTITY_METADATA_UNSUBSCRIBE_RESPONSE),
+            entityName: z.string().min(1),
+            metadataKey: z.string().nullable(),
+            removed: z.boolean(),
+        });
+
+        const Z_EntityMetadataDelivery = Z_MessageBase.extend({
+            type: z.literal(MessageType.ENTITY_METADATA_DELIVERY),
+            entityName: z.string().min(1),
+            metadataKey: z.string().min(1),
+            operation: z.nativeEnum(DatabaseOperation),
+            syncGroup: z.string(),
+            data: z.unknown(),
+        });
+
         export const Z = {
             MessageBase: Z_MessageBase,
             GeneralErrorResponse: Z_GeneralErrorResponse,
@@ -532,6 +856,18 @@ export namespace Communication {
             ReflectPublishRequest: Z_ReflectPublishRequest,
             ReflectDelivery: Z_ReflectDelivery,
             ReflectAckResponse: Z_ReflectAckResponse,
+            EntitySubscribeRequest: Z_EntitySubscribeRequest,
+            EntitySubscribeResponse: Z_EntitySubscribeResponse,
+            EntityUnsubscribeRequest: Z_EntityUnsubscribeRequest,
+            EntityUnsubscribeResponse: Z_EntityUnsubscribeResponse,
+            EntityDelivery: Z_EntityDelivery,
+            EntityMetadataSubscribeRequest: Z_EntityMetadataSubscribeRequest,
+            EntityMetadataSubscribeResponse: Z_EntityMetadataSubscribeResponse,
+            EntityMetadataUnsubscribeRequest:
+                Z_EntityMetadataUnsubscribeRequest,
+            EntityMetadataUnsubscribeResponse:
+                Z_EntityMetadataUnsubscribeResponse,
+            EntityMetadataDelivery: Z_EntityMetadataDelivery,
             AnyMessage: z.discriminatedUnion("type", [
                 Z_GeneralErrorResponse,
                 Z_QueryRequest,
@@ -541,6 +877,16 @@ export namespace Communication {
                 Z_ReflectPublishRequest,
                 Z_ReflectDelivery,
                 Z_ReflectAckResponse,
+                Z_EntitySubscribeRequest,
+                Z_EntitySubscribeResponse,
+                Z_EntityUnsubscribeRequest,
+                Z_EntityUnsubscribeResponse,
+                Z_EntityDelivery,
+                Z_EntityMetadataSubscribeRequest,
+                Z_EntityMetadataSubscribeResponse,
+                Z_EntityMetadataUnsubscribeRequest,
+                Z_EntityMetadataUnsubscribeResponse,
+                Z_EntityMetadataDelivery,
             ]),
         } as const;
     }
@@ -1502,8 +1848,12 @@ export namespace Communication {
                 createSuccess: (data: {
                     success: true;
                     timestamp: number;
-                }): any => ({ ...data, success: true, timestamp: Date.now() }),
-                createError: (error: string): any => ({
+                }): unknown => ({
+                    ...data,
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (error: string): unknown => ({
                     success: false,
                     timestamp: Date.now(),
                     error,
@@ -1594,8 +1944,12 @@ export namespace Communication {
                             p999: number;
                         };
                     };
-                }): any => ({ ...data, success: true, timestamp: Date.now() }),
-                createError: (error: string): any => ({
+                }): unknown => ({
+                    ...data,
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (error: string): unknown => ({
                     success: false,
                     timestamp: Date.now(),
                     error,
@@ -1682,8 +2036,12 @@ export namespace Communication {
                             filesWarmedLastRun?: number | null;
                         };
                     };
-                }): any => ({ ...data, success: true, timestamp: Date.now() }),
-                createError: (error: string): any => ({
+                }): unknown => ({
+                    ...data,
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (error: string): unknown => ({
                     success: false,
                     timestamp: Date.now(),
                     error,
@@ -1761,8 +2119,12 @@ export namespace Communication {
                             p999: number;
                         };
                     };
-                }): any => ({ ...data, success: true, timestamp: Date.now() }),
-                createError: (error: string): any => ({
+                }): unknown => ({
+                    ...data,
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (error: string): unknown => ({
                     success: false,
                     timestamp: Date.now(),
                     error,
@@ -1789,8 +2151,8 @@ export namespace Communication {
                     tokens: number;
                     processingTimeMs: number;
                     tokensPerSecond: number;
-                }): any => ({ success: true, ...data }),
-                createError: (error: string): any => ({
+                }): unknown => ({ success: true, ...data }),
+                createError: (error: string): unknown => ({
                     success: false,
                     error,
                 }),
@@ -1835,8 +2197,8 @@ export namespace Communication {
                     maxTokens?: number;
                     stopSequences?: string[];
                 }): string => JSON.stringify(data),
-                createSuccess: (): any => ({ success: true }),
-                createError: (error: string): any => ({
+                createSuccess: (): unknown => ({ success: true }),
+                createError: (error: string): unknown => ({
                     success: false,
                     error,
                 }),
@@ -1881,8 +2243,8 @@ export namespace Communication {
                     language: string;
                     processingTimeMs: number;
                     audioDurationMs: number;
-                }): any => ({ success: true, ...data }),
-                createError: (error: string): any => ({
+                }): unknown => ({ success: true, ...data }),
+                createError: (error: string): unknown => ({
                     success: false,
                     error,
                 }),
@@ -1934,8 +2296,8 @@ export namespace Communication {
                     voice?: string;
                     responseFormat?: string;
                 }): string => JSON.stringify(data),
-                createSuccess: (): any => ({ success: true }),
-                createError: (error: string): any => ({
+                createSuccess: (): unknown => ({ success: true }),
+                createError: (error: string): unknown => ({
                     success: false,
                     error,
                 }),
@@ -1980,8 +2342,8 @@ export namespace Communication {
                     stt: boolean;
                     tts: boolean;
                     llm: boolean;
-                }): any => ({ success: true, ...data }),
-                createError: (error: string): any => ({
+                }): unknown => ({ success: true, ...data }),
+                createError: (error: string): unknown => ({
                     success: false,
                     error,
                 }),
@@ -2019,8 +2381,12 @@ export namespace Communication {
                     };
                     memory: { heapUsed: number };
                     cpu: { system: number; user: number };
-                }): any => ({ ...data, success: true, timestamp: Date.now() }),
-                createError: (error: string): any => ({
+                }): unknown => ({
+                    ...data,
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (error: string): unknown => ({
                     success: false,
                     timestamp: Date.now(),
                     error,
@@ -2207,8 +2573,12 @@ export namespace Communication {
                             successRate: number;
                         };
                     };
-                }): any => ({ ...data, success: true, timestamp: Date.now() }),
-                createError: (error: string): any => ({
+                }): unknown => ({
+                    ...data,
+                    success: true,
+                    timestamp: Date.now(),
+                }),
+                createError: (error: string): unknown => ({
                     success: false,
                     timestamp: Date.now(),
                     error,
