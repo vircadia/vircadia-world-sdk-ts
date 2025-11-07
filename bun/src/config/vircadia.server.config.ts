@@ -411,7 +411,7 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_INFERENCE_CEREBRAS_API_KEY: z.string().default(""),
     VRCA_SERVER_SERVICE_INFERENCE_CEREBRAS_MODEL: z
         .string()
-        .default("qwen-3-32b"),
+        .default("gpt-oss-120b"),
 
     // Inference Providers - Groq
     VRCA_SERVER_SERVICE_INFERENCE_GROQ_API_KEY: z.string().default(""),
