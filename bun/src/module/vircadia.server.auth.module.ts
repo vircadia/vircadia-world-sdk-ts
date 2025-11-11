@@ -9,6 +9,8 @@ import type { Sql } from "postgres";
 
 const LOG_PREFIX = "General Auth Service";
 
+type AclWarmCallback = (agentId: string) => void;
+
 export class AclService {
     private readonly db: SQL;
     private readonly legacyDb: Sql | null;
@@ -20,6 +22,7 @@ export class AclService {
         new Map();
     private readonly deletableGroupsByAgent: Map<string, Set<string>> =
         new Map();
+    private readonly warmCallbacks: Set<AclWarmCallback> = new Set();
 
     constructor(args: { db: SQL; legacyDb?: Sql | null }) {
         this.db = args.db;
@@ -79,6 +82,8 @@ export class AclService {
                 if (group) deleteSet.add(group);
             }
             this.deletableGroupsByAgent.set(agentId, deleteSet);
+
+            this.notifyWarm(agentId);
         } catch (error) {
             BunLogModule({
                 prefix: LOG_PREFIX,
@@ -95,6 +100,11 @@ export class AclService {
     public canRead(agentId: string, syncGroup: string): boolean {
         const set = this.readableGroupsByAgent.get(agentId);
         return !!set?.has(syncGroup);
+    }
+
+    public getReadableSyncGroups(agentId: string): ReadonlySet<string> {
+        const set = this.readableGroupsByAgent.get(agentId);
+        return set ? new Set(set) : new Set();
     }
 
     public canUpdate(agentId: string, syncGroup: string): boolean {
@@ -114,6 +124,31 @@ export class AclService {
 
     public isWarmed(agentId: string): boolean {
         return this.readableGroupsByAgent.has(agentId);
+    }
+
+    public registerWarmCallback(callback: AclWarmCallback): () => void {
+        this.warmCallbacks.add(callback);
+        return () => {
+            this.warmCallbacks.delete(callback);
+        };
+    }
+
+    private notifyWarm(agentId: string) {
+        for (const cb of this.warmCallbacks) {
+            try {
+                cb(agentId);
+            } catch (error) {
+                BunLogModule({
+                    prefix: LOG_PREFIX,
+                    message: "ACL warm callback threw",
+                    error,
+                    debug: serverConfiguration.VRCA_SERVER_DEBUG,
+                    suppress: serverConfiguration.VRCA_SERVER_SUPPRESS,
+                    type: "error",
+                    data: { agentId },
+                });
+            }
+        }
     }
 
     public async startRoleChangeListener(): Promise<void> {
