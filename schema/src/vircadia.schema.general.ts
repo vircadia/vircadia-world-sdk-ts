@@ -25,6 +25,7 @@ export namespace Entity {
         general__initialized_at?: string;
         general__initialized_by?: string;
         group__sync: string;
+        group__channel?: string | null;
     }
 
     export namespace Metadata {
@@ -33,6 +34,7 @@ export namespace Entity {
             metadata__key: string;
             metadata__value: unknown;
             group__sync: string;
+            group__channel?: string | null;
             general__created_at?: string;
             general__created_by?: string;
             general__updated_at?: string;
@@ -254,15 +256,11 @@ export namespace Communication {
             REFLECT_PUBLISH_REQUEST = "REFLECT_PUBLISH_REQUEST",
             REFLECT_MESSAGE_DELIVERY = "REFLECT_MESSAGE_DELIVERY",
             REFLECT_ACK_RESPONSE = "REFLECT_ACK_RESPONSE",
-            ENTITY_SUBSCRIBE_REQUEST = "ENTITY_SUBSCRIBE_REQUEST",
-            ENTITY_SUBSCRIBE_RESPONSE = "ENTITY_SUBSCRIBE_RESPONSE",
-            ENTITY_UNSUBSCRIBE_REQUEST = "ENTITY_UNSUBSCRIBE_REQUEST",
-            ENTITY_UNSUBSCRIBE_RESPONSE = "ENTITY_UNSUBSCRIBE_RESPONSE",
+            ENTITY_CHANNEL_SUBSCRIBE_REQUEST = "ENTITY_CHANNEL_SUBSCRIBE_REQUEST",
+            ENTITY_CHANNEL_SUBSCRIBE_RESPONSE = "ENTITY_CHANNEL_SUBSCRIBE_RESPONSE",
+            ENTITY_CHANNEL_UNSUBSCRIBE_REQUEST = "ENTITY_CHANNEL_UNSUBSCRIBE_REQUEST",
+            ENTITY_CHANNEL_UNSUBSCRIBE_RESPONSE = "ENTITY_CHANNEL_UNSUBSCRIBE_RESPONSE",
             ENTITY_DELIVERY = "ENTITY_DELIVERY",
-            ENTITY_METADATA_SUBSCRIBE_REQUEST = "ENTITY_METADATA_SUBSCRIBE_REQUEST",
-            ENTITY_METADATA_SUBSCRIBE_RESPONSE = "ENTITY_METADATA_SUBSCRIBE_RESPONSE",
-            ENTITY_METADATA_UNSUBSCRIBE_REQUEST = "ENTITY_METADATA_UNSUBSCRIBE_REQUEST",
-            ENTITY_METADATA_UNSUBSCRIBE_RESPONSE = "ENTITY_METADATA_UNSUBSCRIBE_RESPONSE",
             ENTITY_METADATA_DELIVERY = "ENTITY_METADATA_DELIVERY",
         }
 
@@ -462,32 +460,40 @@ export namespace Communication {
             }
         }
 
-        export class EntitySubscribeRequestMessage implements BaseMessage {
-            public readonly type = MessageType.ENTITY_SUBSCRIBE_REQUEST;
+        export class EntityChannelSubscribeRequestMessage implements BaseMessage {
+            public readonly type = MessageType.ENTITY_CHANNEL_SUBSCRIBE_REQUEST;
             public readonly timestamp: number;
             public requestId: string;
             public errorMessage: string | null;
             public entityName: string;
+            public channel?: string | null;
 
-            constructor(data: { requestId: string; entityName: string }) {
+            constructor(data: {
+                requestId: string;
+                entityName: string;
+                channel?: string | null;
+            }) {
                 this.timestamp = Date.now();
                 this.requestId = data.requestId;
                 this.errorMessage = null;
                 this.entityName = data.entityName;
+                this.channel = data.channel;
             }
         }
 
-        export class EntitySubscribeResponseMessage implements BaseMessage {
-            public readonly type = MessageType.ENTITY_SUBSCRIBE_RESPONSE;
+        export class EntityChannelSubscribeResponseMessage implements BaseMessage {
+            public readonly type = MessageType.ENTITY_CHANNEL_SUBSCRIBE_RESPONSE;
             public readonly timestamp: number;
             public requestId: string;
             public errorMessage: string | null;
             public entityName: string;
+            public channel: string | null;
             public subscribed: boolean;
 
             constructor(data: {
                 requestId: string;
                 entityName: string;
+                channel?: string | null;
                 subscribed: boolean;
                 errorMessage?: string | null;
             }) {
@@ -495,36 +501,45 @@ export namespace Communication {
                 this.requestId = data.requestId;
                 this.errorMessage = data.errorMessage ?? null;
                 this.entityName = data.entityName;
+                this.channel = data.channel ?? null;
                 this.subscribed = data.subscribed;
             }
         }
 
-        export class EntityUnsubscribeRequestMessage implements BaseMessage {
-            public readonly type = MessageType.ENTITY_UNSUBSCRIBE_REQUEST;
+        export class EntityChannelUnsubscribeRequestMessage implements BaseMessage {
+            public readonly type = MessageType.ENTITY_CHANNEL_UNSUBSCRIBE_REQUEST;
             public readonly timestamp: number;
             public requestId: string;
             public errorMessage: string | null;
             public entityName: string;
+            public channel?: string | null;
 
-            constructor(data: { requestId: string; entityName: string }) {
+            constructor(data: {
+                requestId: string;
+                entityName: string;
+                channel?: string | null;
+            }) {
                 this.timestamp = Date.now();
                 this.requestId = data.requestId;
                 this.errorMessage = null;
                 this.entityName = data.entityName;
+                this.channel = data.channel;
             }
         }
 
-        export class EntityUnsubscribeResponseMessage implements BaseMessage {
-            public readonly type = MessageType.ENTITY_UNSUBSCRIBE_RESPONSE;
+        export class EntityChannelUnsubscribeResponseMessage implements BaseMessage {
+            public readonly type = MessageType.ENTITY_CHANNEL_UNSUBSCRIBE_RESPONSE;
             public readonly timestamp: number;
             public requestId: string;
             public errorMessage: string | null;
             public entityName: string;
+            public channel: string | null;
             public removed: boolean;
 
             constructor(data: {
                 requestId: string;
                 entityName: string;
+                channel?: string | null;
                 removed: boolean;
                 errorMessage?: string | null;
             }) {
@@ -532,6 +547,7 @@ export namespace Communication {
                 this.requestId = data.requestId;
                 this.errorMessage = data.errorMessage ?? null;
                 this.entityName = data.entityName;
+                this.channel = data.channel ?? null;
                 this.removed = data.removed;
             }
         }
@@ -544,12 +560,14 @@ export namespace Communication {
             public entityName: string;
             public operation: DatabaseOperation;
             public syncGroup: string;
+            public channel?: string | null;
             public data: unknown;
 
             constructor(data: {
                 entityName: string;
                 operation: DatabaseOperation;
                 syncGroup: string;
+                channel?: string | null;
                 payload: unknown;
             }) {
                 this.timestamp = Date.now();
@@ -558,113 +576,11 @@ export namespace Communication {
                 this.entityName = data.entityName;
                 this.operation = data.operation;
                 this.syncGroup = data.syncGroup;
+                this.channel = data.channel;
                 this.data = data.payload;
             }
         }
 
-        export class EntityMetadataSubscribeRequestMessage
-            implements BaseMessage
-        {
-            public readonly type =
-                MessageType.ENTITY_METADATA_SUBSCRIBE_REQUEST;
-            public readonly timestamp: number;
-            public requestId: string;
-            public errorMessage: string | null;
-            public entityName: string;
-            public metadataKey?: string;
-
-            constructor(data: {
-                requestId: string;
-                entityName: string;
-                metadataKey?: string;
-            }) {
-                this.timestamp = Date.now();
-                this.requestId = data.requestId;
-                this.errorMessage = null;
-                this.entityName = data.entityName;
-                this.metadataKey = data.metadataKey;
-            }
-        }
-
-        export class EntityMetadataSubscribeResponseMessage
-            implements BaseMessage
-        {
-            public readonly type =
-                MessageType.ENTITY_METADATA_SUBSCRIBE_RESPONSE;
-            public readonly timestamp: number;
-            public requestId: string;
-            public errorMessage: string | null;
-            public entityName: string;
-            public metadataKey: string | null;
-            public subscribed: boolean;
-
-            constructor(data: {
-                requestId: string;
-                entityName: string;
-                metadataKey?: string | null;
-                subscribed: boolean;
-                errorMessage?: string | null;
-            }) {
-                this.timestamp = Date.now();
-                this.requestId = data.requestId;
-                this.errorMessage = data.errorMessage ?? null;
-                this.entityName = data.entityName;
-                this.metadataKey = data.metadataKey ?? null;
-                this.subscribed = data.subscribed;
-            }
-        }
-
-        export class EntityMetadataUnsubscribeRequestMessage
-            implements BaseMessage
-        {
-            public readonly type =
-                MessageType.ENTITY_METADATA_UNSUBSCRIBE_REQUEST;
-            public readonly timestamp: number;
-            public requestId: string;
-            public errorMessage: string | null;
-            public entityName: string;
-            public metadataKey?: string;
-
-            constructor(data: {
-                requestId: string;
-                entityName: string;
-                metadataKey?: string;
-            }) {
-                this.timestamp = Date.now();
-                this.requestId = data.requestId;
-                this.errorMessage = null;
-                this.entityName = data.entityName;
-                this.metadataKey = data.metadataKey;
-            }
-        }
-
-        export class EntityMetadataUnsubscribeResponseMessage
-            implements BaseMessage
-        {
-            public readonly type =
-                MessageType.ENTITY_METADATA_UNSUBSCRIBE_RESPONSE;
-            public readonly timestamp: number;
-            public requestId: string;
-            public errorMessage: string | null;
-            public entityName: string;
-            public metadataKey: string | null;
-            public removed: boolean;
-
-            constructor(data: {
-                requestId: string;
-                entityName: string;
-                metadataKey?: string | null;
-                removed: boolean;
-                errorMessage?: string | null;
-            }) {
-                this.timestamp = Date.now();
-                this.requestId = data.requestId;
-                this.errorMessage = data.errorMessage ?? null;
-                this.entityName = data.entityName;
-                this.metadataKey = data.metadataKey ?? null;
-                this.removed = data.removed;
-            }
-        }
 
         export class EntityMetadataDeliveryMessage implements BaseMessage {
             public readonly type = MessageType.ENTITY_METADATA_DELIVERY;
@@ -675,6 +591,7 @@ export namespace Communication {
             public metadataKey: string;
             public operation: DatabaseOperation;
             public syncGroup: string;
+            public channel?: string | null;
             public data: unknown;
 
             constructor(data: {
@@ -682,6 +599,7 @@ export namespace Communication {
                 metadataKey: string;
                 operation: DatabaseOperation;
                 syncGroup: string;
+                channel?: string | null;
                 payload: unknown;
             }) {
                 this.timestamp = Date.now();
@@ -691,6 +609,7 @@ export namespace Communication {
                 this.metadataKey = data.metadataKey;
                 this.operation = data.operation;
                 this.syncGroup = data.syncGroup;
+                this.channel = data.channel;
                 this.data = data.payload;
             }
         }
@@ -704,15 +623,11 @@ export namespace Communication {
             | ReflectPublishRequestMessage
             | ReflectDeliveryMessage
             | ReflectAckResponseMessage
-            | EntitySubscribeRequestMessage
-            | EntitySubscribeResponseMessage
-            | EntityUnsubscribeRequestMessage
-            | EntityUnsubscribeResponseMessage
+            | EntityChannelSubscribeRequestMessage
+            | EntityChannelSubscribeResponseMessage
+            | EntityChannelUnsubscribeRequestMessage
+            | EntityChannelUnsubscribeResponseMessage
             | EntityDeliveryMessage
-            | EntityMetadataSubscribeRequestMessage
-            | EntityMetadataSubscribeResponseMessage
-            | EntityMetadataUnsubscribeRequestMessage
-            | EntityMetadataUnsubscribeResponseMessage
             | EntityMetadataDeliveryMessage;
 
         export function isMessageType<T extends Message>(
@@ -781,25 +696,29 @@ export namespace Communication {
             delivered: z.number(),
         });
 
-        const Z_EntitySubscribeRequest = Z_MessageBase.extend({
-            type: z.literal(MessageType.ENTITY_SUBSCRIBE_REQUEST),
+        const Z_EntityChannelSubscribeRequest = Z_MessageBase.extend({
+            type: z.literal(MessageType.ENTITY_CHANNEL_SUBSCRIBE_REQUEST),
             entityName: z.string().min(1),
+            channel: z.string().nullable().optional(),
         });
 
-        const Z_EntitySubscribeResponse = Z_MessageBase.extend({
-            type: z.literal(MessageType.ENTITY_SUBSCRIBE_RESPONSE),
+        const Z_EntityChannelSubscribeResponse = Z_MessageBase.extend({
+            type: z.literal(MessageType.ENTITY_CHANNEL_SUBSCRIBE_RESPONSE),
             entityName: z.string().min(1),
+            channel: z.string().nullable(),
             subscribed: z.boolean(),
         });
 
-        const Z_EntityUnsubscribeRequest = Z_MessageBase.extend({
-            type: z.literal(MessageType.ENTITY_UNSUBSCRIBE_REQUEST),
+        const Z_EntityChannelUnsubscribeRequest = Z_MessageBase.extend({
+            type: z.literal(MessageType.ENTITY_CHANNEL_UNSUBSCRIBE_REQUEST),
             entityName: z.string().min(1),
+            channel: z.string().nullable().optional(),
         });
 
-        const Z_EntityUnsubscribeResponse = Z_MessageBase.extend({
-            type: z.literal(MessageType.ENTITY_UNSUBSCRIBE_RESPONSE),
+        const Z_EntityChannelUnsubscribeResponse = Z_MessageBase.extend({
+            type: z.literal(MessageType.ENTITY_CHANNEL_UNSUBSCRIBE_RESPONSE),
             entityName: z.string().min(1),
+            channel: z.string().nullable(),
             removed: z.boolean(),
         });
 
@@ -808,33 +727,8 @@ export namespace Communication {
             entityName: z.string().min(1),
             operation: z.nativeEnum(DatabaseOperation),
             syncGroup: z.string(),
+            channel: z.string().nullable().optional(),
             data: z.unknown(),
-        });
-
-        const Z_EntityMetadataSubscribeRequest = Z_MessageBase.extend({
-            type: z.literal(MessageType.ENTITY_METADATA_SUBSCRIBE_REQUEST),
-            entityName: z.string().min(1),
-            metadataKey: z.string().optional(),
-        });
-
-        const Z_EntityMetadataSubscribeResponse = Z_MessageBase.extend({
-            type: z.literal(MessageType.ENTITY_METADATA_SUBSCRIBE_RESPONSE),
-            entityName: z.string().min(1),
-            metadataKey: z.string().nullable(),
-            subscribed: z.boolean(),
-        });
-
-        const Z_EntityMetadataUnsubscribeRequest = Z_MessageBase.extend({
-            type: z.literal(MessageType.ENTITY_METADATA_UNSUBSCRIBE_REQUEST),
-            entityName: z.string().min(1),
-            metadataKey: z.string().optional(),
-        });
-
-        const Z_EntityMetadataUnsubscribeResponse = Z_MessageBase.extend({
-            type: z.literal(MessageType.ENTITY_METADATA_UNSUBSCRIBE_RESPONSE),
-            entityName: z.string().min(1),
-            metadataKey: z.string().nullable(),
-            removed: z.boolean(),
         });
 
         const Z_EntityMetadataDelivery = Z_MessageBase.extend({
@@ -843,6 +737,7 @@ export namespace Communication {
             metadataKey: z.string().min(1),
             operation: z.nativeEnum(DatabaseOperation),
             syncGroup: z.string(),
+            channel: z.string().nullable().optional(),
             data: z.unknown(),
         });
 
@@ -856,17 +751,11 @@ export namespace Communication {
             ReflectPublishRequest: Z_ReflectPublishRequest,
             ReflectDelivery: Z_ReflectDelivery,
             ReflectAckResponse: Z_ReflectAckResponse,
-            EntitySubscribeRequest: Z_EntitySubscribeRequest,
-            EntitySubscribeResponse: Z_EntitySubscribeResponse,
-            EntityUnsubscribeRequest: Z_EntityUnsubscribeRequest,
-            EntityUnsubscribeResponse: Z_EntityUnsubscribeResponse,
+            EntityChannelSubscribeRequest: Z_EntityChannelSubscribeRequest,
+            EntityChannelSubscribeResponse: Z_EntityChannelSubscribeResponse,
+            EntityChannelUnsubscribeRequest: Z_EntityChannelUnsubscribeRequest,
+            EntityChannelUnsubscribeResponse: Z_EntityChannelUnsubscribeResponse,
             EntityDelivery: Z_EntityDelivery,
-            EntityMetadataSubscribeRequest: Z_EntityMetadataSubscribeRequest,
-            EntityMetadataSubscribeResponse: Z_EntityMetadataSubscribeResponse,
-            EntityMetadataUnsubscribeRequest:
-                Z_EntityMetadataUnsubscribeRequest,
-            EntityMetadataUnsubscribeResponse:
-                Z_EntityMetadataUnsubscribeResponse,
             EntityMetadataDelivery: Z_EntityMetadataDelivery,
             AnyMessage: z.discriminatedUnion("type", [
                 Z_GeneralErrorResponse,
@@ -877,15 +766,11 @@ export namespace Communication {
                 Z_ReflectPublishRequest,
                 Z_ReflectDelivery,
                 Z_ReflectAckResponse,
-                Z_EntitySubscribeRequest,
-                Z_EntitySubscribeResponse,
-                Z_EntityUnsubscribeRequest,
-                Z_EntityUnsubscribeResponse,
+                Z_EntityChannelSubscribeRequest,
+                Z_EntityChannelSubscribeResponse,
+                Z_EntityChannelUnsubscribeRequest,
+                Z_EntityChannelUnsubscribeResponse,
                 Z_EntityDelivery,
-                Z_EntityMetadataSubscribeRequest,
-                Z_EntityMetadataSubscribeResponse,
-                Z_EntityMetadataUnsubscribeRequest,
-                Z_EntityMetadataUnsubscribeResponse,
                 Z_EntityMetadataDelivery,
             ]),
         } as const;
@@ -2737,6 +2622,7 @@ export namespace Communication {
                 general__initialized_at: z.string().optional(),
                 general__initialized_by: z.string().optional(),
                 group__sync: z.string().min(1),
+                group__channel: z.string().nullable().optional(),
             });
 
             export const EntityMetadata = z.object({
@@ -2744,6 +2630,7 @@ export namespace Communication {
                 metadata__key: z.string().min(1),
                 metadata__value: z.unknown(),
                 group__sync: z.string().min(1),
+                group__channel: z.string().nullable().optional(),
                 general__created_at: z.string().optional(),
                 general__created_by: z.string().optional(),
                 general__updated_at: z.string().optional(),
