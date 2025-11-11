@@ -54,11 +54,11 @@ In our client, we have a composable that manages the environment assets. It leve
 
 To interact with the client, you simply query to the tables in the database using the `vircadiaWorld.client.Utilities.Connection.query` method.
 
-For example, to create an entity, you can do the following:
+For example, to create an entity, you can do the following (using upsert to handle race conditions):
 
 ```ts
 const result = await vircadiaWorld.client.Utilities.Connection.query({
-    query: "INSERT INTO entity.entities (general__entity_name, group__sync, general__expiry__delete_since_updated_at_ms) VALUES ($1, $2, $3) RETURNING general__entity_name",
+    query: "INSERT INTO entity.entities (general__entity_name, group__sync, general__expiry__delete_since_updated_at_ms) VALUES ($1, $2, $3) ON CONFLICT (general__entity_name) DO UPDATE SET general__expiry__delete_since_updated_at_ms = EXCLUDED.general__expiry__delete_since_updated_at_ms RETURNING general__entity_name",
     parameters: [
         entityName.value,
         "public.NORMAL",
