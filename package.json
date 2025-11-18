@@ -46,7 +46,8 @@
         "build": "bun run clean && bun run build:browser:vue",
         "pack": "cd package && npm pack ../",
         "clean": "rm -rf ./browser/dist",
-        "build:browser:vue": "tsc --build ./browser/tsconfig.browser.vue.json",
+        "build:browser:vue": "tsc --build ./browser/tsconfig.browser.vue.json && bun run copy:browser:assets",
+        "copy:browser:assets": "mkdir -p ./browser/dist/browser/src/toolkit/babylon-holographic-ui/font && cp -r ./browser/src/toolkit/babylon-holographic-ui/font/* ./browser/dist/browser/src/toolkit/babylon-holographic-ui/font/",
         "prepublishOnly": "bun run build"
     }
 }

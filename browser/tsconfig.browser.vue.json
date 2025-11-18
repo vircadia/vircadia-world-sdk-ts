@@ -8,8 +8,6 @@
         "lib": ["DOM", "ESNext"],
         "types": ["@types/node"]
     },
-    "include": ["src/**/*", "../schema/src/**/*"],
-    "files": [
-        "src/index.browser.vue.ts"
-    ]
+    "include": ["src/**/*", "../schema/src/**/*", "src/vite-env.d.ts"],
+    "files": ["src/index.browser.vue.ts"]
 }
