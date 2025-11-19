@@ -32,9 +32,12 @@ export namespace Entity {
         export interface I_Metadata {
             general__entity_name: string;
             metadata__key: string;
-            metadata__value: unknown;
-            group__sync: string;
-            group__channel?: string | null;
+            metadata__jsonb?: unknown;
+            metadata__text?: string;
+            metadata__int?: number;
+            metadata__float?: number;
+            metadata__bool?: boolean;
+            metadata__bytea?: string;
             general__created_at?: string;
             general__created_by?: string;
             general__updated_at?: string;
@@ -460,7 +463,9 @@ export namespace Communication {
             }
         }
 
-        export class EntityChannelSubscribeRequestMessage implements BaseMessage {
+        export class EntityChannelSubscribeRequestMessage
+            implements BaseMessage
+        {
             public readonly type = MessageType.ENTITY_CHANNEL_SUBSCRIBE_REQUEST;
             public readonly timestamp: number;
             public requestId: string;
@@ -481,8 +486,11 @@ export namespace Communication {
             }
         }
 
-        export class EntityChannelSubscribeResponseMessage implements BaseMessage {
-            public readonly type = MessageType.ENTITY_CHANNEL_SUBSCRIBE_RESPONSE;
+        export class EntityChannelSubscribeResponseMessage
+            implements BaseMessage
+        {
+            public readonly type =
+                MessageType.ENTITY_CHANNEL_SUBSCRIBE_RESPONSE;
             public readonly timestamp: number;
             public requestId: string;
             public errorMessage: string | null;
@@ -506,8 +514,11 @@ export namespace Communication {
             }
         }
 
-        export class EntityChannelUnsubscribeRequestMessage implements BaseMessage {
-            public readonly type = MessageType.ENTITY_CHANNEL_UNSUBSCRIBE_REQUEST;
+        export class EntityChannelUnsubscribeRequestMessage
+            implements BaseMessage
+        {
+            public readonly type =
+                MessageType.ENTITY_CHANNEL_UNSUBSCRIBE_REQUEST;
             public readonly timestamp: number;
             public requestId: string;
             public errorMessage: string | null;
@@ -527,8 +538,11 @@ export namespace Communication {
             }
         }
 
-        export class EntityChannelUnsubscribeResponseMessage implements BaseMessage {
-            public readonly type = MessageType.ENTITY_CHANNEL_UNSUBSCRIBE_RESPONSE;
+        export class EntityChannelUnsubscribeResponseMessage
+            implements BaseMessage
+        {
+            public readonly type =
+                MessageType.ENTITY_CHANNEL_UNSUBSCRIBE_RESPONSE;
             public readonly timestamp: number;
             public requestId: string;
             public errorMessage: string | null;
@@ -580,7 +594,6 @@ export namespace Communication {
                 this.data = data.payload;
             }
         }
-
 
         export class EntityMetadataDeliveryMessage implements BaseMessage {
             public readonly type = MessageType.ENTITY_METADATA_DELIVERY;
@@ -754,7 +767,8 @@ export namespace Communication {
             EntityChannelSubscribeRequest: Z_EntityChannelSubscribeRequest,
             EntityChannelSubscribeResponse: Z_EntityChannelSubscribeResponse,
             EntityChannelUnsubscribeRequest: Z_EntityChannelUnsubscribeRequest,
-            EntityChannelUnsubscribeResponse: Z_EntityChannelUnsubscribeResponse,
+            EntityChannelUnsubscribeResponse:
+                Z_EntityChannelUnsubscribeResponse,
             EntityDelivery: Z_EntityDelivery,
             EntityMetadataDelivery: Z_EntityMetadataDelivery,
             AnyMessage: z.discriminatedUnion("type", [
@@ -2625,27 +2639,65 @@ export namespace Communication {
                 group__channel: z.string().nullable().optional(),
             });
 
-            export const EntityMetadata = z.object({
-                general__entity_name: z.string().min(1),
-                metadata__key: z.string().min(1),
-                metadata__value: z.unknown(),
-                group__sync: z.string().min(1),
-                group__channel: z.string().nullable().optional(),
-                general__created_at: z.string().optional(),
-                general__created_by: z.string().optional(),
-                general__updated_at: z.string().optional(),
-                general__updated_by: z.string().optional(),
-                general__expiry__delete_since_updated_at_ms: z
-                    .number()
-                    .int()
-                    .nonnegative()
-                    .optional(),
-                general__expiry__delete_since_created_at_ms: z
-                    .number()
-                    .int()
-                    .nonnegative()
-                    .optional(),
-            });
+            export const EntityMetadata = z
+                .object({
+                    general__entity_name: z.string().min(1),
+                    metadata__key: z.string().min(1),
+                    metadata__jsonb: z.unknown().optional(),
+                    metadata__text: z.string().optional(),
+                    metadata__int: z.number().int().optional(),
+                    metadata__float: z.number().optional(),
+                    metadata__bool: z.boolean().optional(),
+                    metadata__bytea: z.string().optional(),
+                    general__created_at: z.string().optional(),
+                    general__created_by: z.string().optional(),
+                    general__updated_at: z.string().optional(),
+                    general__updated_by: z.string().optional(),
+                    general__expiry__delete_since_updated_at_ms: z
+                        .number()
+                        .int()
+                        .nonnegative()
+                        .optional(),
+                    general__expiry__delete_since_created_at_ms: z
+                        .number()
+                        .int()
+                        .nonnegative()
+                        .optional(),
+                })
+                .refine(
+                    (v) => {
+                        const present =
+                            (v.metadata__jsonb !== undefined &&
+                            v.metadata__jsonb !== null
+                                ? 1
+                                : 0) +
+                            (v.metadata__text !== undefined &&
+                            v.metadata__text !== null
+                                ? 1
+                                : 0) +
+                            (v.metadata__int !== undefined &&
+                            v.metadata__int !== null
+                                ? 1
+                                : 0) +
+                            (v.metadata__float !== undefined &&
+                            v.metadata__float !== null
+                                ? 1
+                                : 0) +
+                            (v.metadata__bool !== undefined &&
+                            v.metadata__bool !== null
+                                ? 1
+                                : 0) +
+                            (v.metadata__bytea !== undefined &&
+                            v.metadata__bytea !== null
+                                ? 1
+                                : 0);
+                        return present === 1;
+                    },
+                    {
+                        message:
+                            "Exactly one of metadata__jsonb, metadata__text, metadata__int, metadata__float, metadata__bool, metadata__bytea must be provided",
+                    },
+                );
 
             export const EntityAsset = z.object({
                 general__asset_file_name: z.string().min(1),
