@@ -1,6 +1,6 @@
 import { SQL } from "bun";
-import { BunLogModule } from "./vircadia.common.bun.log.module";
 import { serverConfiguration } from "../config/vircadia.server.config";
+import { BunLogModule } from "./vircadia.common.bun.log.module";
 
 export class BunPostgresClientModule {
     private static instance: BunPostgresClientModule | null = null;
@@ -136,6 +136,7 @@ export class BunPostgresClientModule {
             database: string;
             username: string;
             password: string;
+            publications?: string;
         };
     }): Promise<import("postgres").Sql> {
         try {
@@ -155,6 +156,7 @@ export class BunPostgresClientModule {
                     database: data.postgres.database,
                     username: data.postgres.username,
                     password: data.postgres.password,
+                    publications: data.postgres.publications,
                 });
 
                 await this.legacySuperSql`SELECT 1`;
@@ -341,12 +343,10 @@ export class BunPostgresClientModule {
             };
         };
     }> {
-        type SqlTagFunction = {
-            (
-                strings: TemplateStringsArray,
-                ...values: unknown[]
-            ): Promise<unknown>;
-        };
+        type SqlTagFunction = (
+            strings: TemplateStringsArray,
+            ...values: unknown[]
+        ) => Promise<unknown>;
 
         const collectStats = async (
             client: unknown,
