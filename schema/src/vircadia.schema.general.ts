@@ -32,6 +32,8 @@ export namespace Entity {
         export interface I_Metadata {
             general__entity_name: string;
             metadata__key: string;
+            ro__group__sync?: string;
+            ro__group__channel?: string | null;
             metadata__jsonb?: unknown;
             metadata__text?: string;
             metadata__int?: number;
@@ -2643,6 +2645,8 @@ export namespace Communication {
                 .object({
                     general__entity_name: z.string().min(1),
                     metadata__key: z.string().min(1),
+                    ro__group__sync: z.string().min(1).optional(),
+                    ro__group__channel: z.string().nullable().optional(),
                     metadata__jsonb: z.unknown().optional(),
                     metadata__text: z.string().optional(),
                     metadata__int: z.number().int().optional(),
