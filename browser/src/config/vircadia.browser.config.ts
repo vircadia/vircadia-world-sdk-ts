@@ -51,11 +51,11 @@ const clientBrowserEnvSchema = z.object({
 
     VRCA_CLIENT_WEB_BABYLON_JS_APP_URL: z
         .url()
-        .default("https://next-app.vircadia.com"),
+        .default("https://antares.vircadia.com"),
 
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_WS_URI: z
         .string()
-        .default("next-world.vircadia.com"),
+        .default("antares.vircadia.com"),
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_WS_URI_USING_SSL: z
         .union([
             z.boolean(),
@@ -69,7 +69,7 @@ const clientBrowserEnvSchema = z.object({
 
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_AUTH_URI: z
         .string()
-        .default("next-world.vircadia.com"),
+        .default("antares.vircadia.com"),
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_AUTH_URI_USING_SSL: z
         .union([
             z.boolean(),
@@ -83,7 +83,7 @@ const clientBrowserEnvSchema = z.object({
 
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_ASSET_URI: z
         .string()
-        .default("next-world.vircadia.com"),
+        .default("antares.vircadia.com"),
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_ASSET_URI_USING_SSL: z
         .union([
             z.boolean(),
@@ -97,7 +97,7 @@ const clientBrowserEnvSchema = z.object({
 
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_INFERENCE_URI: z
         .string()
-        .default("next-world.vircadia.com"),
+        .default("antares.vircadia.com"),
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_INFERENCE_URI_USING_SSL: z
         .union([
             z.boolean(),

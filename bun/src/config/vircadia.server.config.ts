@@ -23,6 +23,16 @@ const serverEnvSchema = z.object({
                 ),
         ])
         .default(false),
+    VRCA_SERVER_ALLOWED_ORIGINS: z.union([z.string(), z.array(z.string())])
+        .transform((val) =>
+            Array.isArray(val)
+                ? val
+                : val
+                      .split(",")
+                      .map((ext) => ext.trim())
+                      .filter((ext) => ext.length > 0),
+        )
+        .default(["antares.vircadia.com"]),
 
     // API WS manager
     VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_CONTAINER_NAME: z
@@ -35,7 +45,7 @@ const serverEnvSchema = z.object({
         z.coerce.number().default(3020),
     VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
         .string()
-        .default("next-world.vircadia.com"),
+        .default("antares.vircadia.com"),
     VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_PORT_PUBLIC_AVAILABLE_AT: z.coerce
         .number()
         .default(443),
@@ -80,7 +90,7 @@ const serverEnvSchema = z.object({
         z.coerce.number().default(3022),
     VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
         .string()
-        .default("next-world.vircadia.com"),
+        .default("antares.vircadia.com"),
     VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_PUBLIC_AVAILABLE_AT:
         z.coerce.number().default(443),
     VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT:
@@ -125,7 +135,7 @@ const serverEnvSchema = z.object({
         z.coerce.number().default(3023),
     VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
         .string()
-        .default("next-world.vircadia.com"),
+        .default("antares.vircadia.com"),
     VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_PUBLIC_AVAILABLE_AT:
         z.coerce.number().default(443),
     VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT:
@@ -176,7 +186,7 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_PORT_CONTAINER_BIND_EXTERNAL:
         z.coerce.number().default(3024),
     VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_HOST_PUBLIC_AVAILABLE_AT:
-        z.string().default("next-world.vircadia.com"),
+        z.string().default("antares.vircadia.com"),
     VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_PORT_PUBLIC_AVAILABLE_AT:
         z.coerce.number().default(443),
     VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT:
@@ -302,15 +312,11 @@ const serverEnvSchema = z.object({
     VRCA_SERVER_SERVICE_CADDY_PORT_CONTAINER_BIND_EXTERNAL_HTTPS: z.coerce
         .number()
         .default(443),
-    VRCA_SERVER_SERVICE_CADDY_DOMAIN_API: z
+    VRCA_SERVER_SERVICE_CADDY_DOMAIN: z
         .string()
-        .default("next-world.vircadia.com"),
-    VRCA_SERVER_SERVICE_CADDY_DOMAIN_APP: z
-        .string()
-        .default("next-app.vircadia.com"),
+        .default("antares.vircadia.com"),
     VRCA_SERVER_SERVICE_CADDY_EMAIL: z.string().default("hello@vircadia.com"),
     VRCA_SERVER_SERVICE_CADDY_TLS_API: z.string().optional(),
-    VRCA_SERVER_SERVICE_CADDY_TLS_APP: z.string().optional(),
 
     // Auth Providers - Azure Entra ID
     // TODO: Rename these to prefix with SERVER_SERVICE_ and so on.
