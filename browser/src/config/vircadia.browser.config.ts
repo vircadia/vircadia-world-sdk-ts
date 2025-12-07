@@ -69,6 +69,12 @@ const VRCA_CLIENT_WEB_BABYLON_JS_DEBUG = BooleanStringSchema.parse(
 const VRCA_CLIENT_WEB_BABYLON_JS_SUPPRESS = BooleanStringSchema.parse(
     getEnv("VRCA_CLIENT_WEB_BABYLON_JS_SUPPRESS"),
 );
+
+const VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_HOST = z
+    .string()
+    .default("antares.vircadia.com")
+    .parse(getEnv("VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_HOST"));
+
 const VRCA_CLIENT_WEB_BABYLON_JS_DEBUG_SESSION_TOKEN = z
     .string()
     .default("")
@@ -103,14 +109,9 @@ const VRCA_CLIENT_WEB_BABYLON_JS_META_FAVICON = z
     .default("/brand/favicon.svg")
     .parse(getEnv("VRCA_CLIENT_WEB_BABYLON_JS_META_FAVICON"));
 
-const VRCA_CLIENT_WEB_BABYLON_JS_APP_URL = z
-    .url()
-    .default("https://antares.vircadia.com")
-    .parse(getEnv("VRCA_CLIENT_WEB_BABYLON_JS_APP_URL"));
-
 const VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_WS_URI = z
     .string()
-    .default("antares.vircadia.com")
+    .default(VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_HOST)
     .parse(getEnv("VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_WS_URI"));
 const VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_WS_URI_USING_SSL =
     BooleanStringTrueSchema.parse(
@@ -121,7 +122,7 @@ const VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_WS_URI_USING_SSL =
 
 const VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_AUTH_URI = z
     .string()
-    .default("antares.vircadia.com")
+    .default(VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_HOST)
     .parse(
         getEnv("VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_AUTH_URI"),
     );
@@ -134,7 +135,7 @@ const VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_AUTH_URI_USING_SSL =
 
 const VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_ASSET_URI = z
     .string()
-    .default("antares.vircadia.com")
+    .default(VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_HOST)
     .parse(
         getEnv("VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_ASSET_URI"),
     );
@@ -147,7 +148,7 @@ const VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_ASSET_URI_USING_SSL =
 
 const VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_INFERENCE_URI = z
     .string()
-    .default("antares.vircadia.com")
+    .default(VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_HOST)
     .parse(
         getEnv(
             "VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_REST_INFERENCE_URI",
@@ -181,16 +182,24 @@ const VRCA_CLIENT_WEB_BABYLON_JS_DEV_PORT = z.coerce
 
 // User components directory (relative to ./src/user)
 // Example: "vircadia-world-seeds" will load from ./src/user/vircadia-world-seeds
-const VRCA_CLIENT_WEB_BABYLON_JS_USER_COMPONENTS_DIR = z
+const VRCA_CLIENT_WEB_BABYLON_JS_USER_COMPONENTS_PATH_RELATIVE = z
     .string()
-    .default("default")
-    .parse(getEnv("VRCA_CLIENT_WEB_BABYLON_JS_USER_COMPONENTS_DIR"));
+    .default("")
+    .parse(getEnv("VRCA_CLIENT_WEB_BABYLON_JS_USER_COMPONENTS_PATH_RELATIVE"));
+
+// User components directory (absolute path)
+// Example: "/Users/me/my-seeds" will load from that directory
+const VRCA_CLIENT_WEB_BABYLON_JS_USER_COMPONENTS_PATH_ABSOLUTE = z
+    .string()
+    .default("")
+    .parse(getEnv("VRCA_CLIENT_WEB_BABYLON_JS_USER_COMPONENTS_PATH_ABSOLUTE"));
 
 // Browser Client environment schema
 export const clientBrowserConfiguration = {
     // Web Babylon JS Client
     VRCA_CLIENT_WEB_BABYLON_JS_DEBUG,
     VRCA_CLIENT_WEB_BABYLON_JS_SUPPRESS,
+    VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_HOST,
     VRCA_CLIENT_WEB_BABYLON_JS_DEBUG_SESSION_TOKEN,
     VRCA_CLIENT_WEB_BABYLON_JS_DEBUG_SESSION_TOKEN_PROVIDER,
 
@@ -201,8 +210,6 @@ export const clientBrowserConfiguration = {
     VRCA_CLIENT_WEB_BABYLON_JS_META_OG_IMAGE,
     VRCA_CLIENT_WEB_BABYLON_JS_META_OG_TYPE,
     VRCA_CLIENT_WEB_BABYLON_JS_META_FAVICON,
-
-    VRCA_CLIENT_WEB_BABYLON_JS_APP_URL,
 
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_WS_URI,
     VRCA_CLIENT_WEB_BABYLON_JS_DEFAULT_WORLD_API_WS_URI_USING_SSL,
@@ -225,5 +232,8 @@ export const clientBrowserConfiguration = {
 
     // User components directory (relative to ./src/user)
     // Example: "vircadia-world-seeds" will load from ./src/user/vircadia-world-seeds
-    VRCA_CLIENT_WEB_BABYLON_JS_USER_COMPONENTS_DIR,
+    VRCA_CLIENT_WEB_BABYLON_JS_USER_COMPONENTS_PATH_RELATIVE,
+    // User components directory (absolute path)
+    // Example: "/Users/me/my-seeds" will load from that directory
+    VRCA_CLIENT_WEB_BABYLON_JS_USER_COMPONENTS_PATH_ABSOLUTE,
 };

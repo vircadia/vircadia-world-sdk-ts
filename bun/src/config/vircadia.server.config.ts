@@ -35,6 +35,12 @@ const VRCA_SERVER_DEBUG = BooleanStringSchema.parse(getEnv("VRCA_SERVER_DEBUG"))
 const VRCA_SERVER_SUPPRESS = BooleanStringSchema.parse(
     getEnv("VRCA_SERVER_SUPPRESS"),
 );
+
+const VRCA_SERVER_DEFAULT_HOST = z
+    .string()
+    .default("antares.vircadia.com")
+    .parse(getEnv("VRCA_SERVER_DEFAULT_HOST"));
+
 const VRCA_SERVER_ALLOWED_ORIGINS = z
     .union([z.string(), z.array(z.string())])
     .transform((val) =>
@@ -45,7 +51,7 @@ const VRCA_SERVER_ALLOWED_ORIGINS = z
                   .map((ext) => ext.trim())
                   .filter((ext) => ext.length > 0),
     )
-    .default(["antares.vircadia.com"])
+    .default([VRCA_SERVER_DEFAULT_HOST])
     .parse(getEnv("VRCA_SERVER_ALLOWED_ORIGINS"));
 
 // API WS manager
@@ -72,7 +78,7 @@ const VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_PORT_CONTAINER_BIND_EXTERNAL =
         );
 const VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_PUBLIC_AVAILABLE_AT = z
     .string()
-    .default("antares.vircadia.com")
+    .default(VRCA_SERVER_DEFAULT_HOST)
     .parse(
         getEnv(
             "VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_PUBLIC_AVAILABLE_AT",
@@ -130,7 +136,7 @@ const VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_CONTAINER_BIND_EXTERN
 const VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_PUBLIC_AVAILABLE_AT =
     z
         .string()
-        .default("antares.vircadia.com")
+        .default(VRCA_SERVER_DEFAULT_HOST)
         .parse(
             getEnv(
                 "VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_PUBLIC_AVAILABLE_AT",
@@ -188,7 +194,7 @@ const VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_CONTAINER_BIND_EXTER
 const VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_PUBLIC_AVAILABLE_AT =
     z
         .string()
-        .default("antares.vircadia.com")
+        .default(VRCA_SERVER_DEFAULT_HOST)
         .parse(
             getEnv(
                 "VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_PUBLIC_AVAILABLE_AT",
@@ -272,7 +278,7 @@ const VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_PORT_CONTAINER_BIND_E
 const VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_HOST_PUBLIC_AVAILABLE_AT =
     z
         .string()
-        .default("antares.vircadia.com")
+        .default(VRCA_SERVER_DEFAULT_HOST)
         .parse(
             getEnv(
                 "VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_HOST_PUBLIC_AVAILABLE_AT",
@@ -396,16 +402,16 @@ const VRCA_SERVER_SERVICE_CADDY_PORT_CONTAINER_BIND_EXTERNAL_HTTPS = z.coerce
     );
 const VRCA_SERVER_SERVICE_CADDY_DOMAIN = z
     .string()
-    .default("antares.vircadia.com")
+    .default(VRCA_SERVER_DEFAULT_HOST)
     .parse(getEnv("VRCA_SERVER_SERVICE_CADDY_DOMAIN"));
 const VRCA_SERVER_SERVICE_CADDY_EMAIL = z
     .string()
     .default("hello@vircadia.com")
     .parse(getEnv("VRCA_SERVER_SERVICE_CADDY_EMAIL"));
-const VRCA_SERVER_SERVICE_CADDY_TLS_API = z
+const VRCA_SERVER_SERVICE_CADDY_TLS_MODE = z
     .string()
     .optional()
-    .parse(getEnv("VRCA_SERVER_SERVICE_CADDY_TLS_API"));
+    .parse(getEnv("VRCA_SERVER_SERVICE_CADDY_TLS_MODE"));
 
 // Auth Providers - Azure Entra ID
 const VRCA_SERVER_AUTH_AZURE_CLIENT_ID = z
@@ -488,6 +494,7 @@ export const serverConfiguration = {
     VRCA_SERVER_CONTAINER_NAME,
     VRCA_SERVER_DEBUG,
     VRCA_SERVER_SUPPRESS,
+    VRCA_SERVER_DEFAULT_HOST,
     VRCA_SERVER_ALLOWED_ORIGINS,
 
     // API WS manager
@@ -562,7 +569,7 @@ export const serverConfiguration = {
     VRCA_SERVER_SERVICE_CADDY_PORT_CONTAINER_BIND_EXTERNAL_HTTPS,
     VRCA_SERVER_SERVICE_CADDY_DOMAIN,
     VRCA_SERVER_SERVICE_CADDY_EMAIL,
-    VRCA_SERVER_SERVICE_CADDY_TLS_API,
+    VRCA_SERVER_SERVICE_CADDY_TLS_MODE,
 
     // Auth Providers - Azure Entra ID
     VRCA_SERVER_AUTH_AZURE_CLIENT_ID,
