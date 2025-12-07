@@ -1,428 +1,589 @@
 import { z } from "zod";
 
-// Server environment schema
-const serverEnvSchema = z.object({
-    VRCA_SERVER_CONTAINER_NAME: z.string().default("vircadia_world_server"),
-    VRCA_SERVER_DEBUG: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
-    VRCA_SERVER_SUPPRESS: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
-    VRCA_SERVER_ALLOWED_ORIGINS: z.union([z.string(), z.array(z.string())])
-        .transform((val) =>
-            Array.isArray(val)
-                ? val
-                : val
-                      .split(",")
-                      .map((ext) => ext.trim())
-                      .filter((ext) => ext.length > 0),
-        )
-        .default(["antares.vircadia.com"]),
+const BooleanStringSchema = z
+    .union([
+        z.boolean(),
+        z.string().transform((val) => val === "1" || val.toLowerCase() === "true"),
+    ])
+    .default(false);
+
+const BooleanStringTrueSchema = z
+    .union([
+        z.boolean(),
+        z.string().transform((val) => val === "1" || val.toLowerCase() === "true"),
+    ])
+    .default(true);
+
+const CommaSeparatedStringArraySchema = z
+    .union([z.string(), z.array(z.string())])
+    .transform((val) =>
+        Array.isArray(val)
+            ? val
+            : val
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter((s) => s.length > 0),
+    );
+
+const getEnv = (key: string) => process.env[key];
+
+const VRCA_SERVER_CONTAINER_NAME = z
+    .string()
+    .default("vircadia_world_server")
+    .parse(getEnv("VRCA_SERVER_CONTAINER_NAME"));
+const VRCA_SERVER_DEBUG = BooleanStringSchema.parse(getEnv("VRCA_SERVER_DEBUG"));
+const VRCA_SERVER_SUPPRESS = BooleanStringSchema.parse(
+    getEnv("VRCA_SERVER_SUPPRESS"),
+);
+const VRCA_SERVER_ALLOWED_ORIGINS = z
+    .union([z.string(), z.array(z.string())])
+    .transform((val) =>
+        Array.isArray(val)
+            ? val
+            : val
+                  .split(",")
+                  .map((ext) => ext.trim())
+                  .filter((ext) => ext.length > 0),
+    )
+    .default(["antares.vircadia.com"])
+    .parse(getEnv("VRCA_SERVER_ALLOWED_ORIGINS"));
+
+// API WS manager
+const VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_CONTAINER_NAME = z
+    .string()
+    .default("vircadia_world_api_ws_manager")
+    .parse(getEnv("VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_CONTAINER_NAME"));
+const VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_CONTAINER_BIND_EXTERNAL = z
+    .string()
+    .default("0.0.0.0")
+    .parse(
+        getEnv(
+            "VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_CONTAINER_BIND_EXTERNAL",
+        ),
+    );
+const VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_PORT_CONTAINER_BIND_EXTERNAL =
+    z.coerce
+        .number()
+        .default(3020)
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_PORT_CONTAINER_BIND_EXTERNAL",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_PUBLIC_AVAILABLE_AT = z
+    .string()
+    .default("antares.vircadia.com")
+    .parse(
+        getEnv(
+            "VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_PUBLIC_AVAILABLE_AT",
+        ),
+    );
+const VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_PORT_PUBLIC_AVAILABLE_AT =
+    z.coerce
+        .number()
+        .default(443)
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_PORT_PUBLIC_AVAILABLE_AT",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT =
+    BooleanStringTrueSchema.parse(
+        getEnv(
+            "VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT",
+        ),
+    );
+const VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_DEBUG =
+    BooleanStringSchema.parse(
+        getEnv("VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_DEBUG"),
+    );
+const VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_SUPPRESS =
+    BooleanStringSchema.parse(
+        getEnv("VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_SUPPRESS"),
+    );
+
+// API REST auth manager
+const VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_CONTAINER_NAME = z
+    .string()
+    .default("vircadia_world_api_rest_auth_manager")
+    .parse(
+        getEnv("VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_CONTAINER_NAME"),
+    );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_CONTAINER_BIND_EXTERNAL =
+    z
+        .string()
+        .default("0.0.0.0")
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_CONTAINER_BIND_EXTERNAL",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_CONTAINER_BIND_EXTERNAL =
+    z.coerce
+        .number()
+        .default(3022)
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_CONTAINER_BIND_EXTERNAL",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_PUBLIC_AVAILABLE_AT =
+    z
+        .string()
+        .default("antares.vircadia.com")
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_PUBLIC_AVAILABLE_AT",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_PUBLIC_AVAILABLE_AT =
+    z.coerce
+        .number()
+        .default(443)
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_PUBLIC_AVAILABLE_AT",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT =
+    BooleanStringTrueSchema.parse(
+        getEnv(
+            "VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT",
+        ),
+    );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_DEBUG =
+    BooleanStringSchema.parse(
+        getEnv("VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_DEBUG"),
+    );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SUPPRESS =
+    BooleanStringSchema.parse(
+        getEnv("VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SUPPRESS"),
+    );
+
+// API REST asset manager
+const VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_CONTAINER_NAME = z
+    .string()
+    .default("vircadia_world_api_rest_asset_manager")
+    .parse(
+        getEnv("VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_CONTAINER_NAME"),
+    );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_CONTAINER_BIND_EXTERNAL =
+    z
+        .string()
+        .default("0.0.0.0")
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_CONTAINER_BIND_EXTERNAL",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_CONTAINER_BIND_EXTERNAL =
+    z.coerce
+        .number()
+        .default(3023)
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_CONTAINER_BIND_EXTERNAL",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_PUBLIC_AVAILABLE_AT =
+    z
+        .string()
+        .default("antares.vircadia.com")
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_PUBLIC_AVAILABLE_AT",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_PUBLIC_AVAILABLE_AT =
+    z.coerce
+        .number()
+        .default(443)
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_PUBLIC_AVAILABLE_AT",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT =
+    BooleanStringTrueSchema.parse(
+        getEnv(
+            "VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT",
+        ),
+    );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAINTENANCE_INTERVAL_MS =
+    z.coerce
+        .number()
+        .default(1000)
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAINTENANCE_INTERVAL_MS",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAX_BYTES =
+    z.coerce
+        .number()
+        .default(4096 * 1024 * 1024)
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAX_BYTES",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_DIR = z
+    .string()
+    .default("/cache")
+    .parse(
+        getEnv("VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_DIR"),
+    );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_DEBUG =
+    BooleanStringSchema.parse(
+        getEnv("VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_DEBUG"),
+    );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_SUPPRESS =
+    BooleanStringSchema.parse(
+        getEnv("VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_SUPPRESS"),
+    );
+
+// API REST inference manager
+const VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_CONTAINER_NAME = z
+    .string()
+    .default("vircadia_world_api_rest_inference_manager")
+    .parse(
+        getEnv(
+            "VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_CONTAINER_NAME",
+        ),
+    );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_HOST_CONTAINER_BIND_EXTERNAL =
+    z
+        .string()
+        .default("0.0.0.0")
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_HOST_CONTAINER_BIND_EXTERNAL",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_PORT_CONTAINER_BIND_EXTERNAL =
+    z.coerce
+        .number()
+        .default(3024)
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_PORT_CONTAINER_BIND_EXTERNAL",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_HOST_PUBLIC_AVAILABLE_AT =
+    z
+        .string()
+        .default("antares.vircadia.com")
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_HOST_PUBLIC_AVAILABLE_AT",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_PORT_PUBLIC_AVAILABLE_AT =
+    z.coerce
+        .number()
+        .default(443)
+        .parse(
+            getEnv(
+                "VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_PORT_PUBLIC_AVAILABLE_AT",
+            ),
+        );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT =
+    BooleanStringTrueSchema.parse(
+        getEnv(
+            "VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT",
+        ),
+    );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_DEBUG =
+    BooleanStringSchema.parse(
+        getEnv("VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_DEBUG"),
+    );
+const VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_SUPPRESS =
+    BooleanStringSchema.parse(
+        getEnv("VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_SUPPRESS"),
+    );
+
+// State manager
+const VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_CONTAINER_NAME = z
+    .string()
+    .default("vircadia_world_state_manager")
+    .parse(getEnv("VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_CONTAINER_NAME"));
+const VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_DEBUG = BooleanStringSchema.parse(
+    getEnv("VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_DEBUG"),
+);
+const VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_SUPPRESS =
+    BooleanStringSchema.parse(
+        getEnv("VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_SUPPRESS"),
+    );
+
+// Postgres
+const VRCA_SERVER_SERVICE_POSTGRES_CONTAINER_NAME = z
+    .string()
+    .default("vircadia_world_postgres")
+    .parse(getEnv("VRCA_SERVER_SERVICE_POSTGRES_CONTAINER_NAME"));
+const VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_BIND_EXTERNAL = z
+    .string()
+    .default("127.0.0.1")
+    .parse(getEnv("VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_BIND_EXTERNAL"));
+const VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_BIND_EXTERNAL = z.coerce
+    .number()
+    .default(5432)
+    .parse(getEnv("VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_BIND_EXTERNAL"));
+const VRCA_SERVER_SERVICE_POSTGRES_DATABASE = z
+    .string()
+    .default("vircadia_world_db")
+    .parse(getEnv("VRCA_SERVER_SERVICE_POSTGRES_DATABASE"));
+const VRCA_SERVER_SERVICE_POSTGRES_SUPER_USER_USERNAME = z
+    .string()
+    .default("vircadia")
+    .parse(getEnv("VRCA_SERVER_SERVICE_POSTGRES_SUPER_USER_USERNAME"));
+const VRCA_SERVER_SERVICE_POSTGRES_SUPER_USER_PASSWORD = z
+    .string()
+    .default("CHANGE_ME!")
+    .parse(getEnv("VRCA_SERVER_SERVICE_POSTGRES_SUPER_USER_PASSWORD"));
+const VRCA_SERVER_SERVICE_POSTGRES_SQL_ENV_PREFIX = z
+    .string()
+    .default("VRCA_SERVER")
+    .parse(getEnv("VRCA_SERVER_SERVICE_POSTGRES_SQL_ENV_PREFIX"));
+const VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_USER_USERNAME = z
+    .string()
+    .default("vircadia_agent_proxy")
+    .parse(getEnv("VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_USER_USERNAME"));
+const VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_USER_PASSWORD = z
+    .string()
+    .default("CHANGE_ME!")
+    .parse(getEnv("VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_USER_PASSWORD"));
+const VRCA_SERVER_SERVICE_POSTGRES_EXTENSIONS =
+    CommaSeparatedStringArraySchema.default([
+        "uuid-ossp",
+        "hstore",
+        "pgcrypto",
+    ]).parse(getEnv("VRCA_SERVER_SERVICE_POSTGRES_EXTENSIONS"));
+
+// PGWEB
+const VRCA_SERVER_SERVICE_PGWEB_CONTAINER_NAME = z
+    .string()
+    .default("vircadia_world_pgweb")
+    .parse(getEnv("VRCA_SERVER_SERVICE_PGWEB_CONTAINER_NAME"));
+const VRCA_SERVER_SERVICE_PGWEB_HOST_CONTAINER_BIND_EXTERNAL = z
+    .string()
+    .default("127.0.0.1")
+    .parse(getEnv("VRCA_SERVER_SERVICE_PGWEB_HOST_CONTAINER_BIND_EXTERNAL"));
+const VRCA_SERVER_SERVICE_PGWEB_PORT_CONTAINER_BIND_EXTERNAL = z.coerce
+    .number()
+    .default(5437)
+    .parse(getEnv("VRCA_SERVER_SERVICE_PGWEB_PORT_CONTAINER_BIND_EXTERNAL"));
+
+// Caddy reverse proxy
+const VRCA_SERVER_SERVICE_CADDY_CONTAINER_NAME = z
+    .string()
+    .default("vircadia_world_caddy")
+    .parse(getEnv("VRCA_SERVER_SERVICE_CADDY_CONTAINER_NAME"));
+const VRCA_SERVER_SERVICE_CADDY_HOST_CONTAINER_BIND_EXTERNAL = z
+    .string()
+    .default("0.0.0.0")
+    .parse(getEnv("VRCA_SERVER_SERVICE_CADDY_HOST_CONTAINER_BIND_EXTERNAL"));
+const VRCA_SERVER_SERVICE_CADDY_PORT_CONTAINER_BIND_EXTERNAL_HTTP = z.coerce
+    .number()
+    .default(80)
+    .parse(
+        getEnv("VRCA_SERVER_SERVICE_CADDY_PORT_CONTAINER_BIND_EXTERNAL_HTTP"),
+    );
+const VRCA_SERVER_SERVICE_CADDY_PORT_CONTAINER_BIND_EXTERNAL_HTTPS = z.coerce
+    .number()
+    .default(443)
+    .parse(
+        getEnv("VRCA_SERVER_SERVICE_CADDY_PORT_CONTAINER_BIND_EXTERNAL_HTTPS"),
+    );
+const VRCA_SERVER_SERVICE_CADDY_DOMAIN = z
+    .string()
+    .default("antares.vircadia.com")
+    .parse(getEnv("VRCA_SERVER_SERVICE_CADDY_DOMAIN"));
+const VRCA_SERVER_SERVICE_CADDY_EMAIL = z
+    .string()
+    .default("hello@vircadia.com")
+    .parse(getEnv("VRCA_SERVER_SERVICE_CADDY_EMAIL"));
+const VRCA_SERVER_SERVICE_CADDY_TLS_API = z
+    .string()
+    .optional()
+    .parse(getEnv("VRCA_SERVER_SERVICE_CADDY_TLS_API"));
+
+// Auth Providers - Azure Entra ID
+const VRCA_SERVER_AUTH_AZURE_CLIENT_ID = z
+    .string()
+    .default("")
+    .parse(getEnv("VRCA_SERVER_AUTH_AZURE_CLIENT_ID"));
+const VRCA_SERVER_AUTH_AZURE_CLIENT_SECRET = z
+    .string()
+    .default("")
+    .parse(getEnv("VRCA_SERVER_AUTH_AZURE_CLIENT_SECRET"));
+const VRCA_SERVER_AUTH_AZURE_TENANT_ID = z
+    .string()
+    .default("common")
+    .parse(getEnv("VRCA_SERVER_AUTH_AZURE_TENANT_ID"));
+const VRCA_SERVER_AUTH_AZURE_JWT_SECRET = z
+    .string()
+    .default("CHANGE_ME_TO_SECURE_SECRET_KEY")
+    .parse(getEnv("VRCA_SERVER_AUTH_AZURE_JWT_SECRET"));
+const VRCA_SERVER_AUTH_AZURE_SCOPES = CommaSeparatedStringArraySchema.default([
+    "openid",
+    "profile",
+    "email",
+    "User.Read",
+]).parse(getEnv("VRCA_SERVER_AUTH_AZURE_SCOPES"));
+
+const VRCA_SERVER_AUTH_AZURE_ENABLED = BooleanStringSchema.parse(
+    getEnv("VRCA_SERVER_AUTH_AZURE_ENABLED"),
+);
+const VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_READ =
+    CommaSeparatedStringArraySchema.default([]).parse(
+        getEnv("VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_READ"),
+    );
+const VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_INSERT =
+    CommaSeparatedStringArraySchema.default([]).parse(
+        getEnv("VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_INSERT"),
+    );
+const VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_UPDATE =
+    CommaSeparatedStringArraySchema.default([]).parse(
+        getEnv("VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_UPDATE"),
+    );
+const VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_DELETE =
+    CommaSeparatedStringArraySchema.default([]).parse(
+        getEnv("VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_DELETE"),
+    );
+
+const VRCA_SERVER_AUTH_AZURE_REDIRECT_URIS =
+    CommaSeparatedStringArraySchema.default([]).parse(
+        getEnv("VRCA_SERVER_AUTH_AZURE_REDIRECT_URIS"),
+    );
+
+// Inference Providers - Cerebras
+const VRCA_SERVER_SERVICE_INFERENCE_CEREBRAS_API_KEY = z
+    .string()
+    .default("")
+    .parse(getEnv("VRCA_SERVER_SERVICE_INFERENCE_CEREBRAS_API_KEY"));
+const VRCA_SERVER_SERVICE_INFERENCE_CEREBRAS_MODEL = z
+    .string()
+    .default("gpt-oss-120b")
+    .parse(getEnv("VRCA_SERVER_SERVICE_INFERENCE_CEREBRAS_MODEL"));
+
+// Inference Providers - Groq
+const VRCA_SERVER_SERVICE_INFERENCE_GROQ_API_KEY = z
+    .string()
+    .default("")
+    .parse(getEnv("VRCA_SERVER_SERVICE_INFERENCE_GROQ_API_KEY"));
+const VRCA_SERVER_SERVICE_INFERENCE_GROQ_STT_MODEL = z
+    .string()
+    .default("whisper-large-v3")
+    .parse(getEnv("VRCA_SERVER_SERVICE_INFERENCE_GROQ_STT_MODEL"));
+const VRCA_SERVER_SERVICE_INFERENCE_GROQ_TTS_MODEL = z
+    .string()
+    .default("playai-tts")
+    .parse(getEnv("VRCA_SERVER_SERVICE_INFERENCE_GROQ_TTS_MODEL"));
+const VRCA_SERVER_SERVICE_INFERENCE_GROQ_TTS_VOICE = z
+    .string()
+    .default("Arista-PlayAI")
+    .parse(getEnv("VRCA_SERVER_SERVICE_INFERENCE_GROQ_TTS_VOICE"));
+
+export const serverConfiguration = {
+    VRCA_SERVER_CONTAINER_NAME,
+    VRCA_SERVER_DEBUG,
+    VRCA_SERVER_SUPPRESS,
+    VRCA_SERVER_ALLOWED_ORIGINS,
 
     // API WS manager
-    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_CONTAINER_NAME: z
-        .string()
-        .default("vircadia_world_api_ws_manager"),
-    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_CONTAINER_BIND_EXTERNAL: z
-        .string()
-        .default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_PORT_CONTAINER_BIND_EXTERNAL:
-        z.coerce.number().default(3020),
-    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
-        .string()
-        .default("antares.vircadia.com"),
-    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_PORT_PUBLIC_AVAILABLE_AT: z.coerce
-        .number()
-        .default(443),
-    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(true),
-    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_DEBUG: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
-    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_SUPPRESS: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_CONTAINER_NAME,
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_CONTAINER_BIND_EXTERNAL,
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_PORT_CONTAINER_BIND_EXTERNAL,
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_HOST_PUBLIC_AVAILABLE_AT,
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_PORT_PUBLIC_AVAILABLE_AT,
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT,
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_DEBUG,
+    VRCA_SERVER_SERVICE_WORLD_API_WS_MANAGER_SUPPRESS,
 
     // API REST auth manager
-    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_CONTAINER_NAME: z
-        .string()
-        .default("vircadia_world_api_rest_auth_manager"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_CONTAINER_BIND_EXTERNAL:
-        z.string().default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_CONTAINER_BIND_EXTERNAL:
-        z.coerce.number().default(3022),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
-        .string()
-        .default("antares.vircadia.com"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_PUBLIC_AVAILABLE_AT:
-        z.coerce.number().default(443),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT:
-        z
-            .union([
-                z.boolean(),
-                z
-                    .string()
-                    .transform(
-                        (val) => val === "1" || val.toLowerCase() === "true",
-                    ),
-            ])
-            .default(true),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_DEBUG: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SUPPRESS: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_CONTAINER_NAME,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_CONTAINER_BIND_EXTERNAL,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_CONTAINER_BIND_EXTERNAL,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_HOST_PUBLIC_AVAILABLE_AT,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_PORT_PUBLIC_AVAILABLE_AT,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_DEBUG,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_AUTH_MANAGER_SUPPRESS,
 
     // API REST asset manager
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_CONTAINER_NAME: z
-        .string()
-        .default("vircadia_world_api_rest_asset_manager"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_CONTAINER_BIND_EXTERNAL:
-        z.string().default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_CONTAINER_BIND_EXTERNAL:
-        z.coerce.number().default(3023),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_PUBLIC_AVAILABLE_AT: z
-        .string()
-        .default("antares.vircadia.com"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_PUBLIC_AVAILABLE_AT:
-        z.coerce.number().default(443),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT:
-        z
-            .union([
-                z.boolean(),
-                z
-                    .string()
-                    .transform(
-                        (val) => val === "1" || val.toLowerCase() === "true",
-                    ),
-            ])
-            .default(true),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAINTENANCE_INTERVAL_MS:
-        z.coerce.number().default(1000),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAX_BYTES:
-        z.coerce.number().default(4096 * 1024 * 1024),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_DIR: z
-        .string()
-        .default("/cache"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_DEBUG: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_SUPPRESS: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_CONTAINER_NAME,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_CONTAINER_BIND_EXTERNAL,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_CONTAINER_BIND_EXTERNAL,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_HOST_PUBLIC_AVAILABLE_AT,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_PORT_PUBLIC_AVAILABLE_AT,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAINTENANCE_INTERVAL_MS,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_MAX_BYTES,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_ASSET_CACHE_DIR,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_DEBUG,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_ASSET_MANAGER_SUPPRESS,
 
     // API REST inference manager
-    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_CONTAINER_NAME: z
-        .string()
-        .default("vircadia_world_api_rest_inference_manager"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_HOST_CONTAINER_BIND_EXTERNAL:
-        z.string().default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_PORT_CONTAINER_BIND_EXTERNAL:
-        z.coerce.number().default(3024),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_HOST_PUBLIC_AVAILABLE_AT:
-        z.string().default("antares.vircadia.com"),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_PORT_PUBLIC_AVAILABLE_AT:
-        z.coerce.number().default(443),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT:
-        z
-            .union([
-                z.boolean(),
-                z
-                    .string()
-                    .transform(
-                        (val) => val === "1" || val.toLowerCase() === "true",
-                    ),
-            ])
-            .default(true),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_DEBUG: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
-    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_SUPPRESS: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_CONTAINER_NAME,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_HOST_CONTAINER_BIND_EXTERNAL,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_PORT_CONTAINER_BIND_EXTERNAL,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_HOST_PUBLIC_AVAILABLE_AT,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_PORT_PUBLIC_AVAILABLE_AT,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_SSL_ENABLED_PUBLIC_AVAILABLE_AT,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_DEBUG,
+    VRCA_SERVER_SERVICE_WORLD_API_REST_INFERENCE_MANAGER_SUPPRESS,
 
     // State manager
-    VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_CONTAINER_NAME: z
-        .string()
-        .default("vircadia_world_state_manager"),
-    VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_DEBUG: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
-    VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_SUPPRESS: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
-
-
+    VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_CONTAINER_NAME,
+    VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_DEBUG,
+    VRCA_SERVER_SERVICE_WORLD_STATE_MANAGER_SUPPRESS,
 
     // Postgres
-    VRCA_SERVER_SERVICE_POSTGRES_CONTAINER_NAME: z
-        .string()
-        .default("vircadia_world_postgres"),
-    VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_BIND_EXTERNAL: z
-        .string()
-        .default("127.0.0.1"),
-    VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
-        .number()
-        .default(5432),
-    VRCA_SERVER_SERVICE_POSTGRES_DATABASE: z
-        .string()
-        .default("vircadia_world_db"),
-    VRCA_SERVER_SERVICE_POSTGRES_SUPER_USER_USERNAME: z
-        .string()
-        .default("vircadia"),
-    VRCA_SERVER_SERVICE_POSTGRES_SUPER_USER_PASSWORD: z
-        .string()
-        .default("CHANGE_ME!"),
-    VRCA_SERVER_SERVICE_POSTGRES_SQL_ENV_PREFIX: z
-        .string()
-        .default("VRCA_SERVER"),
-    VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_USER_USERNAME: z
-        .string()
-        .default("vircadia_agent_proxy"),
-    VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_USER_PASSWORD: z
-        .string()
-        .default("CHANGE_ME!"),
-    VRCA_SERVER_SERVICE_POSTGRES_EXTENSIONS: z
-        .union([z.string(), z.array(z.string())])
-        .transform((val) =>
-            Array.isArray(val)
-                ? val
-                : val
-                      .split(",")
-                      .map((ext) => ext.trim())
-                      .filter((ext) => ext.length > 0),
-        )
-        .default(["uuid-ossp", "hstore", "pgcrypto"]),
+    VRCA_SERVER_SERVICE_POSTGRES_CONTAINER_NAME,
+    VRCA_SERVER_SERVICE_POSTGRES_HOST_CONTAINER_BIND_EXTERNAL,
+    VRCA_SERVER_SERVICE_POSTGRES_PORT_CONTAINER_BIND_EXTERNAL,
+    VRCA_SERVER_SERVICE_POSTGRES_DATABASE,
+    VRCA_SERVER_SERVICE_POSTGRES_SUPER_USER_USERNAME,
+    VRCA_SERVER_SERVICE_POSTGRES_SUPER_USER_PASSWORD,
+    VRCA_SERVER_SERVICE_POSTGRES_SQL_ENV_PREFIX,
+    VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_USER_USERNAME,
+    VRCA_SERVER_SERVICE_POSTGRES_AGENT_PROXY_USER_PASSWORD,
+    VRCA_SERVER_SERVICE_POSTGRES_EXTENSIONS,
 
     // PGWEB
-    VRCA_SERVER_SERVICE_PGWEB_CONTAINER_NAME: z
-        .string()
-        .default("vircadia_world_pgweb"),
-    VRCA_SERVER_SERVICE_PGWEB_HOST_CONTAINER_BIND_EXTERNAL: z
-        .string()
-        .default("127.0.0.1"),
-    VRCA_SERVER_SERVICE_PGWEB_PORT_CONTAINER_BIND_EXTERNAL: z.coerce
-        .number()
-        .default(5437),
+    VRCA_SERVER_SERVICE_PGWEB_CONTAINER_NAME,
+    VRCA_SERVER_SERVICE_PGWEB_HOST_CONTAINER_BIND_EXTERNAL,
+    VRCA_SERVER_SERVICE_PGWEB_PORT_CONTAINER_BIND_EXTERNAL,
 
     // Caddy reverse proxy
-    VRCA_SERVER_SERVICE_CADDY_CONTAINER_NAME: z
-        .string()
-        .default("vircadia_world_caddy"),
-    VRCA_SERVER_SERVICE_CADDY_HOST_CONTAINER_BIND_EXTERNAL: z
-        .string()
-        .default("0.0.0.0"),
-    VRCA_SERVER_SERVICE_CADDY_PORT_CONTAINER_BIND_EXTERNAL_HTTP: z.coerce
-        .number()
-        .default(80),
-    VRCA_SERVER_SERVICE_CADDY_PORT_CONTAINER_BIND_EXTERNAL_HTTPS: z.coerce
-        .number()
-        .default(443),
-    VRCA_SERVER_SERVICE_CADDY_DOMAIN: z
-        .string()
-        .default("antares.vircadia.com"),
-    VRCA_SERVER_SERVICE_CADDY_EMAIL: z.string().default("hello@vircadia.com"),
-    VRCA_SERVER_SERVICE_CADDY_TLS_API: z.string().optional(),
+    VRCA_SERVER_SERVICE_CADDY_CONTAINER_NAME,
+    VRCA_SERVER_SERVICE_CADDY_HOST_CONTAINER_BIND_EXTERNAL,
+    VRCA_SERVER_SERVICE_CADDY_PORT_CONTAINER_BIND_EXTERNAL_HTTP,
+    VRCA_SERVER_SERVICE_CADDY_PORT_CONTAINER_BIND_EXTERNAL_HTTPS,
+    VRCA_SERVER_SERVICE_CADDY_DOMAIN,
+    VRCA_SERVER_SERVICE_CADDY_EMAIL,
+    VRCA_SERVER_SERVICE_CADDY_TLS_API,
 
     // Auth Providers - Azure Entra ID
-    // TODO: Rename these to prefix with SERVER_SERVICE_ and so on.
-    VRCA_SERVER_AUTH_AZURE_CLIENT_ID: z.string().default(""),
-    VRCA_SERVER_AUTH_AZURE_CLIENT_SECRET: z.string().default(""),
-    VRCA_SERVER_AUTH_AZURE_TENANT_ID: z.string().default("common"),
-    VRCA_SERVER_AUTH_AZURE_JWT_SECRET: z
-        .string()
-        .default("CHANGE_ME_TO_SECURE_SECRET_KEY"),
-    VRCA_SERVER_AUTH_AZURE_SCOPES: z
-        .union([z.string(), z.array(z.string())])
-        .transform((val) =>
-            Array.isArray(val)
-                ? val
-                : val
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter((s) => s.length > 0),
-        )
-        .default(["openid", "profile", "email", "User.Read"]),
-
-    VRCA_SERVER_AUTH_AZURE_ENABLED: z
-        .union([
-            z.boolean(),
-            z
-                .string()
-                .transform(
-                    (val) => val === "1" || val.toLowerCase() === "true",
-                ),
-        ])
-        .default(false),
-    VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_READ: z
-        .union([z.string(), z.array(z.string())])
-        .transform((val) =>
-            Array.isArray(val)
-                ? val
-                : val
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter((s) => s.length > 0),
-        )
-        .default([]),
-    VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_INSERT: z
-        .union([z.string(), z.array(z.string())])
-        .transform((val) =>
-            Array.isArray(val)
-                ? val
-                : val
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter((s) => s.length > 0),
-        )
-        .default([]),
-    VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_UPDATE: z
-        .union([z.string(), z.array(z.string())])
-        .transform((val) =>
-            Array.isArray(val)
-                ? val
-                : val
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter((s) => s.length > 0),
-        )
-        .default([]),
-    VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_DELETE: z
-        .union([z.string(), z.array(z.string())])
-        .transform((val) =>
-            Array.isArray(val)
-                ? val
-                : val
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter((s) => s.length > 0),
-        )
-        .default([]),
-
-    VRCA_SERVER_AUTH_AZURE_REDIRECT_URIS: z
-        .union([z.string(), z.array(z.string())])
-        .transform((val) =>
-            Array.isArray(val)
-                ? val
-                : val
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter((s) => s.length > 0),
-        )
-        .default([]),
+    VRCA_SERVER_AUTH_AZURE_CLIENT_ID,
+    VRCA_SERVER_AUTH_AZURE_CLIENT_SECRET,
+    VRCA_SERVER_AUTH_AZURE_TENANT_ID,
+    VRCA_SERVER_AUTH_AZURE_JWT_SECRET,
+    VRCA_SERVER_AUTH_AZURE_SCOPES,
+    VRCA_SERVER_AUTH_AZURE_ENABLED,
+    VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_READ,
+    VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_INSERT,
+    VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_UPDATE,
+    VRCA_SERVER_AUTH_AZURE_DEFAULT_PERMISSIONS_CAN_DELETE,
+    VRCA_SERVER_AUTH_AZURE_REDIRECT_URIS,
 
     // Inference Providers - Cerebras
-    VRCA_SERVER_SERVICE_INFERENCE_CEREBRAS_API_KEY: z.string().default(""),
-    VRCA_SERVER_SERVICE_INFERENCE_CEREBRAS_MODEL: z
-        .string()
-        .default("gpt-oss-120b"),
+    VRCA_SERVER_SERVICE_INFERENCE_CEREBRAS_API_KEY,
+    VRCA_SERVER_SERVICE_INFERENCE_CEREBRAS_MODEL,
 
     // Inference Providers - Groq
-    VRCA_SERVER_SERVICE_INFERENCE_GROQ_API_KEY: z.string().default(""),
-    VRCA_SERVER_SERVICE_INFERENCE_GROQ_STT_MODEL: z
-        .string()
-        .default("whisper-large-v3"),
-    VRCA_SERVER_SERVICE_INFERENCE_GROQ_TTS_MODEL: z
-        .string()
-        .default("playai-tts"),
-    VRCA_SERVER_SERVICE_INFERENCE_GROQ_TTS_VOICE: z
-        .string()
-        .default("Arista-PlayAI"),
-});
-
-// Parse server environment variables
-export const serverConfiguration = serverEnvSchema.parse(process.env);
+    VRCA_SERVER_SERVICE_INFERENCE_GROQ_API_KEY,
+    VRCA_SERVER_SERVICE_INFERENCE_GROQ_STT_MODEL,
+    VRCA_SERVER_SERVICE_INFERENCE_GROQ_TTS_MODEL,
+    VRCA_SERVER_SERVICE_INFERENCE_GROQ_TTS_VOICE,
+};
