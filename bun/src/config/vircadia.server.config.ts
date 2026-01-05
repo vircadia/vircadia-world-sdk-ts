@@ -483,11 +483,11 @@ const VRCA_SERVER_SERVICE_INFERENCE_GROQ_STT_MODEL = z
     .parse(getEnv("VRCA_SERVER_SERVICE_INFERENCE_GROQ_STT_MODEL"));
 const VRCA_SERVER_SERVICE_INFERENCE_GROQ_TTS_MODEL = z
     .string()
-    .default("playai-tts")
+    .default("canopylabs/orpheus-v1-english")
     .parse(getEnv("VRCA_SERVER_SERVICE_INFERENCE_GROQ_TTS_MODEL"));
 const VRCA_SERVER_SERVICE_INFERENCE_GROQ_TTS_VOICE = z
     .string()
-    .default("Arista-PlayAI")
+    .default("autumn")
     .parse(getEnv("VRCA_SERVER_SERVICE_INFERENCE_GROQ_TTS_VOICE"));
 
 export const serverConfiguration = {
