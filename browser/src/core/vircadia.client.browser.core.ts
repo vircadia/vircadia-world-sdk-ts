@@ -212,25 +212,65 @@ export class WsConnectionCore {
         }
     }
 
+    private connectingAuth: { token: string; provider: string } | null = null;
+
     async connect(options?: {
         timeoutMs?: number;
     }): Promise<WsConnectionCoreInfo> {
+        // Capture current credentials for this attempt
+        const currentAuth = {
+            token: this.config.authToken,
+            provider: this.config.authProvider,
+        };
+
+        // If we are already connected...
         if (this.isClientConnected()) {
+            // ...but the token/provider has changed meaningfully, we might need to reconnect.
+            // For now, the existing logic just returns existing info.
+            // A clearer "reconnect" flow would be separate, but let's at least enforce that
+            // if we are *connecting* (below), we respect the new credentials.
             debugLog(
                 this.config,
                 "Already connected to WebSocket server, returning connection info",
             );
             return this.getConnectionInfo();
         }
+
+        // If a connection is already in progress...
         if (this.connectionPromise && this.isConnecting()) {
-            debugLog(
-                this.config,
-                "Already connecting to WebSocket server, returning connection promise",
-            );
-            return this.connectionPromise;
+            // ...check if the credentials have changed since it started.
+            const authChanged =
+                this.connectingAuth &&
+                (this.connectingAuth.token !== currentAuth.token ||
+                    this.connectingAuth.provider !== currentAuth.provider);
+
+            if (authChanged) {
+                debugLog(
+                    this.config,
+                    "Auth credentials changed during connection attempt. Restarting connection...",
+                    {
+                        old: this.connectingAuth,
+                        new: currentAuth,
+                    },
+                );
+                // Cancel existing attempt (will reject the old promise)
+                this.disconnect();
+                // Fall through to start a NEW connection below
+            } else {
+                debugLog(
+                    this.config,
+                    "Already connecting to WebSocket server with same credentials, returning connection promise",
+                );
+                return this.connectionPromise;
+            }
         }
 
-        this.connectionPromise = (async () => {
+        // Start a new connection attempt
+        this.connectingAuth = currentAuth;
+
+        let currentPromise: Promise<WsConnectionCoreInfo>;
+
+        const promiseExecution = async () => {
             try {
                 this.updateConnectionStatus("connecting");
 
@@ -355,10 +395,17 @@ export class WsConnectionCore {
             } catch (error) {
                 throw error;
             } finally {
-                this.connectionPromise = null;
+                // Only clear the promise if IT IS THIS PROMISE that is finishing.
+                // If we restarted, connectionPromise might already be a different new one.
+                if (this.connectionPromise === currentPromise) {
+                    this.connectionPromise = null;
+                    this.connectingAuth = null;
+                }
             }
-        })();
+        };
 
+        currentPromise = promiseExecution();
+        this.connectionPromise = currentPromise;
         return this.connectionPromise;
     }
 
