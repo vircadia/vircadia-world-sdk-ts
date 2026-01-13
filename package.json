@@ -29,6 +29,7 @@
         "jsonwebtoken": "catalog:",
         "lodash-es": "catalog:utils",
         "postgres": "catalog:",
+        "rimraf": "catalog:cli",
         "tmp": "catalog:utils",
         "typescript": "catalog:",
         "vue": "catalog:vue",
@@ -45,7 +46,7 @@
     "scripts": {
         "build": "bun run clean && bun run build:browser:vue",
         "pack": "cd package && npm pack ../",
-        "clean": "rm -rf ./browser/dist",
+        "clean": "rimraf ./browser/dist",
         "build:browser:vue": "tsc --build ./browser/tsconfig.browser.vue.json",
         "prepublishOnly": "bun run build"
     }
