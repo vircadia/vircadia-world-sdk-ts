@@ -248,7 +248,6 @@ export namespace Communication {
     export const REST_BASE_AUTH_PATH = "/world/rest/auth";
     export const REST_BASE_ASSET_PATH = "/world/rest/asset";
     export const REST_BASE_INFERENCE_PATH = "/world/rest/inference";
-    export const REST_BASE_STATE_PATH = "/world/rest/state";
 
     export namespace WebSocket {
         export enum MessageType {
@@ -267,6 +266,8 @@ export namespace Communication {
             ENTITY_CHANNEL_UNSUBSCRIBE_RESPONSE = "ENTITY_CHANNEL_UNSUBSCRIBE_RESPONSE",
             ENTITY_DELIVERY = "ENTITY_DELIVERY",
             ENTITY_METADATA_DELIVERY = "ENTITY_METADATA_DELIVERY",
+            GAME_INPUT = "GAME_INPUT",
+            GAME_STATE_UPDATE = "GAME_STATE_UPDATE",
         }
 
         export enum DatabaseOperation {
@@ -629,6 +630,50 @@ export namespace Communication {
             }
         }
 
+        export class GameInputMessage implements BaseMessage {
+            public readonly type = MessageType.GAME_INPUT;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public inputType: string;
+            public data: unknown;
+
+            constructor(data: {
+                inputType: string;
+                // biome-ignore lint/suspicious/noExplicitAny: input data
+                inputData: any;
+                requestId: string;
+            }) {
+                this.timestamp = Date.now();
+                this.requestId = data.requestId;
+                this.errorMessage = null;
+                this.inputType = data.inputType;
+                this.data = data.inputData;
+            }
+        }
+
+        export class GameStateUpdateMessage implements BaseMessage {
+            public readonly type = MessageType.GAME_STATE_UPDATE;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public updateType: string;
+            public data: unknown;
+
+            constructor(data: {
+                updateType: string;
+                // biome-ignore lint/suspicious/noExplicitAny: update data
+                updateData: any;
+                requestId?: string;
+            }) {
+                this.timestamp = Date.now();
+                this.requestId = data.requestId ?? "";
+                this.errorMessage = null;
+                this.updateType = data.updateType;
+                this.data = data.updateData;
+            }
+        }
+
         export type Message =
             | GeneralErrorResponseMessage
             | QueryRequestMessage
@@ -643,7 +688,9 @@ export namespace Communication {
             | EntityChannelUnsubscribeRequestMessage
             | EntityChannelUnsubscribeResponseMessage
             | EntityDeliveryMessage
-            | EntityMetadataDeliveryMessage;
+            | EntityMetadataDeliveryMessage
+            | GameInputMessage
+            | GameStateUpdateMessage;
 
         export function isMessageType<T extends Message>(
             message: Message,
@@ -756,6 +803,18 @@ export namespace Communication {
             data: z.unknown(),
         });
 
+        const Z_GameInput = Z_MessageBase.extend({
+            type: z.literal(MessageType.GAME_INPUT),
+            inputType: z.string(),
+            data: z.unknown(),
+        });
+
+        const Z_GameStateUpdate = Z_MessageBase.extend({
+            type: z.literal(MessageType.GAME_STATE_UPDATE),
+            updateType: z.string(),
+            data: z.unknown(),
+        });
+
         export const Z = {
             MessageBase: Z_MessageBase,
             GeneralErrorResponse: Z_GeneralErrorResponse,
@@ -773,6 +832,8 @@ export namespace Communication {
                 Z_EntityChannelUnsubscribeResponse,
             EntityDelivery: Z_EntityDelivery,
             EntityMetadataDelivery: Z_EntityMetadataDelivery,
+            GameInput: Z_GameInput,
+            GameStateUpdate: Z_GameStateUpdate,
             AnyMessage: z.discriminatedUnion("type", [
                 Z_GeneralErrorResponse,
                 Z_QueryRequest,
@@ -788,6 +849,8 @@ export namespace Communication {
                 Z_EntityChannelUnsubscribeResponse,
                 Z_EntityDelivery,
                 Z_EntityMetadataDelivery,
+                Z_GameInput,
+                Z_GameStateUpdate,
             ]),
         } as const;
     }
@@ -813,7 +876,6 @@ export namespace Communication {
             INFERENCE_STT = "INFERENCE_STT",
             INFERENCE_TTS = "INFERENCE_TTS",
             INFERENCE_CAPABILITIES = "INFERENCE_CAPABILITIES",
-            STATE_STATS = "STATE_STATS",
             WS_STATS = "WS_STATS",
         }
 
@@ -2253,50 +2315,6 @@ export namespace Communication {
                 returns: {
                     type: "object",
                     description: "Capabilities response",
-                },
-            },
-            STATE_STATS: {
-                path: `${REST_BASE_STATE_PATH}/stats`,
-                method: "GET",
-                createRequest: (): string => "",
-                createSuccess: (data: {
-                    uptime: number;
-                    database: { connected: boolean };
-                    ticks: {
-                        processing: string[];
-                        pending: Record<string, boolean>;
-                    };
-                    entityExpiry: {
-                        enabled: boolean;
-                        intervalActive: boolean;
-                        configuration: {
-                            checkIntervalMs: number;
-                        } | null;
-                    };
-                    metadataExpiry: {
-                        enabled: boolean;
-                        intervalActive: boolean;
-                        configuration: {
-                            checkIntervalMs: number;
-                        } | null;
-                    };
-                    memory: { heapUsed: number };
-                    cpu: { system: number; user: number };
-                }): unknown => ({
-                    ...data,
-                    success: true,
-                    timestamp: Date.now(),
-                }),
-                createError: (error: string): unknown => ({
-                    success: false,
-                    timestamp: Date.now(),
-                    error,
-                }),
-                description: "State service statistics",
-                parameters: [],
-                returns: {
-                    type: "object",
-                    description: "State stats response",
                 },
             },
             WS_STATS: {
