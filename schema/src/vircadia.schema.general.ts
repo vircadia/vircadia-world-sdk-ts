@@ -250,25 +250,63 @@ export namespace Communication {
     export const REST_BASE_INFERENCE_PATH = "/world/rest/inference";
 
     export namespace WebSocket {
-        export enum MessageType {
+        export enum SystemMessageType {
             GENERAL_ERROR_RESPONSE = "GENERAL_ERROR_RESPONSE",
+            SESSION_INFO_RESPONSE = "SESSION_INFO_RESPONSE",
+            TICK_NOTIFICATION_RESPONSE = "TICK_NOTIFICATION_RESPONSE",
+            SYNC_GROUP_UPDATES_RESPONSE = "SYNC_GROUP_UPDATES_RESPONSE",
+        }
+
+        export enum QueryMessageType {
             QUERY_REQUEST = "QUERY_REQUEST",
             QUERY_RESPONSE = "QUERY_RESPONSE",
-            SYNC_GROUP_UPDATES_RESPONSE = "SYNC_GROUP_UPDATES_RESPONSE",
-            TICK_NOTIFICATION_RESPONSE = "TICK_NOTIFICATION_RESPONSE",
-            SESSION_INFO_RESPONSE = "SESSION_INFO_RESPONSE",
+        }
+
+        export enum ReflectMessageType {
             REFLECT_PUBLISH_REQUEST = "REFLECT_PUBLISH_REQUEST",
             REFLECT_MESSAGE_DELIVERY = "REFLECT_MESSAGE_DELIVERY",
             REFLECT_ACK_RESPONSE = "REFLECT_ACK_RESPONSE",
+        }
+
+        export enum EntityMessageType {
             ENTITY_CHANNEL_SUBSCRIBE_REQUEST = "ENTITY_CHANNEL_SUBSCRIBE_REQUEST",
             ENTITY_CHANNEL_SUBSCRIBE_RESPONSE = "ENTITY_CHANNEL_SUBSCRIBE_RESPONSE",
             ENTITY_CHANNEL_UNSUBSCRIBE_REQUEST = "ENTITY_CHANNEL_UNSUBSCRIBE_REQUEST",
             ENTITY_CHANNEL_UNSUBSCRIBE_RESPONSE = "ENTITY_CHANNEL_UNSUBSCRIBE_RESPONSE",
             ENTITY_DELIVERY = "ENTITY_DELIVERY",
             ENTITY_METADATA_DELIVERY = "ENTITY_METADATA_DELIVERY",
+            FETCH_ENTITIES_REQUEST = "FETCH_ENTITIES_REQUEST",
+            FETCH_ENTITIES_RESPONSE = "FETCH_ENTITIES_RESPONSE",
+        }
+
+        export enum GameMessageType {
             GAME_INPUT = "GAME_INPUT",
             GAME_STATE_UPDATE = "GAME_STATE_UPDATE",
         }
+
+        export enum AvatarMessageType {
+            AVATAR_SET_REQUEST = "AVATAR_SET_REQUEST",
+            AVATAR_SET_RESPONSE = "AVATAR_SET_RESPONSE",
+            AVATAR_QUERY_REQUEST = "AVATAR_QUERY_REQUEST",
+            AVATAR_QUERY_RESPONSE = "AVATAR_QUERY_RESPONSE",
+        }
+
+        export const MessageType = {
+            ...SystemMessageType,
+            ...QueryMessageType,
+            ...ReflectMessageType,
+            ...EntityMessageType,
+            ...GameMessageType,
+            ...AvatarMessageType,
+        } as const;
+
+        export type MessageType =
+            | SystemMessageType
+            | QueryMessageType
+            | ReflectMessageType
+            | EntityMessageType
+            | GameMessageType
+            | AvatarMessageType;
 
         export enum DatabaseOperation {
             INSERT = "INSERT",
@@ -276,7 +314,7 @@ export namespace Communication {
             DELETE = "DELETE",
         }
 
-        interface BaseMessage {
+        export interface BaseMessage {
             timestamp: number;
             requestId: string;
             errorMessage: string | null;
@@ -658,10 +696,12 @@ export namespace Communication {
             public requestId: string;
             public errorMessage: string | null;
             public updateType: string;
+            public syncGroup: string;
             public data: unknown;
 
             constructor(data: {
                 updateType: string;
+                syncGroup: string;
                 // biome-ignore lint/suspicious/noExplicitAny: update data
                 updateData: any;
                 requestId?: string;
@@ -670,7 +710,48 @@ export namespace Communication {
                 this.requestId = data.requestId ?? "";
                 this.errorMessage = null;
                 this.updateType = data.updateType;
+                this.syncGroup = data.syncGroup;
                 this.data = data.updateData;
+            }
+        }
+
+        export class FetchEntitiesRequestMessage implements BaseMessage {
+            public readonly type = MessageType.FETCH_ENTITIES_REQUEST;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public syncGroup: string;
+            public region?: [number, number, number, number]; // xmin, ymin, xmax, ymax
+
+            constructor(data: {
+                syncGroup: string;
+                region?: [number, number, number, number];
+                requestId: string;
+            }) {
+                this.timestamp = Date.now();
+                this.requestId = data.requestId;
+                this.errorMessage = null;
+                this.syncGroup = data.syncGroup;
+                this.region = data.region;
+            }
+        }
+
+        export class FetchEntitiesResponseMessage implements BaseMessage {
+            public readonly type = MessageType.FETCH_ENTITIES_RESPONSE;
+            public readonly timestamp: number;
+            public requestId: string;
+            public errorMessage: string | null;
+            public entities: Entity.I_Entity[];
+
+            constructor(data: {
+                entities: Entity.I_Entity[];
+                requestId: string;
+                errorMessage?: string | null;
+            }) {
+                this.timestamp = Date.now();
+                this.requestId = data.requestId;
+                this.errorMessage = data.errorMessage ?? null;
+                this.entities = data.entities;
             }
         }
 
@@ -690,7 +771,9 @@ export namespace Communication {
             | EntityDeliveryMessage
             | EntityMetadataDeliveryMessage
             | GameInputMessage
-            | GameStateUpdateMessage;
+            | GameStateUpdateMessage
+            | FetchEntitiesRequestMessage
+            | FetchEntitiesResponseMessage;
 
         export function isMessageType<T extends Message>(
             message: Message,
@@ -806,13 +889,27 @@ export namespace Communication {
         const Z_GameInput = Z_MessageBase.extend({
             type: z.literal(MessageType.GAME_INPUT),
             inputType: z.string(),
-            data: z.unknown(),
+            data: z.any(),
         });
 
         const Z_GameStateUpdate = Z_MessageBase.extend({
             type: z.literal(MessageType.GAME_STATE_UPDATE),
             updateType: z.string(),
-            data: z.unknown(),
+            syncGroup: z.string(),
+            data: z.any(),
+        });
+
+        const Z_FetchEntitiesRequest = Z_MessageBase.extend({
+            type: z.literal(MessageType.FETCH_ENTITIES_REQUEST),
+            syncGroup: z.string(),
+            region: z
+                .tuple([z.number(), z.number(), z.number(), z.number()])
+                .optional(),
+        });
+
+        const Z_FetchEntitiesResponse = Z_MessageBase.extend({
+            type: z.literal(MessageType.FETCH_ENTITIES_RESPONSE),
+            entities: z.array(z.any()), // I_Entity structure
         });
 
         export const Z = {
@@ -834,6 +931,8 @@ export namespace Communication {
             EntityMetadataDelivery: Z_EntityMetadataDelivery,
             GameInput: Z_GameInput,
             GameStateUpdate: Z_GameStateUpdate,
+            FetchEntitiesRequest: Z_FetchEntitiesRequest,
+            FetchEntitiesResponse: Z_FetchEntitiesResponse,
             AnyMessage: z.discriminatedUnion("type", [
                 Z_GeneralErrorResponse,
                 Z_QueryRequest,

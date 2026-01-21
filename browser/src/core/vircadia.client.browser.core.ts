@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import { Communication } from "../../../schema/src/vircadia.schema.general";
+import { Avatar } from "../../../schema/src/vircadia.schema.avatar";
 
 // TODO: Make errors clearer from here to UI on why a request failed, especially on asset gets which may bypass the browser core, so we need clear Zod schemas for all responses so we can process errors.
 // TODO: Create profile endpoints, at least for /me, but unsure if to put that directly in the DB under 2_AUTH and use queries for it or to do it here.
@@ -136,6 +137,9 @@ export class WsConnectionCore {
     private reflectListeners = new Map<
         string,
         Set<(msg: Communication.WebSocket.ReflectDeliveryMessage) => void>
+    >();
+    private gameStateListeners = new Set<
+        (msg: Communication.WebSocket.GameStateUpdateMessage) => void
     >();
     private channelListeners = new Map<
         string,
@@ -456,6 +460,146 @@ export class WsConnectionCore {
         );
     }
 
+    async fetchEntities(data: {
+        syncGroup: string;
+        region?: [number, number, number, number];
+        timeoutMs?: number;
+    }): Promise<Communication.WebSocket.FetchEntitiesResponseMessage> {
+        if (!this.isClientConnected()) {
+            throw new Error("Not connected to server");
+        }
+
+        const requestId = crypto.randomUUID();
+        const messageData = {
+            type: Communication.WebSocket.MessageType.FETCH_ENTITIES_REQUEST,
+            timestamp: Date.now(),
+            requestId,
+            errorMessage: null,
+            syncGroup: data.syncGroup,
+            region: data.region,
+        };
+
+        // Validate message structure with Zod
+        const parsed =
+            Communication.WebSocket.Z.FetchEntitiesRequest.safeParse(messageData);
+        if (!parsed.success) {
+            throw new Error(
+                `Invalid fetch entities request: ${parsed.error.message}`,
+            );
+        }
+
+        debugLog(
+            this.config,
+            `Sending fetch entities with requestId: ${requestId}`,
+        );
+
+        return new Promise<Communication.WebSocket.FetchEntitiesResponseMessage>(
+            (resolve, reject) => {
+                const createdAt = Date.now();
+                const timeout = setTimeout(() => {
+                    this.pendingRequests.delete(requestId);
+                    reject(new Error("Request timeout"));
+                }, data.timeoutMs ?? DEFAULT_WS_QUERY_TIMEOUT);
+
+                this.pendingRequests.set(requestId, {
+                    resolve: resolve as (value: unknown) => void,
+                    reject,
+                    timeout,
+                    createdAt,
+                });
+                this.ws?.send(JSON.stringify(parsed.data));
+            },
+        );
+    }
+
+    async setAvatar(data: {
+        syncGroup: string;
+        avatarData: Avatar.I_AvatarData;
+        timeoutMs?: number;
+    }): Promise<Avatar.AvatarSetResponseMessage> {
+        if (!this.isClientConnected()) {
+            throw new Error("Not connected to server");
+        }
+
+        const requestId = crypto.randomUUID();
+        const messageData = {
+            type: Communication.WebSocket.MessageType.AVATAR_SET_REQUEST,
+            timestamp: Date.now(),
+            requestId,
+            errorMessage: null,
+            syncGroup: data.syncGroup,
+            avatarData: data.avatarData,
+        };
+
+        const parsed = Avatar.Z_AvatarSetRequest.safeParse(messageData);
+        if (!parsed.success) {
+            throw new Error(
+                `Invalid avatar set request: ${parsed.error.message}`,
+            );
+        }
+
+        debugLog(this.config, `Sending set avatar with requestId: ${requestId}`);
+
+        return new Promise<Avatar.AvatarSetResponseMessage>((resolve, reject) => {
+            const createdAt = Date.now();
+            const timeout = setTimeout(() => {
+                this.pendingRequests.delete(requestId);
+                reject(new Error("Request timeout"));
+            }, data.timeoutMs ?? DEFAULT_WS_QUERY_TIMEOUT);
+
+            this.pendingRequests.set(requestId, {
+                resolve: resolve as (value: unknown) => void,
+                reject,
+                timeout,
+                createdAt,
+            });
+            this.ws?.send(JSON.stringify(parsed.data));
+        });
+    }
+
+    async queryAvatars(data: {
+        syncGroup: string;
+        timeoutMs?: number;
+    }): Promise<Avatar.AvatarQueryResponseMessage> {
+        if (!this.isClientConnected()) {
+            throw new Error("Not connected to server");
+        }
+
+        const requestId = crypto.randomUUID();
+        const messageData = {
+            type: Communication.WebSocket.MessageType.AVATAR_QUERY_REQUEST,
+            timestamp: Date.now(),
+            requestId,
+            errorMessage: null,
+            syncGroup: data.syncGroup,
+        };
+
+        const parsed = Avatar.Z_AvatarQueryRequest.safeParse(messageData);
+        if (!parsed.success) {
+            throw new Error(
+                `Invalid avatar query request: ${parsed.error.message}`,
+            );
+        }
+
+        debugLog(this.config, `Sending query avatars with requestId: ${requestId}`);
+
+        return new Promise<Avatar.AvatarQueryResponseMessage>((resolve, reject) => {
+            const createdAt = Date.now();
+            const timeout = setTimeout(() => {
+                this.pendingRequests.delete(requestId);
+                reject(new Error("Request timeout"));
+            }, data.timeoutMs ?? DEFAULT_WS_QUERY_TIMEOUT);
+
+            this.pendingRequests.set(requestId, {
+                resolve: resolve as (value: unknown) => void,
+                reject,
+                timeout,
+                createdAt,
+            });
+            this.ws?.send(JSON.stringify(parsed.data));
+        });
+    }
+
     getConnectionInfo(): WsConnectionCoreInfo {
         const now = Date.now();
 
@@ -599,6 +743,15 @@ export class WsConnectionCore {
         else this.reflectListeners.set(key, new Set([listener]));
         return () => {
             this.reflectListeners.get(key)?.delete(listener);
+        };
+    }
+
+    subscribeGameState(
+        listener: (msg: Communication.WebSocket.GameStateUpdateMessage) => void,
+    ): () => void {
+        this.gameStateListeners.add(listener);
+        return () => {
+            this.gameStateListeners.delete(listener);
         };
     }
 
@@ -816,13 +969,29 @@ export class WsConnectionCore {
             );
 
             const maybe = JSON.parse(event.data) as unknown;
-            const parsed =
+            let parsed =
                 Communication.WebSocket.Z.AnyMessage.safeParse(maybe);
+
+            if (!parsed.success) {
+                // Fallback for Avatar messages not in the main union
+                const avatarQueryParsed = Avatar.Z_AvatarQueryResponse.safeParse(maybe);
+                if (avatarQueryParsed.success) {
+                    parsed = avatarQueryParsed as any;
+                } else {
+                    const avatarSetParsed = Avatar.Z_AvatarSetResponse.safeParse(maybe);
+                    if (avatarSetParsed.success) {
+                        parsed = avatarSetParsed as any;
+                    }
+                }
+            }
+
             if (!parsed.success) {
                 debugError(
                     this.config,
                     "Invalid WS message envelope",
                     parsed.error,
+                    "Payload:",
+                    event.data,
                 );
                 return;
             }
@@ -854,6 +1023,16 @@ export class WsConnectionCore {
                 const listeners = this.reflectListeners.get(key);
                 if (listeners) {
                     for (const listener of listeners) listener(message);
+                }
+                return;
+            }
+
+            if (
+                message.type ===
+                Communication.WebSocket.MessageType.GAME_STATE_UPDATE
+            ) {
+                for (const listener of this.gameStateListeners) {
+                    listener(message);
                 }
                 return;
             }
@@ -1646,6 +1825,20 @@ export class VircadiaBrowserClient {
             timeoutMs?: number;
         }) => Promise<{ remove: () => Promise<void> }>;
         getConnectionInfo: () => WsConnectionCoreInfo;
+        setAvatar: (data: {
+            syncGroup: string;
+            avatarData: Avatar.I_AvatarData;
+            timeoutMs?: number;
+        }) => Promise<Avatar.AvatarSetResponseMessage>;
+        queryAvatars: (data: {
+            syncGroup: string;
+            timeoutMs?: number;
+        }) => Promise<Avatar.AvatarQueryResponseMessage>;
+        subscribeGameState: (
+            listener: (
+                msg: Communication.WebSocket.GameStateUpdateMessage,
+            ) => void,
+        ) => () => void;
     };
     public readonly restAuth: {
         validateSession: (data: {
@@ -1748,6 +1941,10 @@ export class VircadiaBrowserClient {
             subscribeEntityChannel: (options) =>
                 this.wsCore.subscribeEntityChannel(options),
             getConnectionInfo: () => this.wsCore.getConnectionInfo(),
+            setAvatar: (data) => this.wsCore.setAvatar(data),
+            queryAvatars: (data) => this.wsCore.queryAvatars(data),
+            subscribeGameState: (listener) =>
+                this.wsCore.subscribeGameState(listener),
         };
 
         this.restAuth = {
